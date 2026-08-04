@@ -1,0 +1,119 @@
+@import "tailwindcss";
+
+/* ─── Base reset ──────────────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  background-color: #0f2f1b;
+  color: #F1F8E9;
+  font-family: 'Inter', system-ui, Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+a {
+  text-decoration: none;
+  color: inherit;
+}
+
+/* ─── Form elements: always use dark text on white bg ────────── */
+input,
+textarea,
+select,
+option {
+  color: #111827;          /* gray-900 */
+  background-color: #fff;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: #9ca3af;          /* gray-400 */
+}
+
+/* ─── Hide native password reveal (Edge/IE) ─────────────────── */
+input[type="password"]::-ms-reveal,
+input[type="password"]::-ms-clear {
+  display: none;
+}
+
+/* ─── Custom scrollbar (green theme) ─────────────────────────── */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #a5d6a7;
+  border-radius: 9999px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #66bb6a;
+}
+
+/* Firefox */
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #a5d6a7 transparent;
+}
+
+/* ─── Admin main scrollbar (applied globally) ────────────────── */
+.admin-scroll::-webkit-scrollbar {
+  width: 7px;
+  height: 7px;
+}
+.admin-scroll::-webkit-scrollbar-track {
+  background: #f1f5f1;
+}
+.admin-scroll::-webkit-scrollbar-thumb {
+  background: #c5e1a5;
+  border-radius: 9999px;
+  border: 1px solid #f1f5f1;
+}
+.admin-scroll::-webkit-scrollbar-thumb:hover {
+  background: #8bc34a;
+}
+
+/* Firefox */
+.admin-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: #c5e1a5 #f1f5f1;
+}
+
+/* ─── Custom utility: font-poppins ───────────────────────────── */
+@utility font-poppins {
+  font-family: 'Poppins', sans-serif;
+}
+
+/* ─── Custom animations ──────────────────────────────────────── */
+@keyframes slide-in {
+  from { transform: translateX(100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes scale-in {
+  from { transform: scale(0.95); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+@utility animate-slide-in {
+  animation: slide-in 0.3s ease-out;
+}
+
+@utility animate-scale-in {
+  animation: scale-in 0.2s ease-out;
+}
