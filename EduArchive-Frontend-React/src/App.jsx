@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider } from './context/AuthContext'
 import { NotificationProvider } from './components/Notification'
+import { ThemeProvider } from './context/ThemeContext'
 import ProtectedRoute from './components/ProtectedRoute'
 import GuestRoute from './components/GuestRoute'
 import Landing from './pages/Landing'
@@ -55,10 +56,11 @@ function StudentRoute({ children }) {
 
 function App() {
   return (
-    <BrowserRouter>
-      <NotificationProvider>
-        <AuthProvider>
-          <Routes>
+    <ThemeProvider>
+      <BrowserRouter>
+        <NotificationProvider>
+          <AuthProvider>
+            <Routes>
             {/* Public landing page */}
             <Route path="/" element={<Landing />} />
 
@@ -91,10 +93,11 @@ function App() {
             <Route path="/student/uploads" element={<StudentRoute><StudentUploadedCapstones /></StudentRoute>} />
             <Route path="/student/capstones/:id" element={<StudentRoute><StudentCapstoneMainPage /></StudentRoute>} />
             <Route path="/student" element={<Navigate to="/student/uploads" replace />} />
-          </Routes>
-        </AuthProvider>
-      </NotificationProvider>
-    </BrowserRouter>
+            </Routes>
+          </AuthProvider>
+        </NotificationProvider>
+      </BrowserRouter>
+    </ThemeProvider>
   )
 }
 

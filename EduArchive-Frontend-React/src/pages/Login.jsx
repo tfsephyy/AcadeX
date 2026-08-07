@@ -1,14 +1,191 @@
 import { useState, useEffect } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import { useTheme } from '../context/ThemeContext'
 import ForgotPasswordModal from '../components/ForgotPasswordModal'
 
+/* ── Eye icons ─────────────────────────────────────────────── */
+function EyeIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+      <circle cx="12" cy="12" r="3" />
+    </svg>
+  )
+}
+
+function EyeOffIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24" />
+      <line x1="1" y1="1" x2="23" y2="23" />
+    </svg>
+  )
+}
+
+/* ── Sun / Moon ─────────────────────────────────────────────── */
+function SunIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <circle cx="12" cy="12" r="5" />
+      <line x1="12" y1="1" x2="12" y2="3" /><line x1="12" y1="21" x2="12" y2="23" />
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" /><line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
+      <line x1="1" y1="12" x2="3" y2="12" /><line x1="21" y1="12" x2="23" y2="12" />
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" /><line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
+    </svg>
+  )
+}
+
+function MoonIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" />
+    </svg>
+  )
+}
+
+/* ── Left illustration panel ─────────────────────────────────── */
+function LoginIllustration() {
+  return (
+    <div
+      className="hidden lg:flex flex-col justify-between p-12 relative overflow-hidden"
+      style={{
+        background: 'linear-gradient(135deg, var(--color-bg) 0%, var(--color-bg-secondary) 50%, var(--color-bg-tertiary) 100%)',
+        borderRight: '1px solid var(--color-border)',
+        minHeight: '100vh',
+        flex: '0 0 45%',
+      }}
+    >
+      {/* Background orbs */}
+      <div aria-hidden="true" className="absolute top-[-10%] right-[-20%] w-[400px] h-[400px] rounded-full pointer-events-none animate-blob"
+        style={{ background: 'radial-gradient(circle, rgba(91,190,99,0.2) 0%, transparent 70%)', filter: 'blur(60px)' }} />
+      <div aria-hidden="true" className="absolute bottom-[-10%] left-[-15%] w-[350px] h-[350px] rounded-full pointer-events-none animate-float-slow"
+        style={{ background: 'radial-gradient(circle, rgba(27,127,91,0.25) 0%, transparent 70%)', filter: 'blur(70px)' }} />
+
+      {/* Grid overlay */}
+      <div className="absolute inset-0 bg-grid opacity-40 pointer-events-none" aria-hidden="true" />
+
+      {/* Logo */}
+      <div className="relative z-10">
+        <Link to="/" className="flex items-center gap-2.5 w-fit group">
+          <div style={{
+            width: 40, height: 40,
+            background: 'linear-gradient(135deg, var(--color-primary), var(--color-accent-bright))',
+            borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center',
+            boxShadow: '0 4px 16px rgba(91,190,99,0.3)',
+          }}>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="white" aria-hidden="true">
+              <path d="M4 6H2v14a2 2 0 002 2h14v-2H4V6zm16-4H8a2 2 0 00-2 2v12a2 2 0 002 2h12a2 2 0 002-2V4a2 2 0 00-2-2zm-1 9H9V9h10v2zm-4 4H9v-2h6v2zm4-8H9V5h10v2z" />
+            </svg>
+          </div>
+          <span className="font-poppins font-bold text-2xl" style={{ color: 'var(--color-text)' }}>
+            Acade<span style={{ color: 'var(--color-primary)' }}>X</span>
+          </span>
+        </Link>
+      </div>
+
+      {/* Center content */}
+      <div className="relative z-10 flex-1 flex flex-col justify-center py-12">
+        {/* Central abstract visual */}
+        <div className="relative mx-auto" style={{ width: 320, height: 320 }}>
+          {/* Rotating outer ring */}
+          <div className="absolute inset-0 rounded-full border animate-spin-slow"
+            style={{ borderColor: 'rgba(91,190,99,0.15)', borderStyle: 'dashed' }} aria-hidden="true" />
+
+          {/* Inner pulsing circle */}
+          <div className="absolute inset-8 rounded-full animate-glow-pulse"
+            style={{ background: 'rgba(91,190,99,0.06)', border: '1px solid var(--color-border)' }} aria-hidden="true" />
+
+          {/* Center document icon */}
+          <div
+            className="absolute inset-0 flex items-center justify-center"
+          >
+            <div style={{
+              width: 96, height: 96,
+              background: 'linear-gradient(135deg, var(--color-primary), var(--color-accent-bright))',
+              borderRadius: 24,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              boxShadow: 'var(--shadow-glow-strong)',
+            }}>
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="white" aria-hidden="true">
+                <path d="M4 6H2v14a2 2 0 002 2h14v-2H4V6zm16-4H8a2 2 0 00-2 2v12a2 2 0 002 2h12a2 2 0 002-2V4a2 2 0 00-2-2zm-1 9H9V9h10v2zm-4 4H9v-2h6v2zm4-8H9V5h10v2z" />
+              </svg>
+            </div>
+          </div>
+
+          {/* Orbiting badges */}
+          {[
+            { label: 'PDF Extract', icon: '📄', angle: 0, delay: '0s' },
+            { label: 'OCR', icon: '🔍', angle: 90, delay: '0.5s' },
+            { label: 'NLP', icon: '🧠', angle: 180, delay: '1s' },
+            { label: 'Secure', icon: '🔒', angle: 270, delay: '1.5s' },
+          ].map(({ label, icon, angle, delay }) => {
+            const rad = (angle * Math.PI) / 180
+            const r = 140
+            const x = Math.cos(rad) * r
+            const y = Math.sin(rad) * r
+            return (
+              <div
+                key={label}
+                className="absolute flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold animate-float"
+                style={{
+                  left: `calc(50% + ${x}px - 44px)`,
+                  top: `calc(50% + ${y}px - 16px)`,
+                  background: 'var(--color-surface)',
+                  backdropFilter: 'blur(12px)',
+                  border: '1px solid var(--color-border-strong)',
+                  color: 'var(--color-text)',
+                  boxShadow: 'var(--shadow-sm)',
+                  animationDelay: delay,
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                <span>{icon}</span>
+                <span>{label}</span>
+              </div>
+            )
+          })}
+        </div>
+
+        {/* Description */}
+        <div className="text-center mt-8">
+          <h2 className="font-poppins font-bold text-2xl mb-3" style={{ color: 'var(--color-text)' }}>
+            Academic Research,{' '}
+            <span className="text-gradient">Reimagined</span>
+          </h2>
+          <p className="text-sm leading-relaxed max-w-xs mx-auto" style={{ color: 'var(--color-text-muted)' }}>
+            Access thousands of capstone projects from Mindoro State University in one centralized, intelligent repository.
+          </p>
+        </div>
+
+        {/* Stats strip */}
+        <div className="flex justify-center gap-8 mt-8">
+          {[['1,000+', 'Projects'], ['500+', 'Students'], ['50+', 'Faculty']].map(([val, label]) => (
+            <div key={label} className="text-center">
+              <div className="font-poppins font-bold text-xl" style={{ color: 'var(--color-primary)' }}>{val}</div>
+              <div className="text-xs" style={{ color: 'var(--color-text-muted)' }}>{label}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Bottom MinSU branding */}
+      <div className="relative z-10">
+        <p className="text-xs" style={{ color: 'var(--color-text-faint)' }}>
+          © {new Date().getFullYear()} Mindoro State University
+        </p>
+      </div>
+    </div>
+  )
+}
+
+/* ── Main Login Page ─────────────────────────────────────────── */
 export default function Login() {
   const { login } = useAuth()
+  const { theme, toggleTheme } = useTheme()
   const navigate = useNavigate()
   const location = useLocation()
 
-  // Remember Me — load saved email on mount
   const [form, setForm] = useState(() => {
     const savedEmail = localStorage.getItem('eduarchive_remember_email') || ''
     return { email: savedEmail, password: '' }
@@ -20,12 +197,13 @@ export default function Login() {
   const [successMessage, setSuccessMessage] = useState('')
   const [loading, setLoading] = useState(false)
   const [forgotOpen, setForgotOpen] = useState(false)
+  const [shake, setShake] = useState(false)
 
   // Show registration success message
   useEffect(() => {
     if (location.state?.registered) {
-      setSuccessMessage('Account created successfully! An admin will review and activate your account shortly.')
-      const timer = setTimeout(() => setSuccessMessage(''), 6000)
+      setSuccessMessage('Account created! An admin will review and activate your account shortly.')
+      const timer = setTimeout(() => setSuccessMessage(''), 7000)
       return () => clearTimeout(timer)
     }
   }, [location.state?.registered])
@@ -36,13 +214,17 @@ export default function Login() {
     setGlobalError('')
   }
 
+  const triggerShake = () => {
+    setShake(true)
+    setTimeout(() => setShake(false), 500)
+  }
+
   const handleSubmit = async (e) => {
     e.preventDefault()
     setLoading(true)
     setErrors({})
     setGlobalError('')
 
-    // Remember Me — save or clear email
     if (rememberMe) {
       localStorage.setItem('eduarchive_remember_email', form.email)
     } else {
@@ -64,14 +246,13 @@ export default function Login() {
     } catch (err) {
       const status = err.response?.status
       const data = err.response?.data
-
-      // Special banner for pending-approval accounts (HTTP 423)
+      triggerShake()
       if (status === 423) {
         setGlobalError('Your account is pending approval. Please wait for an administrator to activate your access.')
       } else if (data?.errors) {
         setErrors(data.errors)
       } else {
-        setGlobalError(data?.message || 'An error occurred. Please try again.')
+        setGlobalError(data?.message || 'Invalid credentials. Please try again.')
       }
     } finally {
       setLoading(false)
@@ -80,149 +261,267 @@ export default function Login() {
 
   return (
     <div
-      className="min-h-screen flex items-center justify-center px-4 py-12"
-      style={{ background: 'linear-gradient(135deg, #0f2f1b 0%, #1B5E20 60%, #2E7D32 100%)' }}
+      className="min-h-screen flex"
+      style={{ background: 'var(--color-bg)' }}
     >
-      <div className="w-full max-w-md">
-        {/* Logo */}
-        <div className="text-center mb-8">
-          <Link to="/" className="inline-flex items-center gap-2 group">
-            <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-[#8BC34A] shadow-md">
-              <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-[#0f2f1b]" viewBox="0 0 24 24" fill="currentColor">
+      {/* Left — illustration */}
+      <LoginIllustration />
+
+      {/* Right — form */}
+      <div
+        className="flex-1 flex flex-col items-center justify-center px-6 py-12 min-h-screen relative"
+        style={{ background: 'var(--color-bg)' }}
+      >
+        {/* Theme toggle — top right */}
+        <button
+          className="theme-toggle absolute top-6 right-6"
+          onClick={toggleTheme}
+          aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+        >
+          {theme === 'dark' ? <SunIcon /> : <MoonIcon />}
+        </button>
+
+        <div
+          className="w-full"
+          style={{
+            maxWidth: 420,
+            animation: 'fade-in-up 0.5s ease both',
+          }}
+        >
+          {/* Mobile logo */}
+          <div className="flex lg:hidden items-center justify-center gap-2.5 mb-8">
+            <div style={{
+              width: 38, height: 38,
+              background: 'linear-gradient(135deg, var(--color-primary), var(--color-accent-bright))',
+              borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center',
+              boxShadow: '0 4px 16px rgba(91,190,99,0.3)',
+            }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="white" aria-hidden="true">
                 <path d="M4 6H2v14a2 2 0 002 2h14v-2H4V6zm16-4H8a2 2 0 00-2 2v12a2 2 0 002 2h12a2 2 0 002-2V4a2 2 0 00-2-2zm-1 9H9V9h10v2zm-4 4H9v-2h6v2zm4-8H9V5h10v2z" />
               </svg>
             </div>
-            <span className="font-poppins font-bold text-2xl text-[#F1F8E9]">
-              Edu<span className="text-[#8BC34A]">Archive</span>
+            <span className="font-poppins font-bold text-2xl" style={{ color: 'var(--color-text)' }}>
+              Acade<span style={{ color: 'var(--color-primary)' }}>X</span>
             </span>
-          </Link>
-          <p className="text-[#a5d6a7] text-sm mt-2">Sign in to your account</p>
-        </div>
+          </div>
 
-        {/* Card */}
-        <div className="bg-white/5 backdrop-blur-md border border-[#2E7D32]/40 rounded-2xl p-8 shadow-2xl">
+          {/* Heading */}
+          <div className="mb-8">
+            <h1 className="font-poppins font-bold text-3xl mb-2" style={{ color: 'var(--color-text)', letterSpacing: '-0.02em' }}>
+              Welcome back
+            </h1>
+            <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
+              Sign in to your AcadeX account
+            </p>
+          </div>
+
+          {/* Success banner */}
+          {successMessage && (
+            <div
+              className="mb-6 p-4 rounded-xl text-sm animate-fade-in-up"
+              style={{
+                background: 'rgba(91,190,99,0.08)',
+                border: '1px solid rgba(91,190,99,0.3)',
+                color: 'var(--color-primary)',
+              }}
+            >
+              ✓ {successMessage}
+            </div>
+          )}
+
+          {/* Error banner */}
           {globalError && (
-            <div className="mb-5 p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-sm text-center">
+            <div
+              className="mb-6 p-4 rounded-xl text-sm animate-fade-in-up"
+              style={{
+                background: 'rgba(239,68,68,0.08)',
+                border: '1px solid rgba(239,68,68,0.3)',
+                color: '#f87171',
+              }}
+            >
               {globalError}
             </div>
           )}
 
-          {successMessage && (
-            <div className="mb-5 p-3 rounded-xl bg-green-500/10 border border-green-500/30 text-green-400 text-sm text-center">
-              {successMessage}
-            </div>
-          )}
+          {/* Form card */}
+          <div
+            className="glass-card p-8"
+            style={{
+              animation: shake
+                ? 'shake 0.4s ease'
+                : 'none',
+            }}
+          >
+            <style>{`
+              @keyframes shake {
+                0%, 100% { transform: translateX(0); }
+                20% { transform: translateX(-8px); }
+                40% { transform: translateX(8px); }
+                60% { transform: translateX(-5px); }
+                80% { transform: translateX(5px); }
+              }
+            `}</style>
 
-          <form onSubmit={handleSubmit} className="space-y-5">
-            {/* Email */}
-            <div>
-              <label htmlFor="email" className="block text-[#c8e6c9] text-sm font-medium mb-1.5">
-                Email Address
-              </label>
-              <input
-                id="email"
-                name="email"
-                type="email"
-                autoComplete="email"
-                required
-                value={form.email}
-                onChange={handleChange}
-                className="w-full px-4 py-3 rounded-xl bg-white/5 border border-[#2E7D32]/40 text-[#F1F8E9] placeholder-[#6a9f78]
-                  focus:outline-none focus:ring-2 focus:ring-[#8BC34A]/50 focus:border-[#8BC34A] transition-all duration-200"
-                placeholder="your.email@gmail.com"
-              />
-              {errors.email && <p className="text-red-400 text-xs mt-1">{errors.email[0]}</p>}
-            </div>
-
-            {/* Password */}
-            <div>
-              <label htmlFor="password" className="block text-[#c8e6c9] text-sm font-medium mb-1.5">
-                Password
-              </label>
-              <div className="relative">
+            <form onSubmit={handleSubmit} noValidate>
+              {/* Email */}
+              <div className="mb-5">
+                <label
+                  htmlFor="email"
+                  className="block text-sm font-medium mb-2"
+                  style={{ color: 'var(--color-text-secondary)' }}
+                >
+                  Email Address
+                </label>
                 <input
-                  id="password"
-                  name="password"
-                  type={showPwd ? 'text' : 'password'}
-                  autoComplete="current-password"
+                  id="email"
+                  name="email"
+                  type="email"
+                  autoComplete="email"
                   required
-                  value={form.password}
+                  value={form.email}
                   onChange={handleChange}
-                  className="w-full px-4 py-3 pr-12 rounded-xl bg-white/5 border border-[#2E7D32]/40 text-[#F1F8E9] placeholder-[#6a9f78]
-                    focus:outline-none focus:ring-2 focus:ring-[#8BC34A]/50 focus:border-[#8BC34A] transition-all duration-200"
-                  placeholder="Enter your password"
+                  className={`input-field ${errors.email ? 'error' : ''}`}
+                  placeholder="you@minsu.edu.ph"
                 />
+                {errors.email && (
+                  <p className="text-xs mt-1.5" style={{ color: '#f87171' }}>{errors.email[0]}</p>
+                )}
+              </div>
+
+              {/* Password */}
+              <div className="mb-5">
+                <label
+                  htmlFor="password"
+                  className="block text-sm font-medium mb-2"
+                  style={{ color: 'var(--color-text-secondary)' }}
+                >
+                  Password
+                </label>
+                <div className="relative">
+                  <input
+                    id="password"
+                    name="password"
+                    type={showPwd ? 'text' : 'password'}
+                    autoComplete="current-password"
+                    required
+                    value={form.password}
+                    onChange={handleChange}
+                    className={`input-field pr-12 ${errors.password ? 'error' : ''}`}
+                    placeholder="Enter your password"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPwd(!showPwd)}
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 transition-colors duration-200"
+                    style={{ color: 'var(--color-text-muted)' }}
+                    aria-label={showPwd ? 'Hide password' : 'Show password'}
+                    onMouseEnter={e => e.currentTarget.style.color = 'var(--color-primary)'}
+                    onMouseLeave={e => e.currentTarget.style.color = 'var(--color-text-muted)'}
+                  >
+                    {showPwd ? <EyeOffIcon /> : <EyeIcon />}
+                  </button>
+                </div>
+                {errors.password && (
+                  <p className="text-xs mt-1.5" style={{ color: '#f87171' }}>{errors.password[0]}</p>
+                )}
+              </div>
+
+              {/* Remember Me & Forgot */}
+              <div className="flex items-center justify-between mb-6">
+                <label className="flex items-center gap-2.5 cursor-pointer group">
+                  <div
+                    className="relative w-4 h-4 rounded flex items-center justify-center flex-shrink-0 transition-all duration-200"
+                    style={{
+                      background: rememberMe ? 'var(--color-primary)' : 'var(--input-bg)',
+                      border: `1.5px solid ${rememberMe ? 'var(--color-primary)' : 'var(--input-border)'}`,
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={rememberMe}
+                      onChange={(e) => setRememberMe(e.target.checked)}
+                      className="absolute inset-0 opacity-0 w-full h-full cursor-pointer"
+                      aria-label="Remember me"
+                    />
+                    {rememberMe && (
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                        <polyline points="20 6 9 17 4 12" />
+                      </svg>
+                    )}
+                  </div>
+                  <span className="text-sm" style={{ color: 'var(--color-text-muted)' }}>Remember me</span>
+                </label>
+
                 <button
                   type="button"
-                  onClick={() => setShowPwd(!showPwd)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[#6a9f78] hover:text-[#8BC34A] transition-colors duration-200"
-                  aria-label={showPwd ? 'Hide password' : 'Show password'}
+                  onClick={() => setForgotOpen(true)}
+                  className="text-sm font-medium transition-colors duration-200"
+                  style={{ color: 'var(--color-primary)' }}
+                  onMouseEnter={e => e.target.style.color = 'var(--color-accent-bright)'}
+                  onMouseLeave={e => e.target.style.color = 'var(--color-primary)'}
                 >
-                  {showPwd ? (
-                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21" />
-                    </svg>
-                  ) : (
-                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                    </svg>
-                  )}
+                  Forgot password?
                 </button>
               </div>
-              {errors.password && <p className="text-red-400 text-xs mt-1">{errors.password[0]}</p>}
-            </div>
 
-            {/* Remember Me & Forgot Password */}
-            <div className="flex items-center justify-between">
-              <label className="flex items-center gap-2 cursor-pointer group">
-                <input
-                  type="checkbox"
-                  checked={rememberMe}
-                  onChange={(e) => setRememberMe(e.target.checked)}
-                  className="w-4 h-4 rounded border-[#2E7D32] bg-white/5 text-[#8BC34A] focus:ring-[#8BC34A]/50 focus:ring-offset-0 cursor-pointer"
-                />
-                <span className="text-sm text-[#a5d6a7] group-hover:text-[#c8e6c9] transition-colors">Remember Me</span>
-              </label>
+              {/* Submit */}
               <button
-                type="button"
-                onClick={() => setForgotOpen(true)}
-                className="text-sm text-[#8BC34A] hover:text-[#a5d6a7] font-medium hover:underline transition-colors"
+                type="submit"
+                disabled={loading}
+                className="btn-primary w-full"
+                style={{
+                  padding: '0.9rem',
+                  opacity: loading ? 0.7 : 1,
+                  cursor: loading ? 'not-allowed' : 'pointer',
+                }}
               >
-                Forgot Password?
+                {loading ? (
+                  <>
+                    <div
+                      className="w-4 h-4 rounded-full border-2 border-white border-t-transparent"
+                      style={{ animation: 'spin 0.7s linear infinite' }}
+                      aria-hidden="true"
+                    />
+                    Signing in…
+                  </>
+                ) : (
+                  'Sign In'
+                )}
               </button>
-            </div>
+            </form>
 
-            {/* Submit */}
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full py-3.5 rounded-xl bg-[#2E7D32] text-[#F1F8E9] font-semibold text-sm
-                hover:bg-[#388e3c] focus:ring-2 focus:ring-[#8BC34A]/50 shadow-lg shadow-green-900/40
-                transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed
-                flex items-center justify-center gap-2"
+            <p className="mt-6 text-center text-sm" style={{ color: 'var(--color-text-muted)' }}>
+              Don't have an account?{' '}
+              <Link
+                to="/register"
+                className="font-semibold transition-colors duration-200"
+                style={{ color: 'var(--color-primary)' }}
+                onMouseEnter={e => e.target.style.color = 'var(--color-accent-bright)'}
+                onMouseLeave={e => e.target.style.color = 'var(--color-primary)'}
+              >
+                Create one
+              </Link>
+            </p>
+          </div>
+
+          {/* Back to home */}
+          <div className="mt-6 text-center">
+            <Link
+              to="/"
+              className="text-xs transition-colors duration-200 inline-flex items-center gap-1.5"
+              style={{ color: 'var(--color-text-faint)' }}
+              onMouseEnter={e => e.currentTarget.style.color = 'var(--color-text-muted)'}
+              onMouseLeave={e => e.currentTarget.style.color = 'var(--color-text-faint)'}
             >
-              {loading && (
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-              )}
-              {loading ? 'Signing in…' : 'Sign In'}
-            </button>
-          </form>
-
-          <p className="mt-6 text-center text-[#a5d6a7] text-sm">
-            Don&apos;t have an account?{' '}
-            <Link to="/register" className="text-[#8BC34A] font-medium hover:underline">
-              Create one
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M19 12H5M12 19l-7-7 7-7" />
+              </svg>
+              Back to AcadeX
             </Link>
-          </p>
+          </div>
         </div>
-
-        <p className="text-center text-[#6a9f78] text-xs mt-6">
-          © 2026 Mindoro State University. All rights reserved.
-        </p>
       </div>
 
-      {/* Forgot Password Modal */}
       <ForgotPasswordModal open={forgotOpen} onClose={() => setForgotOpen(false)} />
     </div>
   )

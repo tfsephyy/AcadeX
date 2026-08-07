@@ -7,7 +7,7 @@ import Footer from '../components/Footer'
 
 export default function Landing() {
   return (
-    <div className="font-sans bg-[#0f2f1b] text-[#F1F8E9] min-h-screen">
+    <div style={{ background: 'var(--color-bg)', color: 'var(--color-text)' }}>
       <Navbar />
       <main>
         <Hero />
