@@ -19,7 +19,7 @@ const FEATURES = [
         <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
       </svg>
     ),
-    label: 'Smart PDF Extraction',
+    label: 'PDF Extraction',
     description: 'Automatically extract title, authors, abstract, keywords, and publication year from any uploaded PDF.',
     color: '#22c55e',
   },
@@ -71,7 +71,7 @@ const FEATURES = [
         <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
       </svg>
     ),
-    label: 'AI Chatbot',
+    label: 'Chatbot',
     description: 'Intelligent assistant that helps users navigate the repository, discover research, and answer queries.',
     color: '#ec4899',
   },

@@ -164,7 +164,6 @@ const STATS = [
   { value: 1000, suffix: '+', label: 'Capstone Projects' },
   { value: 500, suffix: '+', label: 'Students' },
   { value: 50, suffix: '+', label: 'Faculty Members' },
-  { value: 1, suffix: '', label: 'Central Repository' },
 ]
 
 function StatsRow({ started }) {
@@ -172,7 +171,7 @@ function StatsRow({ started }) {
     useCountUp(STATS[0].value, 1800, started),
     useCountUp(STATS[1].value, 1600, started),
     useCountUp(STATS[2].value, 1400, started),
-    useCountUp(STATS[3].value, 800, started),
+
   ]
 
   return (
@@ -219,7 +218,7 @@ export default function Hero() {
         style={{ background: 'radial-gradient(circle, rgba(91,190,99,0.2) 0%, transparent 70%)', filter: 'blur(40px)' }} />
 
       <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 md:py-28 w-full">
-        <div className="flex flex-col-reverse lg:flex-row items-center gap-14 lg:gap-20">
+        <div className="flex flex-col lg:flex-row items-center gap-14 lg:gap-20">
 
           {/* Left — Content */}
           <div className="flex-1 text-center lg:text-left">
