@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider } from './context/AuthContext'
 import { NotificationProvider } from './components/Notification'
 import { ThemeProvider } from './context/ThemeContext'
+import { ChatbotProvider } from './context/ChatbotContext'
 import ProtectedRoute from './components/ProtectedRoute'
 import GuestRoute from './components/GuestRoute'
 import Landing from './pages/Landing'
@@ -88,45 +89,47 @@ function App() {
       <BrowserRouter>
         <NotificationProvider>
           <AuthProvider>
-            <Routes>
-            {/* Public landing page */}
-            <Route path="/" element={<Landing />} />
+            <ChatbotProvider>
+              <Routes>
+              {/* Public landing page */}
+              <Route path="/" element={<Landing />} />
 
-            {/* Guest-only (redirect to dashboard if logged in) */}
-            <Route path="/login" element={<GuestRoute><Login /></GuestRoute>} />
-            <Route path="/register" element={<GuestRoute><Register /></GuestRoute>} />
+              {/* Guest-only (redirect to dashboard if logged in) */}
+              <Route path="/login" element={<GuestRoute><Login /></GuestRoute>} />
+              <Route path="/register" element={<GuestRoute><Register /></GuestRoute>} />
 
-            {/* Protected (must be logged in) */}
-            <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+              {/* Protected (must be logged in) */}
+              <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
 
-            {/* Admin routes */}
-            <Route path="/admin/dashboard" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
-            <Route path="/admin/capstones/:id" element={<AdminRoute><CapstoneMainPage /></AdminRoute>} />
-            <Route path="/admin/capstone-library" element={<AdminRoute><CapstoneLibrary /></AdminRoute>} />
-            <Route path="/admin/capstone-library/review-data" element={<AdminBareRoute><ReviewExtractedDataPage nextPath="/admin/capstone-library/upload-details" backPath="/admin/capstone-library" /></AdminBareRoute>} />
-            <Route path="/admin/capstone-library/upload-details" element={<AdminBareRoute><AdminCapstoneAdditionalInfoPage /></AdminBareRoute>} />
-            <Route path="/admin/users" element={<AdminRoute><UserManagement /></AdminRoute>} />
-            <Route path="/admin/published" element={<AdminRoute><PublishedCapstones /></AdminRoute>} />
-            <Route path="/admin/activity-logs" element={<AdminRoute><ActivityLogs /></AdminRoute>} />
-            <Route path="/admin/profile" element={<AdminRoute><AdminProfile /></AdminRoute>} />
-            <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
+              {/* Admin routes */}
+              <Route path="/admin/dashboard" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
+              <Route path="/admin/capstones/:id" element={<AdminRoute><CapstoneMainPage /></AdminRoute>} />
+              <Route path="/admin/capstone-library" element={<AdminRoute><CapstoneLibrary /></AdminRoute>} />
+              <Route path="/admin/capstone-library/review-data" element={<AdminBareRoute><ReviewExtractedDataPage nextPath="/admin/capstone-library/upload-details" backPath="/admin/capstone-library" /></AdminBareRoute>} />
+              <Route path="/admin/capstone-library/upload-details" element={<AdminBareRoute><AdminCapstoneAdditionalInfoPage /></AdminBareRoute>} />
+              <Route path="/admin/users" element={<AdminRoute><UserManagement /></AdminRoute>} />
+              <Route path="/admin/published" element={<AdminRoute><PublishedCapstones /></AdminRoute>} />
+              <Route path="/admin/activity-logs" element={<AdminRoute><ActivityLogs /></AdminRoute>} />
+              <Route path="/admin/profile" element={<AdminRoute><AdminProfile /></AdminRoute>} />
+              <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
 
-            {/* Faculty routes */}
-            <Route path="/faculty/capstone-library" element={<FacultyRoute><FacultyCapstoneLibrary /></FacultyRoute>} />
-            <Route path="/faculty/capstone-library/review-data" element={<FacultyBareRoute><ReviewExtractedDataPage nextPath="/faculty/capstone-library/upload-details" backPath="/faculty/capstone-library" /></FacultyBareRoute>} />
-            <Route path="/faculty/capstone-library/upload-details" element={<FacultyBareRoute><CapstoneAdditionalInfoPage /></FacultyBareRoute>} />
-            <Route path="/faculty/uploads" element={<FacultyRoute><FacultyUploadedCapstones /></FacultyRoute>} />
-            <Route path="/faculty/capstones/:id" element={<FacultyRoute><CapstoneMainPage /></FacultyRoute>} />
-            <Route path="/faculty/profile" element={<FacultyRoute><FacultyProfile /></FacultyRoute>} />
-            <Route path="/faculty" element={<Navigate to="/faculty/uploads" replace />} />
-            <Route path="/faculty/dashboard" element={<Navigate to="/faculty/uploads" replace />} />
+              {/* Faculty routes */}
+              <Route path="/faculty/capstone-library" element={<FacultyRoute><FacultyCapstoneLibrary /></FacultyRoute>} />
+              <Route path="/faculty/capstone-library/review-data" element={<FacultyBareRoute><ReviewExtractedDataPage nextPath="/faculty/capstone-library/upload-details" backPath="/faculty/capstone-library" /></FacultyBareRoute>} />
+              <Route path="/faculty/capstone-library/upload-details" element={<FacultyBareRoute><CapstoneAdditionalInfoPage /></FacultyBareRoute>} />
+              <Route path="/faculty/uploads" element={<FacultyRoute><FacultyUploadedCapstones /></FacultyRoute>} />
+              <Route path="/faculty/capstones/:id" element={<FacultyRoute><CapstoneMainPage /></FacultyRoute>} />
+              <Route path="/faculty/profile" element={<FacultyRoute><FacultyProfile /></FacultyRoute>} />
+              <Route path="/faculty" element={<Navigate to="/faculty/uploads" replace />} />
+              <Route path="/faculty/dashboard" element={<Navigate to="/faculty/uploads" replace />} />
 
-            {/* Student routes */}
-            <Route path="/student/uploads" element={<StudentRoute><StudentUploadedCapstones /></StudentRoute>} />
-            <Route path="/student/capstones/:id" element={<StudentRoute><StudentCapstoneMainPage /></StudentRoute>} />
-            <Route path="/student/profile" element={<StudentRoute><StudentProfile /></StudentRoute>} />
-            <Route path="/student" element={<Navigate to="/student/uploads" replace />} />
-            </Routes>
+              {/* Student routes */}
+              <Route path="/student/uploads" element={<StudentRoute><StudentUploadedCapstones /></StudentRoute>} />
+              <Route path="/student/capstones/:id" element={<StudentRoute><StudentCapstoneMainPage /></StudentRoute>} />
+              <Route path="/student/profile" element={<StudentRoute><StudentProfile /></StudentRoute>} />
+              <Route path="/student" element={<Navigate to="/student/uploads" replace />} />
+              </Routes>
+            </ChatbotProvider>
           </AuthProvider>
         </NotificationProvider>
       </BrowserRouter>

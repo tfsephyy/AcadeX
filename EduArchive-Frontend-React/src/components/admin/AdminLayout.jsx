@@ -17,6 +17,7 @@ import {
 } from 'react-icons/hi';
 import ConfirmDialog from '../ConfirmDialog';
 import { getAdminNotifications, getUnreadNotificationCount, markNotificationRead, markAllNotificationsRead } from '../../api/admin';
+import Chatbot from '../Chatbot';
 
 const navItems = [
     { to: '/admin/dashboard',      label: 'Dashboard',         icon: HiOutlineViewGrid },
@@ -396,6 +397,9 @@ export default function AdminLayout({ children }) {
                 onConfirm={handleLogout}
                 onCancel={() => setLogoutConfirm(false)}
             />
+
+            {/* Chatbot — floating AI assistant */}
+            <Chatbot />
         </div>
     );
 }

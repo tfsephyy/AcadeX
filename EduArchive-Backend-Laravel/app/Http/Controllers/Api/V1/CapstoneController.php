@@ -10,12 +10,13 @@ use App\Models\CapstoneResource;
 use App\Models\Keyword;
 use App\Models\Notification;
 use App\Models\User;
+use App\Services\PdfEncryptorService;
 use App\Services\PdfExtractorService;
+use App\Services\PdfTextService;
 use App\Traits\ApiResponses;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Facades\Validator;
 
 class CapstoneController extends Controller
 {
@@ -90,7 +91,7 @@ class CapstoneController extends Controller
     }
 
     /**
-     * Upload and extract PDF data.
+     * Upload and extract PDF data (encrypted at rest).
      */
     public function upload(Request $request): JsonResponse
     {
@@ -103,11 +104,14 @@ class CapstoneController extends Controller
         }
 
         $file = $request->file('pdf');
-        $path = $file->store('capstones', 'local');
 
-        // Extract data from PDF
+        // Extract text BEFORE encrypting (extractor needs the real file)
         $extractor = new PdfExtractorService();
         $extracted = $extractor->extract($file);
+
+        // Encrypt and store
+        $encryptor = new PdfEncryptorService();
+        $path = $encryptor->encryptAndStore('capstones', $file);
 
         return $this->successResponse([
             'pdf_path'          => $path,
@@ -117,20 +121,21 @@ class CapstoneController extends Controller
     }
 
     /**
-     * Upload a resource file (additional attachment for a capstone).
+     * Upload a resource file (encrypted at rest).
      */
     public function uploadResource(Request $request): JsonResponse
     {
         $validator = Validator::make($request->all(), [
-            'file' => 'required|file|max:51200', // 50MB max
+            'file' => 'required|file|max:51200',
         ]);
 
         if ($validator->fails()) {
             return $this->errorResponse('Validation failed.', 422, $validator->errors());
         }
 
-        $file = $request->file('file');
-        $path = $file->store('capstone_resources', 'local');
+        $file      = $request->file('file');
+        $encryptor = new PdfEncryptorService();
+        $path      = $encryptor->encryptAndStore('capstone_resources', $file);
 
         return $this->successResponse([
             'file_path'          => $path,
@@ -213,6 +218,18 @@ class CapstoneController extends Controller
                     'file_original_name' => $resource['file_original_name'] ?? null,
                 ]);
             }
+        }
+
+        // ── Extract full PDF text and store in DB for chatbot ──────────────
+        // Done after creation so a failure never blocks the upload.
+        try {
+            $pdfTextService = new PdfTextService();
+            $pdfText = $pdfTextService->extractFromEncryptedPath($capstone->pdf_path);
+            if (!empty($pdfText)) {
+                $capstone->update(['pdf_text' => $pdfText]);
+            }
+        } catch (\Throwable $e) {
+            \Log::warning('PDF text extraction failed for capstone ' . $capstone->id . ': ' . $e->getMessage());
         }
 
         AuditLog::log('upload_capstone', $request->user()->id, Capstone::class, $capstone->id);
@@ -564,54 +581,120 @@ class CapstoneController extends Controller
     }
 
     /**
-     * Download a capstone PDF.
+     * Issue a short-lived signed token for PDF access.
+     * Bound to the authenticated user + capstone.
      */
-    public function download(Request $request, Capstone $capstone): \Symfony\Component\HttpFoundation\BinaryFileResponse|JsonResponse
+    public function getPdfToken(Request $request, Capstone $capstone): JsonResponse
     {
+        $user = $request->user();
+
+        // Non-admins and non-faculty can only access published capstones
+        if (!$user->hasRole('admin') && !$user->hasRole('faculty')) {
+            if (!$capstone->is_published) {
+                return $this->errorResponse('Capstone not available.', 403);
+            }
+        }
+
+        $encryptor = new PdfEncryptorService();
+        $token = $encryptor->generateToken($capstone->id, $user->id, 30); // 30-min TTL
+
+        return $this->successResponse(['token' => $token, 'expires_in' => 1800], 'PDF token issued.');
+    }
+
+    /**
+     * Download a capstone PDF (authenticated + authorization checks).
+     */
+    public function download(Request $request, Capstone $capstone): \Symfony\Component\HttpFoundation\StreamedResponse|JsonResponse
+    {
+        $user = $request->user();
+
+        // Non-admins can only download published capstones
+        if (!$user->hasRole('admin') && !$capstone->is_published) {
+            return $this->errorResponse('You are not authorized to download this capstone.', 403);
+        }
+
         if (!$capstone->pdf_path || !Storage::disk('local')->exists($capstone->pdf_path)) {
             return $this->errorResponse('PDF file not found.', 404);
         }
 
+        // Decrypt in memory
+        $encryptor = new PdfEncryptorService();
+        $rawBytes  = $encryptor->decryptFromDisk($capstone->pdf_path);
+
+        if ($rawBytes === null) {
+            return $this->errorResponse('PDF could not be decrypted.', 500);
+        }
+
         // Record download
         $capstone->downloads()->create([
-            'user_id'    => $request->user()?->id,
+            'user_id'    => $user->id,
             'ip_address' => $request->ip(),
         ]);
         $capstone->increment('download_count');
 
-        // Audit log for download tracking
         AuditLog::log(
             'download_capstone',
-            $request->user()?->id,
+            $user->id,
             Capstone::class,
             $capstone->id,
             null,
             ['title' => $capstone->title]
         );
 
-        $fullPath = Storage::disk('local')->path($capstone->pdf_path);
         $filename = $capstone->pdf_original_name ?? $capstone->title . '.pdf';
+        $size     = strlen($rawBytes);
 
-        return response()->download($fullPath, $filename, [
-            'Content-Type' => 'application/pdf',
-        ]);
+        return response()->stream(
+            function () use ($rawBytes) { echo $rawBytes; },
+            200,
+            [
+                'Content-Type'              => 'application/pdf',
+                'Content-Disposition'       => 'attachment; filename="' . addslashes($filename) . '"',
+                'Content-Length'            => $size,
+                'Cache-Control'             => 'no-store, no-cache, must-revalidate, max-age=0',
+                'Pragma'                    => 'no-cache',
+                'X-Content-Type-Options'    => 'nosniff',
+            ]
+        );
     }
 
     /**
-     * Serve PDF for viewing.
+     * Serve PDF for viewing (in-memory decryption, no file written to disk).
      */
-    public function servePdf(Capstone $capstone): \Symfony\Component\HttpFoundation\BinaryFileResponse|JsonResponse
+    public function servePdf(Request $request, Capstone $capstone): \Symfony\Component\HttpFoundation\StreamedResponse|JsonResponse
     {
+        $user = $request->user();
+
+        // Non-admins can only view published capstones
+        if (!$user->hasRole('admin') && !$capstone->is_published) {
+            return $this->errorResponse('Capstone not available.', 403);
+        }
+
         if (!$capstone->pdf_path || !Storage::disk('local')->exists($capstone->pdf_path)) {
             return $this->errorResponse('PDF file not found.', 404);
         }
 
-        $fullPath = Storage::disk('local')->path($capstone->pdf_path);
+        $encryptor = new PdfEncryptorService();
+        $rawBytes  = $encryptor->decryptFromDisk($capstone->pdf_path);
 
-        return response()->file($fullPath, [
-            'Content-Type'        => 'application/pdf',
-            'Content-Disposition' => 'inline',
-        ]);
+        if ($rawBytes === null) {
+            return $this->errorResponse('PDF could not be decrypted.', 500);
+        }
+
+        $size = strlen($rawBytes);
+
+        return response()->stream(
+            function () use ($rawBytes) { echo $rawBytes; },
+            200,
+            [
+                'Content-Type'              => 'application/pdf',
+                'Content-Disposition'       => 'inline',
+                'Content-Length'            => $size,
+                'Cache-Control'             => 'no-store, no-cache, must-revalidate, max-age=0',
+                'Pragma'                    => 'no-cache',
+                'X-Content-Type-Options'    => 'nosniff',
+            ]
+        );
     }
 
     /**

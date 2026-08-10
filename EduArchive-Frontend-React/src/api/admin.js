@@ -53,7 +53,9 @@ export const getPublishedCategories = () => axios.get('/published/categories');
 export const getCapstone = (id) => axios.get(`/capstones/${id}`);
 export const recordView = (id) => axios.post(`/capstones/${id}/view`);
 export const downloadCapstone = (id) => axios.get(`/capstones/${id}/download`, { responseType: 'blob' });
-export const getCaptonePdf = (id) => `/capstones/${id}/pdf`;
+// PDF is fetched as a blob (decrypted in-memory on the server, never exposed as a raw file URL)
+export const getCapstoneBlob = (id) => axios.get(`/capstones/${id}/pdf`, { responseType: 'blob' });
+export const getCaptonePdf = (id) => `/capstones/${id}/pdf`; // kept for backward compat
 export const getFacultyList = (params = {}) => axios.get('/capstones/faculty-list', { params });
 
 // ── Notifications ──────────────────────────────────

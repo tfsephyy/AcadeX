@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\V1\ActivityLogController;
 use App\Http\Controllers\Api\V1\AdminDashboardController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\CapstoneController;
+use App\Http\Controllers\Api\V1\ChatbotController;
 use App\Http\Controllers\Api\V1\NotificationController;
 use App\Http\Controllers\Api\V1\PasswordResetController;
 use App\Http\Controllers\Api\V1\PublishedCapstoneController;
@@ -50,12 +51,20 @@ Route::prefix('v1')->group(function () {
             Route::get('/categories', [PublishedCapstoneController::class, 'categories']);
         });
 
+        // ── Chatbot (all authenticated users) ──────────────────────
+        Route::post('/chatbot/message', [ChatbotController::class, 'message'])
+            ->middleware('throttle:30,1');
+
         // ── Shared capstone utilities (all authenticated users) ──
         Route::get('/capstones/faculty-list',              [CapstoneController::class, 'getFacultyList']);
         Route::get('/capstones/bookmarked',                [CapstoneController::class, 'userBookmarks']);
         Route::post('/capstones/{capstone}/view',          [CapstoneController::class, 'recordView']);
-        Route::get('/capstones/{capstone}/download',       [CapstoneController::class, 'download']);
+        // PDF serving — decrypts in-memory, no raw file exposed
         Route::get('/capstones/{capstone}/pdf',            [CapstoneController::class, 'servePdf']);
+        Route::get('/capstones/{capstone}/pdf-token',      [CapstoneController::class, 'getPdfToken']);
+        // Download — rate-limited to 10 per hour per user
+        Route::get('/capstones/{capstone}/download',       [CapstoneController::class, 'download'])
+            ->middleware('throttle:10,60');
         Route::post('/capstones/{capstone}/bookmark',      [CapstoneController::class, 'toggleBookmark']);
         Route::get('/capstones/{capstone}',                [CapstoneController::class, 'show']);
 

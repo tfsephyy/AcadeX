@@ -12,6 +12,7 @@ import {
     HiChevronDown,
 } from 'react-icons/hi';
 import ConfirmDialog from '../ConfirmDialog';
+import Chatbot from '../Chatbot';
 
 const navItems = [
     { to: '/faculty/capstone-library', label: 'Capstone Library',    icon: HiOutlineLibrary },
@@ -236,6 +237,9 @@ export default function FacultyLayout({ children }) {
                 onConfirm={handleLogout}
                 onCancel={() => setLogoutConfirm(false)}
             />
+
+            {/* Chatbot — floating AI assistant */}
+            <Chatbot />
         </div>
     );
 }

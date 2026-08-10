@@ -9,6 +9,7 @@ import { Document, Page, pdfjs } from 'react-pdf';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
 import api from '../../api/axios';
+import { useChatbotContext } from '../../context/ChatbotContext';
 
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
@@ -16,6 +17,7 @@ export default function CapstoneMainPage() {
     const { id } = useParams();
     const navigate = useNavigate();
     const notify = useNotification();
+    const { setCapstoneContext } = useChatbotContext();
     const [capstone, setCapstone] = useState(null);
     const [loading, setLoading] = useState(true);
     const [bookmarked, setBookmarked] = useState(false);
@@ -24,6 +26,14 @@ export default function CapstoneMainPage() {
     const [pdfWidth, setPdfWidth] = useState(600);
     const pdfContainerRef = useRef(null);
     const viewRecorded = useRef(false);
+
+    // Push capstone context into chatbot when capstone loads, clear on unmount
+    useEffect(() => {
+        if (capstone) {
+            setCapstoneContext({ id: capstone.id, title: capstone.title });
+        }
+        return () => setCapstoneContext(null);
+    }, [capstone?.id]);
 
     useEffect(() => {
         viewRecorded.current = false;

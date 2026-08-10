@@ -11,6 +11,7 @@ import {
     HiChevronDown,
 } from 'react-icons/hi';
 import ConfirmDialog from '../ConfirmDialog';
+import Chatbot from '../Chatbot';
 
 const navItems = [
     { to: '/student/uploads', label: 'Uploaded Capstones', icon: HiOutlineBookOpen },
@@ -234,6 +235,9 @@ export default function StudentLayout({ children }) {
                 onConfirm={handleLogout}
                 onCancel={() => setLogoutConfirm(false)}
             />
+
+            {/* Chatbot — floating AI assistant */}
+            <Chatbot />
         </div>
     );
 }

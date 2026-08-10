@@ -21,6 +21,7 @@ class Capstone extends Model
         'abstract',
         'pdf_path',
         'pdf_original_name',
+        'pdf_text',          // full extracted text from PDF — used by chatbot
         'status',
         'is_published',
         'is_archived',
