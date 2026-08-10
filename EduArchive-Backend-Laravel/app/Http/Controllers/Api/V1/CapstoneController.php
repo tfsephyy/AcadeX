@@ -525,29 +525,38 @@ class CapstoneController extends Controller
 
     /**
      * Record a view for a capstone.
+     * Authenticated users: strictly one view per user (enforced by unique key).
+     * Guests: one view per IP per 30 min.
      */
     public function recordView(Request $request, Capstone $capstone): JsonResponse
     {
         $userId = $request->user()?->id;
-        $ip = $request->ip();
+        $ip     = $request->ip();
 
-        // Prevent duplicate views from same user within 30 minutes
-        $recentView = $capstone->views()
-            ->where(function ($q) use ($userId, $ip) {
-                if ($userId) {
-                    $q->where('user_id', $userId);
-                } else {
-                    $q->where('ip_address', $ip);
-                }
-            })
-            ->where('created_at', '>', now()->subMinutes(30))
-            ->exists();
+        if ($userId) {
+            // firstOrCreate respects the unique(user_id, capstone_id) constraint
+            [$view, $created] = [
+                \App\Models\CapstoneView::firstOrCreate(
+                    ['user_id' => $userId, 'capstone_id' => $capstone->id],
+                    ['ip_address' => $ip]
+                ),
+                false,
+            ];
+            $created = $view->wasRecentlyCreated;
+        } else {
+            // Guest: prevent repeat views within 30 min by IP
+            $created = !$capstone->views()
+                ->whereNull('user_id')
+                ->where('ip_address', $ip)
+                ->where('created_at', '>', now()->subMinutes(30))
+                ->exists();
 
-        if (!$recentView) {
-            $capstone->views()->create([
-                'user_id'    => $userId,
-                'ip_address' => $ip,
-            ]);
+            if ($created) {
+                $capstone->views()->create(['ip_address' => $ip]);
+            }
+        }
+
+        if ($created) {
             $capstone->increment('view_count');
         }
 

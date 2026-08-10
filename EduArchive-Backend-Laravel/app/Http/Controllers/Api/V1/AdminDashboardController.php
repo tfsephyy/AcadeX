@@ -88,4 +88,53 @@ class AdminDashboardController extends Controller
 
         return $this->successResponse($data, 'Recent approved capstones.');
     }
+
+    /**
+     * Get the top 5 most-viewed capstones (unique views per user).
+     */
+    public function mostViewed(): JsonResponse
+    {
+        $data = Capstone::with(['uploader:id,name'])
+            ->withCount(['views as unique_views' => function ($q) {
+                $q->whereNotNull('user_id');
+            }])
+            ->orderByDesc('unique_views')
+            ->limit(5)
+            ->get()
+            ->map(fn($c) => [
+                'id'           => $c->id,
+                'title'        => $c->title,
+                'author'       => $c->author,
+                'year'         => $c->year,
+                'program'      => $c->program,
+                'unique_views' => $c->unique_views,
+                'uploader'     => $c->uploader?->name,
+            ]);
+
+        return $this->successResponse($data, 'Most viewed capstones.');
+    }
+
+    /**
+     * Get the top 5 most-cited capstones (referenced by other capstones).
+     */
+    public function mostCited(): JsonResponse
+    {
+        $data = Capstone::with(['uploader:id,name'])
+            ->withCount('referencedBy as citation_count')
+            ->orderByDesc('citation_count')
+            ->having('citation_count', '>', 0)
+            ->limit(5)
+            ->get()
+            ->map(fn($c) => [
+                'id'             => $c->id,
+                'title'          => $c->title,
+                'author'         => $c->author,
+                'year'           => $c->year,
+                'program'        => $c->program,
+                'citation_count' => $c->citation_count,
+                'uploader'       => $c->uploader?->name,
+            ]);
+
+        return $this->successResponse($data, 'Most cited capstones.');
+    }
 }

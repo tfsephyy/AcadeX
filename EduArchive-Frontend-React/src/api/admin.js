@@ -7,6 +7,8 @@ export const getApprovedByYear = () => axios.get('/admin/dashboard/approved-by-y
 export const getStatusDistribution = () => axios.get('/admin/dashboard/status-distribution');
 export const getStudentsPerYear = () => axios.get('/admin/dashboard/students-per-year');
 export const getRecentApproved = () => axios.get('/admin/dashboard/recent-approved');
+export const getMostViewed = () => axios.get('/admin/dashboard/most-viewed');
+export const getMostCited = () => axios.get('/admin/dashboard/most-cited');
 
 // ── Capstone Management ────────────────────────────
 export const getCapstones = (params = {}) => axios.get('/admin/capstones', { params });

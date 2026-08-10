@@ -68,6 +68,8 @@ Route::prefix('v1')->group(function () {
             Route::get('/dashboard/approved-by-year',   [AdminDashboardController::class, 'approvedByYear']);
             Route::get('/dashboard/students-per-year',  [AdminDashboardController::class, 'studentsPerYear']);
             Route::get('/dashboard/recent-approved',    [AdminDashboardController::class, 'recentApproved']);
+            Route::get('/dashboard/most-viewed',        [AdminDashboardController::class, 'mostViewed']);
+            Route::get('/dashboard/most-cited',         [AdminDashboardController::class, 'mostCited']);
 
             // Capstone Management
             Route::get('/capstones',                       [CapstoneController::class, 'index']);
