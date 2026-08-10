@@ -30,14 +30,55 @@ class PdfExtractorService
         '/^\s*Page\s*\d+\s*$/mi', // "Page 1" style footers
     ];
 
+    /** Minimum average chars/page to consider text-based (not scanned). */
+    private const OCR_THRESHOLD = 80;
+
+    /** Ghostscript binary — auto-detected at runtime. */
+    private const GS_PATHS = [
+        'C:\\Program Files\\gs\\gs10.07.1\\bin\\gswin64c.exe',
+        'C:\\Program Files\\gs\\gs10.05.0\\bin\\gswin64c.exe',
+        'C:\\Program Files\\gs\\gs10.04.0\\bin\\gswin64c.exe',
+        'gswin64c',
+        'gswin32c',
+        'gs',
+    ];
+
+    /** Tesseract binary — auto-detected at runtime. */
+    private const TESS_PATHS = [
+        'C:\\Program Files\\Tesseract-OCR\\tesseract.exe',
+        'C:\\Program Files (x86)\\Tesseract-OCR\\tesseract.exe',
+        'tesseract',
+    ];
+
     /**
      * Extract text and metadata from a PDF file.
+     * Automatically falls back to OCR for scanned PDFs.
      */
     public function extract(UploadedFile $file): array
     {
-        // Parse PDF once — get raw pages (no trimming)
-        $rawPages = $this->extractRawPages($file->getRealPath());
+        $filePath = $file->getRealPath();
+
+        // Parse PDF — get raw pages (no trimming)
+        $rawPages = $this->extractRawPages($filePath);
         $rawFirstPage = $rawPages[0] ?? '';
+
+        // Detect scanned PDF: if average chars/page is too low, run OCR
+        $totalChars = array_sum(array_map('mb_strlen', $rawPages));
+        $pageCount  = max(1, count($rawPages));
+        $avgChars   = $totalChars / $pageCount;
+
+        if ($avgChars < self::OCR_THRESHOLD) {
+            Log::info("PdfExtractorService: sparse text ({$avgChars} chars/page avg) — attempting OCR on [{$filePath}]");
+            $ocrPages = $this->extractPagesViaOcr($filePath);
+
+            if (!empty(implode('', $ocrPages))) {
+                Log::info('PdfExtractorService: OCR succeeded, using OCR text for metadata extraction.');
+                $rawPages     = $ocrPages;
+                $rawFirstPage = $ocrPages[0] ?? '';
+            } else {
+                Log::warning('PdfExtractorService: OCR returned no text. Metadata will be empty.');
+            }
+        }
 
         // Clean pages (header/footer trimmed) for title, author, abstract, etc.
         $pages = array_map(function ($rawText) {
@@ -46,7 +87,7 @@ class PdfExtractorService
         }, $rawPages);
 
         $firstPageText = $pages[0] ?? '';
-        $fullText = implode("\n", $pages);
+        $fullText      = implode("\n", $pages);
 
         $abstract = $this->extractAbstract($fullText);
         if ($abstract) {
@@ -54,18 +95,17 @@ class PdfExtractorService
         }
 
         return [
-            'title' => $this->extractTitle($firstPageText),
-            'year' => $this->extractYear($rawFirstPage),
-            'author' => $this->extractAuthor($firstPageText),
-            'program' => $this->extractProgram($fullText),
+            'title'    => $this->extractTitle($firstPageText),
+            'year'     => $this->extractYear($rawFirstPage),
+            'author'   => $this->extractAuthor($firstPageText),
+            'program'  => $this->extractProgram($fullText),
             'abstract' => $abstract,
             'keywords' => $this->extractKeywords($fullText),
         ];
     }
 
     /**
-     * Extract RAW text per page (no header/footer trimming).
-     * Used for year extraction where the year sits at the very bottom of page 1.
+     * Extract RAW text per page using smalot/pdfparser (works for text-based PDFs).
      *
      * @return string[] Array of raw text strings indexed by page number (0-based).
      */
@@ -73,8 +113,8 @@ class PdfExtractorService
     {
         try {
             $parser = new \Smalot\PdfParser\Parser();
-            $pdf = $parser->parseFile($filePath);
-            $pages = [];
+            $pdf    = $parser->parseFile($filePath);
+            $pages  = [];
 
             foreach ($pdf->getPages() as $page) {
                 $pages[] = $page->getText();
@@ -85,6 +125,117 @@ class PdfExtractorService
             Log::warning('PDF raw text extraction failed: ' . $e->getMessage());
             return [''];
         }
+    }
+
+    // ─── OCR Pipeline (Ghostscript → Tesseract) ──────────────────────────────
+
+    /**
+     * Use Ghostscript to render PDF pages to PNG, then Tesseract to read them.
+     * Returns one string per page, same structure as extractRawPages().
+     *
+     * @return string[]
+     */
+    protected function extractPagesViaOcr(string $filePath): array
+    {
+        $gs   = $this->findBinary(self::GS_PATHS, 'Ghostscript');
+        $tess = $this->findBinary(self::TESS_PATHS, 'Tesseract');
+
+        if (!$gs || !$tess) {
+            return [''];
+        }
+
+        $tmpDir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'eduocr_' . uniqid('', true);
+        @mkdir($tmpDir, 0777, true);
+
+        try {
+            // Render PDF → PNG (300 DPI, one file per page)
+            $outPattern = $tmpDir . DIRECTORY_SEPARATOR . 'page_%04d.png';
+            $gsCmd = sprintf(
+                '"%s" -dNOPAUSE -dBATCH -dSAFER -sDEVICE=png16m -r300 -dTextAlphaBits=4 -dGraphicsAlphaBits=4 -sOutputFile="%s" "%s" 2>&1',
+                $gs, $outPattern, $filePath
+            );
+            exec($gsCmd, $gsOut, $gsCode);
+
+            if ($gsCode !== 0) {
+                Log::warning('OCR: Ghostscript failed (code ' . $gsCode . '): ' . implode(' ', $gsOut));
+                return [''];
+            }
+
+            $images = glob($tmpDir . DIRECTORY_SEPARATOR . 'page_*.png') ?: [];
+            sort($images); // maintain page order
+
+            if (empty($images)) {
+                Log::warning('OCR: Ghostscript produced no images.');
+                return [''];
+            }
+
+            $pages = [];
+            foreach (array_slice($images, 0, 60) as $imgPath) {
+                $outBase = $imgPath . '_ocr';
+                $tessCmd = sprintf(
+                    '"%s" "%s" "%s" -l eng --psm 6 2>&1',
+                    $tess, $imgPath, $outBase
+                );
+                exec($tessCmd, $tessOut, $tessCode);
+
+                $txtFile = $outBase . '.txt';
+                $pageText = '';
+                if (file_exists($txtFile)) {
+                    $pageText = trim(file_get_contents($txtFile));
+                    @unlink($txtFile);
+                }
+                $pages[] = $pageText;
+            }
+
+            return $pages;
+
+        } catch (\Throwable $e) {
+            Log::error('OCR pipeline error: ' . $e->getMessage());
+            return [''];
+        } finally {
+            // Clean up all temp images
+            foreach (glob($tmpDir . DIRECTORY_SEPARATOR . '*') ?: [] as $f) {
+                @unlink($f);
+            }
+            @rmdir($tmpDir);
+        }
+    }
+
+    /**
+     * Find a binary from a list of candidate paths.
+     * Returns the first working path, or null.
+     */
+    private function findBinary(array $candidates, string $label): ?string
+    {
+        // Also search for any Ghostscript version dynamically
+        if ($label === 'Ghostscript') {
+            foreach (glob('C:\\Program Files\\gs\\gs*\\bin\\gswin64c.exe') ?: [] as $p) {
+                $candidates[] = $p;
+            }
+            foreach (glob('C:\\Program Files\\gs\\gs*\\bin\\gswin32c.exe') ?: [] as $p) {
+                $candidates[] = $p;
+            }
+        }
+
+        foreach ($candidates as $bin) {
+            $exists = (str_contains($bin, DIRECTORY_SEPARATOR) || str_contains($bin, '/'))
+                ? file_exists($bin)
+                : $this->onPath($bin);
+
+            if ($exists) {
+                return $bin;
+            }
+        }
+
+        Log::warning("OCR: {$label} binary not found. Install it to enable OCR for scanned PDFs.");
+        return null;
+    }
+
+    private function onPath(string $bin): bool
+    {
+        $cmd  = PHP_OS_FAMILY === 'Windows' ? "where \"{$bin}" : "which \"{$bin}\"";
+        exec($cmd . ' 2>&1', $out, $code);
+        return $code === 0;
     }
 
     /**
