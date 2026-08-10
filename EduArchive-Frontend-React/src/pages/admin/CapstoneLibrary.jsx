@@ -425,12 +425,6 @@ export default function CapstoneLibrary() {
                 <UploadCapstoneModal
                     open={uploadOpen}
                     onClose={() => setUploadOpen(false)}
-                    onSuccess={() => {
-                        setUploadOpen(false);
-                        setPage(1);
-                        setSearch('');
-                        setFilters({ year: '', program: '', category: '' });
-                    }}
                 />
             )}
 

@@ -31,6 +31,15 @@ import StudentUploadedCapstones from './pages/student/StudentUploadedCapstones'
 import StudentCapstoneMainPage from './pages/student/StudentCapstoneMainPage'
 import StudentProfile from './pages/student/StudentProfile'
 
+// Faculty extra pages
+import CapstoneAdditionalInfoPage from './pages/faculty/CapstoneAdditionalInfoPage'
+
+// Admin extra pages
+import AdminCapstoneAdditionalInfoPage from './pages/admin/AdminCapstoneAdditionalInfoPage'
+
+// Shared
+import ReviewExtractedDataPage from './components/ReviewExtractedDataPage'
+
 function AdminRoute({ children }) {
   return (
     <ProtectedRoute roles={['admin']}>
@@ -39,10 +48,28 @@ function AdminRoute({ children }) {
   )
 }
 
+// Used for full-page admin flows that render without the sidebar
+function AdminBareRoute({ children }) {
+  return (
+    <ProtectedRoute roles={['admin']}>
+      {children}
+    </ProtectedRoute>
+  )
+}
+
 function FacultyRoute({ children }) {
   return (
     <ProtectedRoute roles={['faculty']}>
       <FacultyLayout>{children}</FacultyLayout>
+    </ProtectedRoute>
+  )
+}
+
+// Full-page faculty flows without the sidebar
+function FacultyBareRoute({ children }) {
+  return (
+    <ProtectedRoute roles={['faculty']}>
+      {children}
     </ProtectedRoute>
   )
 }
@@ -76,6 +103,8 @@ function App() {
             <Route path="/admin/dashboard" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
             <Route path="/admin/capstones/:id" element={<AdminRoute><CapstoneMainPage /></AdminRoute>} />
             <Route path="/admin/capstone-library" element={<AdminRoute><CapstoneLibrary /></AdminRoute>} />
+            <Route path="/admin/capstone-library/review-data" element={<AdminBareRoute><ReviewExtractedDataPage nextPath="/admin/capstone-library/upload-details" backPath="/admin/capstone-library" /></AdminBareRoute>} />
+            <Route path="/admin/capstone-library/upload-details" element={<AdminBareRoute><AdminCapstoneAdditionalInfoPage /></AdminBareRoute>} />
             <Route path="/admin/users" element={<AdminRoute><UserManagement /></AdminRoute>} />
             <Route path="/admin/published" element={<AdminRoute><PublishedCapstones /></AdminRoute>} />
             <Route path="/admin/activity-logs" element={<AdminRoute><ActivityLogs /></AdminRoute>} />
@@ -84,6 +113,8 @@ function App() {
 
             {/* Faculty routes */}
             <Route path="/faculty/capstone-library" element={<FacultyRoute><FacultyCapstoneLibrary /></FacultyRoute>} />
+            <Route path="/faculty/capstone-library/review-data" element={<FacultyBareRoute><ReviewExtractedDataPage nextPath="/faculty/capstone-library/upload-details" backPath="/faculty/capstone-library" /></FacultyBareRoute>} />
+            <Route path="/faculty/capstone-library/upload-details" element={<FacultyBareRoute><CapstoneAdditionalInfoPage /></FacultyBareRoute>} />
             <Route path="/faculty/uploads" element={<FacultyRoute><FacultyUploadedCapstones /></FacultyRoute>} />
             <Route path="/faculty/capstones/:id" element={<FacultyRoute><CapstoneMainPage /></FacultyRoute>} />
             <Route path="/faculty/profile" element={<FacultyRoute><FacultyProfile /></FacultyRoute>} />

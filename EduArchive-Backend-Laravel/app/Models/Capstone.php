@@ -24,6 +24,8 @@ class Capstone extends Model
         'status',
         'is_published',
         'is_archived',
+        'publication_status',
+        'adviser_id',
         'uploaded_by',
         'approved_by',
         'approved_at',
@@ -54,6 +56,11 @@ class Capstone extends Model
         return $this->belongsTo(User::class, 'approved_by');
     }
 
+    public function adviser(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'adviser_id');
+    }
+
     public function keywords(): BelongsToMany
     {
         return $this->belongsToMany(Keyword::class, 'capstone_keyword')->withTimestamps();
@@ -72,6 +79,31 @@ class Capstone extends Model
     public function views(): HasMany
     {
         return $this->hasMany(CapstoneView::class);
+    }
+
+    public function resources(): HasMany
+    {
+        return $this->hasMany(CapstoneResource::class);
+    }
+
+    public function referencedCapstones(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            Capstone::class,
+            'capstone_references',
+            'capstone_id',
+            'referenced_capstone_id'
+        )->withTimestamps();
+    }
+
+    public function referencedBy(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            Capstone::class,
+            'capstone_references',
+            'referenced_capstone_id',
+            'capstone_id'
+        )->withTimestamps();
     }
 
     // --- Scopes ---

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\AuditLog;
 use App\Models\Bookmark;
 use App\Models\Capstone;
+use App\Models\CapstoneResource;
 use App\Models\Keyword;
 use App\Models\Notification;
 use App\Models\User;
@@ -26,7 +27,7 @@ class CapstoneController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $query = Capstone::with(['keywords', 'uploader:id,name', 'approver:id,name']);
+        $query = Capstone::with(['keywords', 'uploader:id,name', 'approver:id,name', 'adviser:id,name']);
 
         // Faculty users only see their own uploaded capstones
         if ($request->user() && $request->user()->hasRole('faculty')) {
@@ -76,7 +77,7 @@ class CapstoneController extends Controller
      */
     public function show(Request $request, Capstone $capstone): JsonResponse
     {
-        $capstone->load(['keywords', 'uploader:id,name', 'approver:id,name']);
+        $capstone->load(['keywords', 'uploader:id,name', 'approver:id,name', 'adviser:id,name', 'resources', 'referencedCapstones:id,title,author,year,program']);
 
         $data = $capstone->toArray();
         $data['is_bookmarked'] = $request->user()
@@ -116,39 +117,74 @@ class CapstoneController extends Controller
     }
 
     /**
-     * Store capstone with extracted/edited data.
+     * Upload a resource file (additional attachment for a capstone).
      */
-    public function store(Request $request): JsonResponse
+    public function uploadResource(Request $request): JsonResponse
     {
         $validator = Validator::make($request->all(), [
-            'title'             => 'required|string|max:500',
-            'year'              => 'nullable|integer|min:2000|max:2099',
-            'author'            => 'required|string|max:500',
-            'program'           => 'nullable|string|in:BSIT,BSCpE',
-            'category'          => 'nullable|string|max:100',
-            'abstract'          => 'nullable|string',
-            'pdf_path'          => 'required|string',
-            'pdf_original_name' => 'nullable|string',
-            'keywords'          => 'nullable|array',
-            'keywords.*'        => 'string|max:100',
+            'file' => 'required|file|max:51200', // 50MB max
         ]);
 
         if ($validator->fails()) {
             return $this->errorResponse('Validation failed.', 422, $validator->errors());
         }
 
+        $file = $request->file('file');
+        $path = $file->store('capstone_resources', 'local');
+
+        return $this->successResponse([
+            'file_path'          => $path,
+            'file_original_name' => $file->getClientOriginalName(),
+        ], 'Resource file uploaded.');
+    }
+
+    /**
+     * Store capstone with extracted/edited data and additional info.
+     */
+    public function store(Request $request): JsonResponse
+    {
+        $validator = Validator::make($request->all(), [
+            'title'              => 'required|string|max:500|unique:capstones,title',
+            'year'               => 'nullable|integer|min:2000|max:2099',
+            'author'             => 'required|string|max:500',
+            'program'            => 'nullable|string|in:BSIT,BSCpE',
+            'category'           => 'nullable|string|max:100',
+            'abstract'           => 'nullable|string',
+            'pdf_path'           => 'required|string',
+            'pdf_original_name'  => 'nullable|string',
+            'keywords'           => 'nullable|array',
+            'keywords.*'         => 'string|max:100',
+            'publication_status' => 'nullable|in:published,unpublished,in_progress',
+            'adviser_id'         => 'nullable|exists:users,id',
+            'references'         => 'nullable|array',
+            'references.*'       => 'integer|exists:capstones,id',
+            'resources'          => 'nullable|array',
+            'resources.*.name'             => 'required|string|max:255',
+            'resources.*.file_path'        => 'required|string',
+            'resources.*.file_original_name' => 'nullable|string',
+        ]);
+
+        if ($validator->fails()) {
+            return $this->errorResponse('Validation failed.', 422, $validator->errors());
+        }
+
+        $publicationStatus = $request->input('publication_status', 'published');
+        $isPublished = $publicationStatus === 'published';
+
         $capstone = Capstone::create([
-            'title'             => $request->title,
-            'year'              => $request->year,
-            'author'            => $request->author,
-            'program'           => $request->program,
-            'category'          => $request->category,
-            'abstract'          => $request->abstract,
-            'pdf_path'          => $request->pdf_path,
-            'pdf_original_name' => $request->pdf_original_name,
-            'uploaded_by'       => $request->user()->id,
-            'status'            => 'approved',
-            'is_published'      => true,
+            'title'              => $request->title,
+            'year'               => $request->year,
+            'author'             => $request->author,
+            'program'            => $request->program,
+            'category'           => $request->category,
+            'abstract'           => $request->abstract,
+            'pdf_path'           => $request->pdf_path,
+            'pdf_original_name'  => $request->pdf_original_name,
+            'uploaded_by'        => $request->user()->id,
+            'status'             => 'approved',
+            'is_published'       => $isPublished,
+            'publication_status' => $publicationStatus,
+            'adviser_id'         => $request->adviser_id,
         ]);
 
         // Attach keywords
@@ -161,6 +197,24 @@ class CapstoneController extends Controller
             $capstone->keywords()->sync($keywordIds);
         }
 
+        // Attach referenced capstones
+        if ($request->has('references') && is_array($request->references)) {
+            $refs = array_filter($request->references, fn($id) => $id !== $capstone->id);
+            $capstone->referencedCapstones()->sync($refs);
+        }
+
+        // Save resource attachments
+        if ($request->has('resources') && is_array($request->resources)) {
+            foreach ($request->resources as $resource) {
+                CapstoneResource::create([
+                    'capstone_id'        => $capstone->id,
+                    'name'               => $resource['name'],
+                    'file_path'          => $resource['file_path'],
+                    'file_original_name' => $resource['file_original_name'] ?? null,
+                ]);
+            }
+        }
+
         AuditLog::log('upload_capstone', $request->user()->id, Capstone::class, $capstone->id);
 
         // Create notifications for all admins about new capstone upload
@@ -170,18 +224,39 @@ class CapstoneController extends Controller
 
         foreach ($admins as $admin) {
             Notification::create([
-                'admin_id' => $admin->id,
-                'type' => 'capstone_uploaded',
-                'title' => 'New Capstone Uploaded',
-                'message' => "Capstone '{$capstone->title}' uploaded by {$request->user()->name}",
-                'related_user_id' => $request->user()->id,
+                'admin_id'            => $admin->id,
+                'type'                => 'capstone_uploaded',
+                'title'               => 'New Capstone Uploaded',
+                'message'             => "Capstone '{$capstone->title}' uploaded by {$request->user()->name}",
+                'related_user_id'     => $request->user()->id,
                 'related_capstone_id' => $capstone->id,
-                'is_read' => false,
+                'is_read'             => false,
             ]);
         }
 
-        $capstone->load('keywords');
-        return $this->successResponse($capstone, 'Capstone published successfully.', 201);
+        $capstone->load(['keywords', 'resources', 'referencedCapstones', 'adviser:id,name']);
+        return $this->successResponse($capstone, 'Capstone saved successfully.', 201);
+    }
+
+    /**
+     * Return a list of faculty users (for adviser picker).
+     */
+    public function getFacultyList(Request $request): JsonResponse
+    {
+        $faculty = User::whereHas('role', function ($q) {
+                $q->where('name', 'faculty');
+            })
+            ->where('is_approved', true)
+            ->where('is_archived', false)
+            ->orderBy('name')
+            ->get(['id', 'name']);
+
+        if ($request->has('search') && $request->search) {
+            $search = strtolower($request->search);
+            $faculty = $faculty->filter(fn($u) => str_contains(strtolower($u->name), $search))->values();
+        }
+
+        return $this->successResponse($faculty, 'Faculty list retrieved.');
     }
 
     /**
@@ -410,6 +485,13 @@ class CapstoneController extends Controller
             Storage::disk('local')->delete($capstone->pdf_path);
         }
 
+        // Delete resource files
+        foreach ($capstone->resources as $resource) {
+            if ($resource->file_path && Storage::disk('local')->exists($resource->file_path)) {
+                Storage::disk('local')->delete($resource->file_path);
+            }
+        }
+
         AuditLog::log(
             'delete_capstone',
             $request->user()->id,
@@ -425,13 +507,13 @@ class CapstoneController extends Controller
 
         foreach ($admins as $admin) {
             Notification::create([
-                'admin_id' => $admin->id,
-                'type' => 'capstone_deleted',
-                'title' => 'Capstone Deleted',
-                'message' => "Capstone '{$capstone->title}' deleted by {$request->user()->name}",
-                'related_user_id' => $request->user()->id,
+                'admin_id'            => $admin->id,
+                'type'                => 'capstone_deleted',
+                'title'               => 'Capstone Deleted',
+                'message'             => "Capstone '{$capstone->title}' deleted by {$request->user()->name}",
+                'related_user_id'     => $request->user()->id,
                 'related_capstone_id' => $capstone->id,
-                'is_read' => false,
+                'is_read'             => false,
             ]);
         }
 
@@ -516,7 +598,7 @@ class CapstoneController extends Controller
         }
 
         $fullPath = Storage::disk('local')->path($capstone->pdf_path);
-        
+
         return response()->file($fullPath, [
             'Content-Type'        => 'application/pdf',
             'Content-Disposition' => 'inline',
@@ -592,13 +674,13 @@ class CapstoneController extends Controller
 
         foreach ($admins as $admin) {
             Notification::create([
-                'admin_id' => $admin->id,
-                'type' => 'capstone_edited',
-                'title' => 'Capstone Edited',
-                'message' => "Capstone '{$capstone->title}' edited by {$request->user()->name}",
-                'related_user_id' => $request->user()->id,
+                'admin_id'            => $admin->id,
+                'type'                => 'capstone_edited',
+                'title'               => 'Capstone Edited',
+                'message'             => "Capstone '{$capstone->title}' edited by {$request->user()->name}",
+                'related_user_id'     => $request->user()->id,
                 'related_capstone_id' => $capstone->id,
-                'is_read' => false,
+                'is_read'             => false,
             ]);
         }
 

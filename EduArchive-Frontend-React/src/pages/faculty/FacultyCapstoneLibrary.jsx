@@ -10,7 +10,6 @@ import {
     getFacultyCapstones,
     deleteFacultyCapstone,
     updateFacultyCapstone,
-    uploadFacultyCapstone,
     getArchivedFacultyCapstones,
     archiveFacultyCapstone,
     unarchiveFacultyCapstone,
@@ -442,14 +441,6 @@ export default function FacultyCapstoneLibrary() {
                 <FacultyUploadCapstoneModal
                     open={uploadOpen}
                     onClose={() => setUploadOpen(false)}
-                    uploadFn={uploadFacultyCapstone}
-                    onSuccess={() => {
-                        setUploadOpen(false);
-                        setPage(1);
-                        setSearch('');
-                        setFilters({ year: '', program: '', category: '' });
-                        fetchCapstones();
-                    }}
                 />
             )}
 

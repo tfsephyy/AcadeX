@@ -50,13 +50,14 @@ Route::prefix('v1')->group(function () {
             Route::get('/categories', [PublishedCapstoneController::class, 'categories']);
         });
 
-        // ── Capstone view/download/bookmark (all authenticated users) ──
-        Route::post('/capstones/{capstone}/view',     [CapstoneController::class, 'recordView']);
-        Route::get('/capstones/{capstone}/download',   [CapstoneController::class, 'download']);
-        Route::get('/capstones/{capstone}/pdf',        [CapstoneController::class, 'servePdf']);
-        Route::post('/capstones/{capstone}/bookmark',  [CapstoneController::class, 'toggleBookmark']);
-        Route::get('/capstones/bookmarked',            [CapstoneController::class, 'userBookmarks']);
-        Route::get('/capstones/{capstone}',            [CapstoneController::class, 'show']);
+        // ── Shared capstone utilities (all authenticated users) ──
+        Route::get('/capstones/faculty-list',              [CapstoneController::class, 'getFacultyList']);
+        Route::get('/capstones/bookmarked',                [CapstoneController::class, 'userBookmarks']);
+        Route::post('/capstones/{capstone}/view',          [CapstoneController::class, 'recordView']);
+        Route::get('/capstones/{capstone}/download',       [CapstoneController::class, 'download']);
+        Route::get('/capstones/{capstone}/pdf',            [CapstoneController::class, 'servePdf']);
+        Route::post('/capstones/{capstone}/bookmark',      [CapstoneController::class, 'toggleBookmark']);
+        Route::get('/capstones/{capstone}',                [CapstoneController::class, 'show']);
 
         // ── Admin-only routes ────────────────────────────
         Route::middleware('role:admin')->prefix('admin')->group(function () {
@@ -69,18 +70,19 @@ Route::prefix('v1')->group(function () {
             Route::get('/dashboard/recent-approved',    [AdminDashboardController::class, 'recentApproved']);
 
             // Capstone Management
-            Route::get('/capstones',                    [CapstoneController::class, 'index']);
-            Route::post('/capstones',                   [CapstoneController::class, 'store']);
-            Route::post('/capstones/upload',            [CapstoneController::class, 'upload']);
-            Route::get('/capstones/archived',           [CapstoneController::class, 'archived']);
-            Route::get('/capstones/bookmarked',         [CapstoneController::class, 'adminBookmarks']);
-            Route::post('/capstones/{capstone}/approve', [CapstoneController::class, 'approve']);
-            Route::post('/capstones/{capstone}/reject',  [CapstoneController::class, 'reject']);
-            Route::post('/capstones/{capstone}/archive', [CapstoneController::class, 'archive']);
+            Route::get('/capstones',                       [CapstoneController::class, 'index']);
+            Route::post('/capstones',                      [CapstoneController::class, 'store']);
+            Route::post('/capstones/upload',               [CapstoneController::class, 'upload']);
+            Route::post('/capstones/upload-resource',      [CapstoneController::class, 'uploadResource']);
+            Route::get('/capstones/archived',              [CapstoneController::class, 'archived']);
+            Route::get('/capstones/bookmarked',            [CapstoneController::class, 'adminBookmarks']);
+            Route::post('/capstones/{capstone}/approve',   [CapstoneController::class, 'approve']);
+            Route::post('/capstones/{capstone}/reject',    [CapstoneController::class, 'reject']);
+            Route::post('/capstones/{capstone}/archive',   [CapstoneController::class, 'archive']);
             Route::post('/capstones/{capstone}/unarchive', [CapstoneController::class, 'unarchive']);
             Route::post('/capstones/{capstone}/unpublish', [CapstoneController::class, 'unpublish']);
-            Route::put('/capstones/{capstone}',         [CapstoneController::class, 'update']);
-            Route::delete('/capstones/{capstone}',      [CapstoneController::class, 'destroy']);
+            Route::put('/capstones/{capstone}',            [CapstoneController::class, 'update']);
+            Route::delete('/capstones/{capstone}',         [CapstoneController::class, 'destroy']);
 
             // User Management
             Route::get('/users/new',                    [UserManagementController::class, 'newUsers']);
@@ -95,10 +97,10 @@ Route::prefix('v1')->group(function () {
             Route::delete('/users/{user}',              [UserManagementController::class, 'remove']);
 
             // Notifications
-            Route::get('/notifications',                [NotificationController::class, 'index']);
-            Route::get('/notifications/unread-count',   [NotificationController::class, 'unreadCount']);
-            Route::put('/notifications/{notification}/read', [NotificationController::class, 'markAsRead']);
-            Route::put('/notifications/mark-all-read',  [NotificationController::class, 'markAllAsRead']);
+            Route::get('/notifications',                      [NotificationController::class, 'index']);
+            Route::get('/notifications/unread-count',         [NotificationController::class, 'unreadCount']);
+            Route::put('/notifications/{notification}/read',  [NotificationController::class, 'markAsRead']);
+            Route::put('/notifications/mark-all-read',        [NotificationController::class, 'markAllAsRead']);
 
             // Activity Logs
             Route::get('/activity-logs',       [ActivityLogController::class, 'index']);
@@ -108,14 +110,15 @@ Route::prefix('v1')->group(function () {
         // ── Faculty routes ───────────────────────────────
         Route::middleware('role:admin,faculty')->prefix('faculty')->group(function () {
             // Faculty Capstone Management (scoped to own uploads)
-            Route::get('/capstones',                        [CapstoneController::class, 'index']);
-            Route::post('/capstones',                       [CapstoneController::class, 'store']);
-            Route::post('/capstones/upload',                [CapstoneController::class, 'upload']);
-            Route::get('/capstones/archived',               [CapstoneController::class, 'archived']);
-            Route::post('/capstones/{capstone}/archive',    [CapstoneController::class, 'archive']);
-            Route::post('/capstones/{capstone}/unarchive',  [CapstoneController::class, 'unarchive']);
-            Route::put('/capstones/{capstone}',             [CapstoneController::class, 'update']);
-            Route::delete('/capstones/{capstone}',          [CapstoneController::class, 'destroy']);
+            Route::get('/capstones',                         [CapstoneController::class, 'index']);
+            Route::post('/capstones',                        [CapstoneController::class, 'store']);
+            Route::post('/capstones/upload',                 [CapstoneController::class, 'upload']);
+            Route::post('/capstones/upload-resource',        [CapstoneController::class, 'uploadResource']);
+            Route::get('/capstones/archived',                [CapstoneController::class, 'archived']);
+            Route::post('/capstones/{capstone}/archive',     [CapstoneController::class, 'archive']);
+            Route::post('/capstones/{capstone}/unarchive',   [CapstoneController::class, 'unarchive']);
+            Route::put('/capstones/{capstone}',              [CapstoneController::class, 'update']);
+            Route::delete('/capstones/{capstone}',           [CapstoneController::class, 'destroy']);
         });
     });
 });

@@ -14,6 +14,9 @@ export const uploadCapstone = (formData) => axios.post('/admin/capstones/upload'
     headers: { 'Content-Type': 'multipart/form-data' },
 });
 export const storeCapstone = (data) => axios.post('/admin/capstones', data);
+export const uploadAdminResource = (formData) => axios.post('/admin/capstones/upload-resource', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+});
 export const updateCapstone = (id, data) => axios.put(`/admin/capstones/${id}`, data);
 export const approveCapstone = (id) => axios.post(`/admin/capstones/${id}/approve`);
 export const rejectCapstone = (id) => axios.post(`/admin/capstones/${id}/reject`);
@@ -49,6 +52,7 @@ export const getCapstone = (id) => axios.get(`/capstones/${id}`);
 export const recordView = (id) => axios.post(`/capstones/${id}/view`);
 export const downloadCapstone = (id) => axios.get(`/capstones/${id}/download`, { responseType: 'blob' });
 export const getCaptonePdf = (id) => `/capstones/${id}/pdf`;
+export const getFacultyList = (params = {}) => axios.get('/capstones/faculty-list', { params });
 
 // ── Notifications ──────────────────────────────────
 export const getAdminNotifications = (params = {}) => axios.get('/admin/notifications', { params });
@@ -65,6 +69,9 @@ export const getActivityLogTypes = () => axios.get('/admin/activity-logs/types')
 // ── Faculty Capstone Management ────────────────────
 export const getFacultyCapstones = (params = {}) => axios.get('/faculty/capstones', { params });
 export const uploadFacultyCapstone = (formData) => axios.post('/faculty/capstones/upload', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+});
+export const uploadFacultyResource = (formData) => axios.post('/faculty/capstones/upload-resource', formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
 });
 export const storeFacultyCapstone = (data) => axios.post('/faculty/capstones', data);
