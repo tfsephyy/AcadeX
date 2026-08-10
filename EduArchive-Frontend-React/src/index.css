@@ -474,12 +474,12 @@ input[type="password"]::-ms-clear {
   scrollbar-color: var(--color-text-muted) transparent;
 }
 
-/* Admin scroll */
-.admin-scroll::-webkit-scrollbar { width: 7px; height: 7px; }
-.admin-scroll::-webkit-scrollbar-track { background: #f1f5f1; }
-.admin-scroll::-webkit-scrollbar-thumb { background: #c5e1a5; border-radius: 9999px; border: 1px solid #f1f5f1; }
-.admin-scroll::-webkit-scrollbar-thumb:hover { background: #8bc34a; }
-.admin-scroll { scrollbar-width: thin; scrollbar-color: #c5e1a5 #f1f5f1; }
+/* Admin scroll — now uses CSS vars for theme compatibility */
+.admin-scroll::-webkit-scrollbar { width: 5px; height: 5px; }
+.admin-scroll::-webkit-scrollbar-track { background: var(--panel-content-bg, #f0fbf0); }
+.admin-scroll::-webkit-scrollbar-thumb { background: var(--color-border-strong); border-radius: 9999px; }
+.admin-scroll::-webkit-scrollbar-thumb:hover { background: var(--color-primary); }
+.admin-scroll { scrollbar-width: thin; scrollbar-color: var(--color-border-strong) transparent; }
 
 /* ═══════════════════════════════════════════════════════════════
    SECTION BACKGROUNDS
@@ -707,4 +707,247 @@ input[type="password"]::-ms-clear {
 .nav-link:hover::after,
 .nav-link.active::after {
   width: 100%;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   PANEL / DASHBOARD LAYOUT SYSTEM
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── Dark Mode Panel Tokens ────────────────────────────────────── */
+:root,
+[data-theme="dark"] {
+  --panel-sidebar-start:       #05120d;
+  --panel-sidebar-end:         #091a0f;
+  --panel-logo-border:         rgba(91, 190, 99, 0.14);
+  --panel-logo-icon-bg:        rgba(91, 190, 99, 0.16);
+  --panel-nav-text:            #7aaa80;
+  --panel-nav-hover-bg:        rgba(91, 190, 99, 0.08);
+  --panel-nav-hover-text:      #c8e0c8;
+  --panel-nav-active-bg:       rgba(91, 190, 99, 0.15);
+  --panel-nav-active-text:     #5BBE63;
+  --panel-nav-active-glow:     #5BBE63;
+  --panel-profile-hover:       rgba(91, 190, 99, 0.07);
+  --panel-profile-text:        #c8e0c8;
+  --panel-profile-muted:       #7aaa80;
+  --panel-header-bg:           rgba(5, 18, 13, 0.97);
+  --panel-header-border:       rgba(91, 190, 99, 0.10);
+  --panel-content-bg:          #07170F;
+  --panel-dropdown-bg:         #0d2218;
+  --panel-dropdown-border:     rgba(91, 190, 99, 0.18);
+  --panel-dropdown-text:       #a8cca8;
+  --panel-dropdown-hover:      rgba(91, 190, 99, 0.07);
+  --panel-dropdown-danger:     #f87171;
+  --panel-dropdown-danger-hover: rgba(248, 113, 113, 0.08);
+  --panel-dropdown-divider:    rgba(91, 190, 99, 0.12);
+  --panel-arrow-bg:            #0d2218;
+  --panel-arrow-hover:         #112b1c;
+  --panel-sidebar-border-r:    rgba(91, 190, 99, 0.09);
+  --panel-topbar-text:         #7aaa80;
+  --panel-topbar-btn-hover:    rgba(91, 190, 99, 0.08);
+  --panel-welcome-accent:      #5BBE63;
+  --panel-notif-unread-bg:     rgba(91, 190, 99, 0.06);
+  --panel-notif-unread-hover:  rgba(91, 190, 99, 0.11);
+  --panel-notif-divider:       rgba(91, 190, 99, 0.09);
+}
+
+/* ── Light Mode Panel Tokens ───────────────────────────────────── */
+[data-theme="light"] {
+  --panel-sidebar-start:       #1B5E20;
+  --panel-sidebar-end:         #2E7D32;
+  --panel-logo-border:         rgba(0, 0, 0, 0.13);
+  --panel-logo-icon-bg:        rgba(139, 195, 74, 0.22);
+  --panel-nav-text:            rgba(255, 255, 255, 0.60);
+  --panel-nav-hover-bg:        rgba(255, 255, 255, 0.12);
+  --panel-nav-hover-text:      #ffffff;
+  --panel-nav-active-bg:       rgba(255, 255, 255, 0.22);
+  --panel-nav-active-text:     #ffffff;
+  --panel-nav-active-glow:     #8BC34A;
+  --panel-profile-hover:       rgba(255, 255, 255, 0.10);
+  --panel-profile-text:        rgba(255, 255, 255, 0.90);
+  --panel-profile-muted:       rgba(255, 255, 255, 0.55);
+  --panel-header-bg:           rgba(255, 255, 255, 0.97);
+  --panel-header-border:       rgba(0, 0, 0, 0.07);
+  --panel-content-bg:          #F0FBF0;
+  --panel-dropdown-bg:         #ffffff;
+  --panel-dropdown-border:     rgba(0, 0, 0, 0.09);
+  --panel-dropdown-text:       #1a4422;
+  --panel-dropdown-hover:      rgba(91, 190, 99, 0.07);
+  --panel-dropdown-danger:     #dc2626;
+  --panel-dropdown-danger-hover: rgba(220, 38, 38, 0.06);
+  --panel-dropdown-divider:    rgba(0, 0, 0, 0.08);
+  --panel-arrow-bg:            #2E7D32;
+  --panel-arrow-hover:         #1B5E20;
+  --panel-sidebar-border-r:    rgba(0, 0, 0, 0.09);
+  --panel-topbar-text:         #2d5a35;
+  --panel-topbar-btn-hover:    rgba(0, 0, 0, 0.05);
+  --panel-welcome-accent:      #1B5E20;
+  --panel-notif-unread-bg:     rgba(91, 190, 99, 0.09);
+  --panel-notif-unread-hover:  rgba(91, 190, 99, 0.15);
+  --panel-notif-divider:       rgba(0, 0, 0, 0.07);
+}
+
+/* Sidebar */
+.panel-sidebar {
+  background: linear-gradient(180deg, var(--panel-sidebar-start) 0%, var(--panel-sidebar-end) 100%);
+  border-right: 1px solid var(--panel-sidebar-border-r);
+}
+.panel-logo-border { border-bottom: 1px solid var(--panel-logo-border); }
+
+/* Nav items */
+.panel-nav-item { color: var(--panel-nav-text); }
+.panel-nav-item:hover { background: var(--panel-nav-hover-bg); color: var(--panel-nav-hover-text); }
+.panel-nav-active {
+  background: var(--panel-nav-active-bg);
+  color: var(--panel-nav-active-text);
+  box-shadow: inset 3px 0 0 var(--panel-nav-active-glow);
+}
+
+/* Profile area */
+.panel-profile-border { border-top: 1px solid var(--panel-logo-border); }
+.panel-profile-btn    { color: var(--panel-profile-text); }
+.panel-profile-btn:hover { background: var(--panel-profile-hover); }
+
+/* Dropdown */
+.panel-dropdown {
+  background: var(--panel-dropdown-bg);
+  border: 1px solid var(--panel-dropdown-border);
+  box-shadow: 0 12px 40px rgba(0,0,0,0.22);
+}
+.panel-dropdown-item { color: var(--panel-dropdown-text); }
+.panel-dropdown-item:hover { background: var(--panel-dropdown-hover); }
+.panel-dropdown-danger { color: var(--panel-dropdown-danger); border-top: 1px solid var(--panel-dropdown-divider); }
+.panel-dropdown-danger:hover { background: var(--panel-dropdown-danger-hover); }
+
+/* Header */
+.panel-header {
+  background: var(--panel-header-bg);
+  border-bottom: 1px solid var(--panel-header-border);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+/* Content background */
+.panel-content-bg { background: var(--panel-content-bg); }
+
+/* Arrow tab */
+.panel-arrow-tab { background: var(--panel-arrow-bg); color: var(--panel-nav-text); }
+.panel-arrow-tab:hover { background: var(--panel-arrow-hover); color: var(--panel-nav-hover-text); }
+
+/* Top bar */
+.panel-topbar-btn { color: var(--panel-topbar-text); }
+.panel-topbar-btn:hover { background: var(--panel-topbar-btn-hover); }
+
+/* Notification items */
+.panel-notif-read   { background: var(--panel-dropdown-bg); }
+.panel-notif-read:hover   { background: var(--panel-dropdown-hover); }
+.panel-notif-unread { background: var(--panel-notif-unread-bg); }
+.panel-notif-unread:hover { background: var(--panel-notif-unread-hover); }
+.panel-notif-divide > * + * { border-top: 1px solid var(--panel-notif-divider); }
+
+/* Panel scrollbar */
+.panel-scroll::-webkit-scrollbar { width: 4px; }
+.panel-scroll::-webkit-scrollbar-track { background: transparent; }
+.panel-scroll::-webkit-scrollbar-thumb { background: var(--panel-logo-border); border-radius: 9999px; }
+.panel-scroll::-webkit-scrollbar-thumb:hover { background: var(--color-primary); }
+.panel-scroll { scrollbar-width: thin; scrollbar-color: var(--panel-logo-border) transparent; }
+
+/* ═══════════════════════════════════════════════════════════════
+   DARK MODE — GLOBAL TAILWIND OVERRIDES
+   Auto-remaps hardcoded Tailwind color utilities so inner page
+   components (tables, cards, modals, badges) respect the theme
+   without requiring per-file edits.
+   ═══════════════════════════════════════════════════════════════ */
+[data-theme="dark"] {
+  /* ─ Backgrounds ─────────────────────────────────────────────────── */
+  .bg-white   { background-color: var(--color-surface-elevated) !important; }
+  .bg-gray-50 { background-color: var(--color-bg-secondary)     !important; }
+  .bg-gray-100{ background-color: var(--color-bg-tertiary)      !important; }
+  .bg-gray-200{ background-color: rgba(17, 43, 28, 0.95)        !important; }
+
+  /* ─ Text ───────────────────────────────────────────────────────── */
+  .text-gray-900 { color: var(--color-text)           !important; }
+  .text-gray-800 { color: var(--color-text)           !important; }
+  .text-gray-700 { color: var(--color-text-secondary) !important; }
+  .text-gray-600 { color: var(--color-text-secondary) !important; }
+  .text-gray-500 { color: var(--color-text-muted)     !important; }
+  .text-gray-400 { color: var(--color-text-faint)     !important; }
+  .text-gray-300 { color: var(--color-text-faint)     !important; }
+
+  /* ─ Borders ───────────────────────────────────────────────────── */
+  .border-gray-100 { border-color: var(--color-border)        !important; }
+  .border-gray-200 { border-color: var(--color-border)        !important; }
+  .border-gray-300 { border-color: var(--color-border-strong) !important; }
+
+  /* ─ Dividers ──────────────────────────────────────────────────── */
+  .divide-gray-100 > * + * { border-color: var(--color-border) !important; }
+  .divide-gray-200 > * + * { border-color: var(--color-border) !important; }
+
+  /* ─ Hover states ─────────────────────────────────────────────── */
+  .hover\:bg-white:hover    { background-color: var(--color-surface-hover)   !important; }
+  .hover\:bg-gray-50:hover  { background-color: var(--color-surface-hover)   !important; }
+  .hover\:bg-gray-100:hover { background-color: var(--color-bg-tertiary)     !important; }
+  .hover\:text-gray-900:hover{ color: var(--color-text)                      !important; }
+
+  /* ─ Inputs ─────────────────────────────────────────────────────── */
+  input, textarea, select {
+    background-color: var(--input-bg)      !important;
+    color:            var(--input-text)    !important;
+    border-color:     var(--input-border)  !important;
+  }
+  input::placeholder, textarea::placeholder {
+    color: var(--input-placeholder) !important;
+  }
+  input:focus, textarea:focus, select:focus {
+    border-color: var(--color-border-focus) !important;
+    box-shadow: 0 0 0 3px rgba(91, 190, 99, 0.12) !important;
+    outline: none !important;
+  }
+
+  /* ─ Green tint badges (status chips) ─────────────────────────── */
+  .bg-green-100  { background-color: rgba(91, 190, 99, 0.15)  !important; }
+  .text-green-800{ color: #5BBE63                             !important; }
+  .text-green-700{ color: #5BBE63                             !important; }
+  .text-green-600{ color: #5BBE63                             !important; }
+  .bg-green-50   { background-color: rgba(91, 190, 99, 0.08)  !important; }
+
+  /* ─ Yellow/amber badges ───────────────────────────────────── */
+  .bg-yellow-100  { background-color: rgba(251, 191, 36, 0.15) !important; }
+  .text-yellow-800{ color: #FCD34D                             !important; }
+  .text-yellow-700{ color: #FCD34D                             !important; }
+  .bg-yellow-50   { background-color: rgba(251, 191, 36, 0.08) !important; }
+
+  /* ─ Red/danger badges ─────────────────────────────────────── */
+  .bg-red-100  { background-color: rgba(239, 68, 68, 0.15)    !important; }
+  .text-red-800{ color: #f87171                               !important; }
+  .text-red-700{ color: #f87171                               !important; }
+  .text-red-600{ color: #f87171                               !important; }
+  .bg-red-50   { background-color: rgba(239, 68, 68, 0.08)    !important; }
+  .border-red-200{ border-color: rgba(239, 68, 68, 0.25)      !important; }
+
+  /* ─ Blue badges & highlights ───────────────────────────────── */
+  .bg-blue-50  { background-color: rgba(59, 130, 246, 0.08)   !important; }
+  .bg-blue-100 { background-color: rgba(59, 130, 246, 0.15)   !important; }
+  .text-blue-600{ color: #60a5fa                              !important; }
+  .text-blue-700{ color: #60a5fa                              !important; }
+  .hover\:bg-blue-100:hover { background-color: rgba(59, 130, 246, 0.18) !important; }
+
+  /* ─ Shadows ───────────────────────────────────────────────────── */
+  .shadow-sm  { box-shadow: var(--shadow-sm) !important; }
+  .shadow-md  { box-shadow: var(--shadow-md) !important; }
+  .shadow-lg  { box-shadow: var(--shadow-lg) !important; }
+  .shadow-xl  { box-shadow: var(--shadow-lg) !important; }
+  .shadow-2xl { box-shadow: var(--shadow-lg) !important; }
+
+  /* ─ Rings ───────────────────────────────────────────────────────── */
+  .ring-gray-200 { --tw-ring-color: var(--color-border) !important; }
+  .ring-gray-300 { --tw-ring-color: var(--color-border-strong) !important; }
+
+  /* ─ Table-specific overrides ─────────────────────────────────── */
+  table { color: var(--color-text); }
+  thead { background-color: var(--color-bg-secondary) !important; }
+  thead th { color: var(--color-text-muted) !important; }
+  tbody tr:hover { background-color: var(--color-surface-hover) !important; }
+
+  /* ─ Select option background ─────────────────────────────────── */
+  select option { background-color: var(--color-bg-secondary); color: var(--color-text); }
 }

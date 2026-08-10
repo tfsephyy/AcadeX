@@ -29,6 +29,7 @@ import FacultyProfile from './pages/faculty/FacultyProfile'
 import StudentLayout from './components/student/StudentLayout'
 import StudentUploadedCapstones from './pages/student/StudentUploadedCapstones'
 import StudentCapstoneMainPage from './pages/student/StudentCapstoneMainPage'
+import StudentProfile from './pages/student/StudentProfile'
 
 function AdminRoute({ children }) {
   return (
@@ -89,9 +90,10 @@ function App() {
             <Route path="/faculty" element={<Navigate to="/faculty/uploads" replace />} />
             <Route path="/faculty/dashboard" element={<Navigate to="/faculty/uploads" replace />} />
 
-            {/* Student routes (uploaded capstones only) */}
+            {/* Student routes */}
             <Route path="/student/uploads" element={<StudentRoute><StudentUploadedCapstones /></StudentRoute>} />
             <Route path="/student/capstones/:id" element={<StudentRoute><StudentCapstoneMainPage /></StudentRoute>} />
+            <Route path="/student/profile" element={<StudentRoute><StudentProfile /></StudentRoute>} />
             <Route path="/student" element={<Navigate to="/student/uploads" replace />} />
             </Routes>
           </AuthProvider>

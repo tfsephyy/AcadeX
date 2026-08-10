@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { useTheme } from '../../context/ThemeContext';
 import {
     HiOutlineViewGrid,
     HiOutlineUsers,
@@ -15,51 +16,44 @@ import {
     HiOutlineClipboardList,
 } from 'react-icons/hi';
 import ConfirmDialog from '../ConfirmDialog';
-import ProfileModal from './../../components/ProfileModal';
 import { getAdminNotifications, getUnreadNotificationCount, markNotificationRead, markAllNotificationsRead } from '../../api/admin';
 
 const navItems = [
-    { to: '/admin/dashboard', label: 'Dashboard', icon: HiOutlineViewGrid },
-    { to: '/admin/users', label: 'User Management', icon: HiOutlineUsers },
-    { to: '/admin/capstone-library', label: 'Capstone Library', icon: HiOutlineLibrary },
-    { to: '/admin/published', label: 'Uploaded Capstones', icon: HiOutlineBookOpen },
-    { to: '/admin/activity-logs', label: 'Activity Logs', icon: HiOutlineClipboardList },
+    { to: '/admin/dashboard',      label: 'Dashboard',         icon: HiOutlineViewGrid },
+    { to: '/admin/users',          label: 'User Management',   icon: HiOutlineUsers },
+    { to: '/admin/capstone-library',label: 'Capstone Library', icon: HiOutlineLibrary },
+    { to: '/admin/published',      label: 'Uploaded Capstones',icon: HiOutlineBookOpen },
+    { to: '/admin/activity-logs',  label: 'Activity Logs',     icon: HiOutlineClipboardList },
 ];
 
 export default function AdminLayout({ children }) {
-    const [sidebarOpen, setSidebarOpen] = useState(false);
-    const [profileOpen, setProfileOpen] = useState(false);
-    const [profileModalOpen, setProfileModalOpen] = useState(false);
+    const [sidebarOpen, setSidebarOpen]           = useState(false);
+    const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+    const [profileOpen, setProfileOpen]           = useState(false);
     const [notificationOpen, setNotificationOpen] = useState(false);
-    const [logoutConfirm, setLogoutConfirm] = useState(false);
-    const [notifications, setNotifications] = useState([]);
-    const [unreadCount, setUnreadCount] = useState(0);
-    const [loadingNotifications, setLoadingNotifications] = useState(false);
+    const [logoutConfirm, setLogoutConfirm]       = useState(false);
+    const [notifications, setNotifications]       = useState([]);
+    const [unreadCount, setUnreadCount]           = useState(0);
+    const [loadingNotif, setLoadingNotif]         = useState(false);
     const { user, logout } = useAuth();
+    const { theme, toggleTheme } = useTheme();
     const navigate = useNavigate();
 
-    const profileAreaRef = useRef(null);
+    const profileAreaRef  = useRef(null);
     const notifDropdownRef = useRef(null);
-    const bellRef = useRef(null);
+    const bellRef          = useRef(null);
 
-    useEffect(() => {
-        fetchNotifications();
-    }, []);
+    useEffect(() => { fetchNotifications(); }, []);
 
-    // Click outside handler
     useEffect(() => {
         const handleClickOutside = (e) => {
-            // Close profile dropdown
             if (profileOpen && profileAreaRef.current && !profileAreaRef.current.contains(e.target)) {
                 setProfileOpen(false);
             }
-            // Close notification dropdown — check both the bell button and the dropdown panel
             if (notificationOpen) {
-                const clickedBell = bellRef.current && bellRef.current.contains(e.target);
-                const clickedDropdown = notifDropdownRef.current && notifDropdownRef.current.contains(e.target);
-                if (!clickedBell && !clickedDropdown) {
-                    setNotificationOpen(false);
-                }
+                const hitBell     = bellRef.current?.contains(e.target);
+                const hitDropdown = notifDropdownRef.current?.contains(e.target);
+                if (!hitBell && !hitDropdown) setNotificationOpen(false);
             }
         };
         document.addEventListener('mousedown', handleClickOutside);
@@ -68,33 +62,25 @@ export default function AdminLayout({ children }) {
 
     const fetchNotifications = async () => {
         try {
-            setLoadingNotifications(true);
-            const response = await getAdminNotifications({ per_page: 15 });
-            // API returns: { data: { data: [...notifications], current_page, ... } }
-            // response.data = { success, message, data: paginatorObj }
-            // response.data.data = paginatorObj { data: [...], current_page, ... }
-            // response.data.data.data = actual notifications array
-            const notifData = response.data?.data?.data || response.data?.data || [];
-            setNotifications(Array.isArray(notifData) ? notifData : []);
-            const countResponse = await getUnreadNotificationCount();
-            setUnreadCount(countResponse.data?.data?.unread_count || 0);
-        } catch (error) {
-            console.error('Failed to fetch notifications:', error);
+            setLoadingNotif(true);
+            const res   = await getAdminNotifications({ per_page: 15 });
+            const data  = res.data?.data?.data || res.data?.data || [];
+            setNotifications(Array.isArray(data) ? data : []);
+            const cRes  = await getUnreadNotificationCount();
+            setUnreadCount(cRes.data?.data?.unread_count || 0);
+        } catch {
+            // silent
         } finally {
-            setLoadingNotifications(false);
+            setLoadingNotif(false);
         }
     };
 
-    const handleMarkAsRead = async (notificationId) => {
+    const handleMarkAsRead = async (id) => {
         try {
-            await markNotificationRead(notificationId);
-            setNotifications(notifications.map(n =>
-                n.id === notificationId ? { ...n, is_read: true } : n
-            ));
+            await markNotificationRead(id);
+            setNotifications(notifications.map(n => n.id === id ? { ...n, is_read: true } : n));
             setUnreadCount(Math.max(0, unreadCount - 1));
-        } catch (error) {
-            console.error('Failed to mark notification as read:', error);
-        }
+        } catch { /* silent */ }
     };
 
     const handleMarkAllAsRead = async () => {
@@ -102,9 +88,7 @@ export default function AdminLayout({ children }) {
             await markAllNotificationsRead();
             setNotifications(notifications.map(n => ({ ...n, is_read: true })));
             setUnreadCount(0);
-        } catch (error) {
-            console.error('Failed to mark all notifications as read:', error);
-        }
+        } catch { /* silent */ }
     };
 
     const handleLogout = async () => {
@@ -116,55 +100,62 @@ export default function AdminLayout({ children }) {
     };
 
     return (
-        <div className="flex h-screen bg-white overflow-hidden">
+        <div className="flex h-screen overflow-hidden panel-content-bg">
             {/* Mobile overlay */}
             {sidebarOpen && (
                 <div
-                    className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+                    className="fixed inset-0 z-40 lg:hidden"
+                    style={{ background: 'var(--panel-mobile-overlay, rgba(0,0,0,0.6))' }}
                     onClick={() => setSidebarOpen(false)}
                 />
             )}
 
-            {/* Sidebar */}
+            {/* ── Sidebar ──────────────────────────────────────────── */}
             <aside className={`
                 fixed lg:static inset-y-0 left-0 z-50
-                w-64 flex flex-col
-                bg-[#1B5E20] text-white
-                transform transition-transform duration-300 ease-in-out
-                ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+                flex flex-col flex-shrink-0
+                panel-sidebar overflow-hidden
+                transition-all duration-300 ease-in-out
+                ${sidebarCollapsed ? 'lg:w-0' : 'lg:w-64'}
+                ${sidebarOpen ? 'w-64 translate-x-0' : 'w-64 -translate-x-full lg:translate-x-0'}
             `}>
                 {/* Logo */}
-                <div className="flex items-center gap-3 px-6 py-5 border-b border-green-800">
-                    <div className="w-10 h-10 bg-[#8BC34A] rounded-lg flex items-center justify-center shrink-0">
-                        <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-[#0f2f1b]" viewBox="0 0 24 24" fill="currentColor">
+                <div className="flex items-center gap-3 px-6 py-5 panel-logo-border flex-shrink-0">
+                    <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+                         style={{ background: 'var(--panel-logo-icon-bg)' }}>
+                        <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" viewBox="0 0 24 24"
+                             fill="var(--color-primary)">
                             <path d="M4 6H2v14a2 2 0 002 2h14v-2H4V6zm16-4H8a2 2 0 00-2 2v12a2 2 0 002 2h12a2 2 0 002-2V4a2 2 0 00-2-2zm-1 9H9V9h10v2zm-4 4H9v-2h6v2zm4-8H9V5h10v2z" />
                         </svg>
                     </div>
                     <div>
-                        <h1 className="font-bold text-lg leading-tight">
-                            Edu<span className="text-[#8BC34A]">Archive</span>
+                        <h1 className="font-bold text-lg leading-tight"
+                            style={{ color: 'var(--panel-profile-text)' }}>
+                            Edu<span style={{ color: 'var(--color-primary)' }}>Archive</span>
                         </h1>
-                        <span className="text-[10px] text-green-300 uppercase tracking-widest">Admin Panel</span>
+                        <span className="text-[10px] uppercase tracking-widest"
+                              style={{ color: 'var(--panel-profile-muted)' }}>Admin</span>
                     </div>
-                    <button className="lg:hidden ml-auto" onClick={() => setSidebarOpen(false)}>
+                    <button
+                        className="lg:hidden ml-auto p-1 rounded-lg panel-profile-btn transition-colors"
+                        onClick={() => setSidebarOpen(false)}
+                    >
                         <HiOutlineX className="w-5 h-5" />
                     </button>
                 </div>
 
                 {/* Navigation */}
-                <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+                <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto panel-scroll">
                     {navItems.map((item) => (
                         <NavLink
                             key={item.to}
                             to={item.to}
                             onClick={() => setSidebarOpen(false)}
-                            className={({ isActive }) => `
-                                flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-200
-                                ${isActive
-                                    ? 'bg-[#8BC34A] text-white shadow-md'
-                                    : 'text-green-100 hover:bg-green-800 hover:text-white'
-                                }
-                            `}
+                            className={({ isActive }) =>
+                                `flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${
+                                    isActive ? 'panel-nav-active' : 'panel-nav-item'
+                                }`
+                            }
                         >
                             <item.icon className="w-5 h-5 shrink-0" />
                             {item.label}
@@ -172,18 +163,17 @@ export default function AdminLayout({ children }) {
                     ))}
                 </nav>
 
-                {/* Bottom: profile row with bell */}
-                <div ref={profileAreaRef} className="relative px-3 pb-4 border-t border-green-800 pt-2">
-
-                    {/* Row: [Avatar] [Name/Email] [🔔] [▼] */}
-                    <div className="flex items-center gap-1 px-2 py-2 rounded-lg hover:bg-green-800 transition-colors">
-
+                {/* Profile + Bell row */}
+                <div ref={profileAreaRef} className="relative px-3 py-3 panel-profile-border">
+                    {/* Row */}
+                    <div className="flex items-center gap-1 px-2 py-2 rounded-xl transition-colors panel-profile-btn">
                         {/* Avatar */}
                         <button
                             onClick={() => { setProfileOpen(!profileOpen); setNotificationOpen(false); }}
-                            className="w-9 h-9 bg-[#8BC34A] rounded-full flex items-center justify-center text-sm font-bold shrink-0"
+                            className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold shrink-0 text-white"
+                            style={{ background: 'var(--color-primary)' }}
                         >
-                            {user?.name?.charAt(0) || 'A'}
+                            {user?.name?.charAt(0)?.toUpperCase() || 'A'}
                         </button>
 
                         {/* Name & email */}
@@ -191,15 +181,21 @@ export default function AdminLayout({ children }) {
                             onClick={() => { setProfileOpen(!profileOpen); setNotificationOpen(false); }}
                             className="flex-1 text-left px-2 min-w-0"
                         >
-                            <p className="text-sm font-medium text-white truncate">{user?.name || 'Admin'}</p>
-                            <p className="text-xs text-green-300 truncate">{user?.email?.toLowerCase()}</p>
+                            <p className="text-sm font-semibold truncate"
+                               style={{ color: 'var(--panel-profile-text)' }}>
+                                {user?.name || 'Admin'}
+                            </p>
+                            <p className="text-xs truncate"
+                               style={{ color: 'var(--panel-profile-muted)' }}>
+                                {user?.email?.toLowerCase()}
+                            </p>
                         </button>
 
-                        {/* Bell icon */}
+                        {/* Bell */}
                         <button
                             ref={bellRef}
                             onClick={() => { setNotificationOpen(!notificationOpen); setProfileOpen(false); }}
-                            className="relative p-1.5 rounded-md text-green-200 hover:text-white hover:bg-green-700 transition-colors shrink-0"
+                            className="relative p-1.5 rounded-md transition-colors panel-nav-item"
                         >
                             <HiOutlineBell className="w-5 h-5" />
                             {unreadCount > 0 && (
@@ -212,27 +208,28 @@ export default function AdminLayout({ children }) {
                         {/* Chevron */}
                         <button
                             onClick={() => { setProfileOpen(!profileOpen); setNotificationOpen(false); }}
-                            className="shrink-0 text-green-200 hover:text-white transition-colors"
+                            className="shrink-0 transition-colors"
+                            style={{ color: 'var(--panel-profile-muted)' }}
                         >
                             <HiChevronDown className={`w-4 h-4 transition-transform ${profileOpen ? 'rotate-180' : ''}`} />
                         </button>
                     </div>
 
-                    {/* Profile dropdown — opens upward, inside sidebar */}
+                    {/* Profile dropdown */}
                     {profileOpen && (
-                        <div className="absolute bottom-full left-3 right-3 mb-1 bg-white rounded-lg shadow-xl border border-gray-200 overflow-hidden z-[100]">
+                        <div className="absolute bottom-full left-3 right-3 mb-1 rounded-xl overflow-hidden z-[100] panel-dropdown">
                             <button
-                                onClick={() => { setProfileOpen(false); setProfileModalOpen(true); }}
-                                className="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-700 hover:bg-gray-50"
+                                onClick={() => { setProfileOpen(false); navigate('/admin/profile'); }}
+                                className="w-full flex items-center gap-3 px-4 py-3 text-sm transition-colors panel-dropdown-item"
                             >
-                                <HiOutlineUser className="w-4 h-4" />
+                                <HiOutlineUser className="w-4 h-4 shrink-0" />
                                 Profile
                             </button>
                             <button
                                 onClick={() => { setProfileOpen(false); setLogoutConfirm(true); }}
-                                className="w-full flex items-center gap-3 px-4 py-3 text-sm text-red-600 hover:bg-red-50 border-t border-gray-100"
+                                className="w-full flex items-center gap-3 px-4 py-3 text-sm transition-colors panel-dropdown-danger"
                             >
-                                <HiOutlineLogout className="w-4 h-4" />
+                                <HiOutlineLogout className="w-4 h-4 shrink-0" />
                                 Logout
                             </button>
                         </div>
@@ -240,76 +237,145 @@ export default function AdminLayout({ children }) {
                 </div>
             </aside>
 
-            {/* Main content */}
+            {/* ── Desktop sidebar toggle tab ───────────────────────── */}
+            <button
+                className="hidden lg:flex fixed top-4 z-[60] items-center justify-center w-5 h-10 rounded-r-lg shadow-lg transition-all duration-300 panel-arrow-tab"
+                style={{ left: sidebarCollapsed ? 0 : '16rem' }}
+                onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+                title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            >
+                <svg xmlns="http://www.w3.org/2000/svg" className="w-3.5 h-3.5" fill="none"
+                     viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                    {sidebarCollapsed
+                        ? <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                        : <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+                    }
+                </svg>
+            </button>
+
+            {/* ── Main content ─────────────────────────────────────── */}
             <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
                 {/* Top bar */}
-                <header className="flex items-center gap-4 px-4 lg:px-8 py-3 bg-white border-b border-gray-200 shrink-0">
+                <header className="flex items-center gap-3 px-4 py-2.5 shrink-0 panel-header">
+                    {/* Mobile hamburger */}
                     <button
-                        className="lg:hidden p-2 text-gray-600 hover:bg-gray-100 rounded-lg"
+                        className="lg:hidden p-2 rounded-lg transition-colors panel-topbar-btn"
                         onClick={() => setSidebarOpen(true)}
                     >
                         <HiOutlineMenu className="w-5 h-5" />
                     </button>
+
                     <div className="flex-1" />
-                    <span className="text-sm text-gray-500 hidden sm:block">
-                        Welcome, <span className="font-medium text-gray-700">{user?.name}</span>
+
+                    {/* Theme toggle */}
+                    <button
+                        onClick={toggleTheme}
+                        className="p-2 rounded-lg transition-colors panel-topbar-btn"
+                        title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+                    >
+                        {theme === 'dark' ? (
+                            <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none"
+                                 viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.7}>
+                                <path strokeLinecap="round" strokeLinejoin="round"
+                                    d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364-.707.707M6.343 17.657l-.707.707m12.728 0-.707-.707M6.343 6.343l-.707-.707M12 7a5 5 0 100 10 5 5 0 000-10z" />
+                            </svg>
+                        ) : (
+                            <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none"
+                                 viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.7}>
+                                <path strokeLinecap="round" strokeLinejoin="round"
+                                    d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" />
+                            </svg>
+                        )}
+                    </button>
+
+                    {/* Welcome text */}
+                    <span className="text-sm hidden sm:block" style={{ color: 'var(--panel-topbar-text)' }}>
+                        Welcome,{' '}
+                        <span className="font-semibold" style={{ color: 'var(--panel-welcome-accent)' }}>
+                            {user?.name}
+                        </span>
                     </span>
                 </header>
 
                 {/* Page content */}
-                <main className="flex-1 overflow-y-auto bg-gray-50 p-4 lg:p-8 admin-scroll">
+                <main className="flex-1 overflow-y-auto p-4 lg:p-8 admin-scroll panel-content-bg">
                     {children}
                 </main>
             </div>
 
-            {/* ═══ NOTIFICATION DROPDOWN ═══ rendered OUTSIDE sidebar to avoid clipping */}
+            {/* ── Notification dropdown (outside sidebar to avoid clip) */}
             {notificationOpen && (
                 <div
                     ref={notifDropdownRef}
-                    className="fixed bottom-16 left-[17rem] w-80 bg-white rounded-lg shadow-2xl border border-gray-200 max-h-96 overflow-y-auto z-[9999]"
+                    className={`fixed bottom-16 w-80 rounded-xl max-h-96 overflow-y-auto z-[9999] transition-all duration-300 panel-scroll panel-dropdown ${
+                        sidebarCollapsed ? 'left-4' : 'left-[17rem]'
+                    }`}
                     style={{ maxWidth: 'calc(100vw - 2rem)' }}
                 >
-                    <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between sticky top-0 bg-white rounded-t-lg">
-                        <div>
-                            <span className="font-semibold text-gray-900">Notifications</span>
+                    {/* Header */}
+                    <div className="px-4 py-3 flex items-center justify-between sticky top-0 panel-dropdown"
+                         style={{ borderBottom: '1px solid var(--panel-dropdown-border)' }}>
+                        <div className="flex items-center gap-2">
+                            <span className="font-semibold text-sm"
+                                  style={{ color: 'var(--panel-dropdown-text)' }}>
+                                Notifications
+                            </span>
                             {unreadCount > 0 && (
-                                <span className="ml-2 inline-block bg-red-100 text-red-700 text-xs font-medium px-2 py-0.5 rounded-full">
+                                <span className="inline-block bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
                                     {unreadCount}
                                 </span>
                             )}
                         </div>
                         {unreadCount > 0 && (
-                            <button onClick={handleMarkAllAsRead} className="text-xs text-blue-600 hover:text-blue-700 font-medium">
+                            <button
+                                onClick={handleMarkAllAsRead}
+                                className="text-xs font-medium transition-colors"
+                                style={{ color: 'var(--color-primary)' }}
+                            >
                                 Mark all as read
                             </button>
                         )}
                     </div>
-                    {loadingNotifications ? (
-                        <div className="px-4 py-8 text-center text-gray-500">
-                            <p className="text-sm">Loading...</p>
+
+                    {/* Body */}
+                    {loadingNotif ? (
+                        <div className="px-4 py-8 text-center">
+                            <p className="text-sm" style={{ color: 'var(--panel-profile-muted)' }}>Loading…</p>
                         </div>
                     ) : notifications.length === 0 ? (
-                        <div className="px-4 py-8 text-center text-gray-500">
-                            <HiOutlineBell className="w-8 h-8 mx-auto mb-2 text-gray-300" />
-                            <p className="text-sm">No notifications yet</p>
+                        <div className="px-4 py-8 text-center">
+                            <HiOutlineBell className="w-8 h-8 mx-auto mb-2"
+                                           style={{ color: 'var(--panel-nav-text)' }} />
+                            <p className="text-sm" style={{ color: 'var(--panel-profile-muted)' }}>
+                                No notifications yet
+                            </p>
                         </div>
                     ) : (
-                        <div className="divide-y divide-gray-100">
+                        <div className="panel-notif-divide">
                             {notifications.map((notif) => (
                                 <div
                                     key={notif.id}
                                     onClick={() => !notif.is_read && handleMarkAsRead(notif.id)}
-                                    className={`px-4 py-3 cursor-pointer transition-colors ${notif.is_read ? 'bg-white hover:bg-gray-50' : 'bg-blue-50 hover:bg-blue-100'}`}
+                                    className={`px-4 py-3 cursor-pointer transition-colors ${
+                                        notif.is_read ? 'panel-notif-read' : 'panel-notif-unread'
+                                    }`}
                                 >
                                     <div className="flex items-start justify-between gap-2">
                                         <div className="flex-1">
-                                            <p className={`text-sm ${notif.is_read ? 'text-gray-600' : 'font-medium text-gray-900'}`}>
+                                            <p className={`text-sm ${notif.is_read ? '' : 'font-semibold'}`}
+                                               style={{ color: notif.is_read
+                                                   ? 'var(--panel-profile-muted)'
+                                                   : 'var(--panel-dropdown-text)' }}>
                                                 {notif.title}
                                             </p>
-                                            <p className="text-xs text-gray-500 mt-1 line-clamp-2">{notif.message}</p>
+                                            <p className="text-xs mt-1 line-clamp-2"
+                                               style={{ color: 'var(--panel-profile-muted)' }}>
+                                                {notif.message}
+                                            </p>
                                         </div>
                                         {!notif.is_read && (
-                                            <span className="w-2 h-2 bg-blue-500 rounded-full mt-1.5 shrink-0"></span>
+                                            <span className="w-2 h-2 rounded-full mt-1.5 shrink-0"
+                                                  style={{ background: 'var(--color-primary)' }} />
                                         )}
                                     </div>
                                 </div>
@@ -318,9 +384,6 @@ export default function AdminLayout({ children }) {
                     )}
                 </div>
             )}
-
-            {/* Profile Modal */}
-            <ProfileModal open={profileModalOpen} onClose={() => setProfileModalOpen(false)} />
 
             {/* Logout Confirmation */}
             <ConfirmDialog
