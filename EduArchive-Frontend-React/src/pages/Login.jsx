@@ -48,12 +48,12 @@ function MoonIcon() {
 function LoginIllustration() {
   return (
     <div
-      className="hidden lg:flex flex-col justify-between p-12 relative overflow-hidden"
+      className="hidden lg:flex flex-col justify-between p-8 relative overflow-hidden"
       style={{
         background: 'linear-gradient(135deg, var(--color-bg) 0%, var(--color-bg-secondary) 50%, var(--color-bg-tertiary) 100%)',
         borderRight: '1px solid var(--color-border)',
         minHeight: '100vh',
-        flex: '0 0 45%',
+        flex: '0 0 40%',
       }}
     >
       {/* Background orbs */}
@@ -85,9 +85,9 @@ function LoginIllustration() {
       </div>
 
       {/* Center content */}
-      <div className="relative z-10 flex-1 flex flex-col justify-center py-12">
+      <div className="relative z-10 flex-1 flex flex-col justify-center py-6">
         {/* Central abstract visual */}
-        <div className="relative mx-auto" style={{ width: 320, height: 320 }}>
+        <div className="relative mx-auto" style={{ width: 240, height: 240 }}>
           {/* Rotating outer ring */}
           <div className="absolute inset-0 rounded-full border animate-spin-slow"
             style={{ borderColor: 'rgba(91,190,99,0.15)', borderStyle: 'dashed' }} aria-hidden="true" />
@@ -101,13 +101,13 @@ function LoginIllustration() {
             className="absolute inset-0 flex items-center justify-center"
           >
             <div style={{
-              width: 96, height: 96,
+              width: 72, height: 72,
               background: 'linear-gradient(135deg, var(--color-primary), var(--color-accent-bright))',
-              borderRadius: 24,
+              borderRadius: 18,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               boxShadow: 'var(--shadow-glow-strong)',
             }}>
-              <svg width="48" height="48" viewBox="0 0 24 24" fill="white" aria-hidden="true">
+              <svg width="36" height="36" viewBox="0 0 24 24" fill="white" aria-hidden="true">
                 <path d="M4 6H2v14a2 2 0 002 2h14v-2H4V6zm16-4H8a2 2 0 00-2 2v12a2 2 0 002 2h12a2 2 0 002-2V4a2 2 0 00-2-2zm-1 9H9V9h10v2zm-4 4H9v-2h6v2zm4-8H9V5h10v2z" />
               </svg>
             </div>
@@ -121,7 +121,7 @@ function LoginIllustration() {
             { label: 'Secure', icon: '🔒', angle: 270, delay: '1.5s' },
           ].map(({ label, icon, angle, delay }) => {
             const rad = (angle * Math.PI) / 180
-            const r = 140
+            const r = 105
             const x = Math.cos(rad) * r
             const y = Math.sin(rad) * r
             return (
@@ -148,22 +148,22 @@ function LoginIllustration() {
         </div>
 
         {/* Description */}
-        <div className="text-center mt-8">
-          <h2 className="font-poppins font-bold text-2xl mb-3" style={{ color: 'var(--color-text)' }}>
+        <div className="text-center mt-5">
+          <h2 className="font-poppins font-bold text-lg mb-2" style={{ color: 'var(--color-text)' }}>
             Academic Research,{' '}
             <span className="text-gradient">Reimagined</span>
           </h2>
-          <p className="text-sm leading-relaxed max-w-xs mx-auto" style={{ color: 'var(--color-text-muted)' }}>
+          <p className="leading-relaxed max-w-xs mx-auto" style={{ color: 'var(--color-text-muted)', fontSize: '0.78rem' }}>
             Access thousands of capstone projects from Mindoro State University in one centralized, intelligent repository.
           </p>
         </div>
 
         {/* Stats strip */}
-        <div className="flex justify-center gap-8 mt-8">
+        <div className="flex justify-center gap-6 mt-5">
           {[['1,000+', 'Projects'], ['500+', 'Students'], ['50+', 'Faculty']].map(([val, label]) => (
             <div key={label} className="text-center">
-              <div className="font-poppins font-bold text-xl" style={{ color: 'var(--color-primary)' }}>{val}</div>
-              <div className="text-xs" style={{ color: 'var(--color-text-muted)' }}>{label}</div>
+              <div className="font-poppins font-bold text-base" style={{ color: 'var(--color-primary)' }}>{val}</div>
+              <div style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)' }}>{label}</div>
             </div>
           ))}
         </div>
@@ -261,7 +261,7 @@ export default function Login() {
 
   return (
     <div
-      className="min-h-screen flex"
+      className="h-screen flex overflow-hidden"
       style={{ background: 'var(--color-bg)' }}
     >
       {/* Left — illustration */}
@@ -269,7 +269,7 @@ export default function Login() {
 
       {/* Right — form */}
       <div
-        className="flex-1 flex flex-col items-center justify-center px-6 py-12 min-h-screen relative"
+        className="flex-1 flex flex-col items-center justify-center px-6 py-4 h-screen relative overflow-y-auto"
         style={{ background: 'var(--color-bg)' }}
       >
         {/* Theme toggle — top right */}
@@ -284,33 +284,33 @@ export default function Login() {
         <div
           className="w-full"
           style={{
-            maxWidth: 420,
+            maxWidth: 400,
             animation: 'fade-in-up 0.5s ease both',
           }}
         >
           {/* Mobile logo */}
-          <div className="flex lg:hidden items-center justify-center gap-2.5 mb-8">
+          <div className="flex lg:hidden items-center justify-center gap-2.5 mb-5">
             <div style={{
-              width: 38, height: 38,
+              width: 34, height: 34,
               background: 'linear-gradient(135deg, var(--color-primary), var(--color-accent-bright))',
-              borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center',
+              borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center',
               boxShadow: '0 4px 16px rgba(91,190,99,0.3)',
             }}>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="white" aria-hidden="true">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="white" aria-hidden="true">
                 <path d="M4 6H2v14a2 2 0 002 2h14v-2H4V6zm16-4H8a2 2 0 00-2 2v12a2 2 0 002 2h12a2 2 0 002-2V4a2 2 0 00-2-2zm-1 9H9V9h10v2zm-4 4H9v-2h6v2zm4-8H9V5h10v2z" />
               </svg>
             </div>
-            <span className="font-poppins font-bold text-2xl" style={{ color: 'var(--color-text)' }}>
+            <span className="font-poppins font-bold text-xl" style={{ color: 'var(--color-text)' }}>
               Acade<span style={{ color: 'var(--color-primary)' }}>X</span>
             </span>
           </div>
 
           {/* Heading */}
-          <div className="mb-8">
-            <h1 className="font-poppins font-bold text-3xl mb-2" style={{ color: 'var(--color-text)', letterSpacing: '-0.02em' }}>
+          <div className="mb-5">
+            <h1 className="font-poppins font-bold text-2xl mb-1" style={{ color: 'var(--color-text)', letterSpacing: '-0.02em' }}>
               Welcome back
             </h1>
-            <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
+            <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
               Sign in to your AcadeX account
             </p>
           </div>
@@ -318,11 +318,12 @@ export default function Login() {
           {/* Success banner */}
           {successMessage && (
             <div
-              className="mb-6 p-4 rounded-xl text-sm animate-fade-in-up"
+              className="mb-4 p-3 rounded-xl animate-fade-in-up"
               style={{
                 background: 'rgba(91,190,99,0.08)',
                 border: '1px solid rgba(91,190,99,0.3)',
                 color: 'var(--color-primary)',
+                fontSize: '0.8rem',
               }}
             >
               ✓ {successMessage}
@@ -332,11 +333,12 @@ export default function Login() {
           {/* Error banner */}
           {globalError && (
             <div
-              className="mb-6 p-4 rounded-xl text-sm animate-fade-in-up"
+              className="mb-4 p-3 rounded-xl animate-fade-in-up"
               style={{
                 background: 'rgba(239,68,68,0.08)',
                 border: '1px solid rgba(239,68,68,0.3)',
                 color: '#f87171',
+                fontSize: '0.8rem',
               }}
             >
               {globalError}
@@ -345,7 +347,7 @@ export default function Login() {
 
           {/* Form card */}
           <div
-            className="glass-card p-8"
+            className="glass-card p-5"
             style={{
               animation: shake
                 ? 'shake 0.4s ease'
@@ -364,11 +366,11 @@ export default function Login() {
 
             <form onSubmit={handleSubmit} noValidate>
               {/* Email */}
-              <div className="mb-5">
+              <div className="mb-3.5">
                 <label
                   htmlFor="email"
-                  className="block text-sm font-medium mb-2"
-                  style={{ color: 'var(--color-text-secondary)' }}
+                  className="block font-medium mb-1.5"
+                  style={{ color: 'var(--color-text-secondary)', fontSize: '0.8rem' }}
                 >
                   Email Address
                 </label>
@@ -382,18 +384,19 @@ export default function Login() {
                   onChange={handleChange}
                   className={`input-field ${errors.email ? 'error' : ''}`}
                   placeholder="you@minsu.edu.ph"
+                  style={{ padding: '0.55rem 0.875rem', fontSize: '0.875rem' }}
                 />
                 {errors.email && (
-                  <p className="text-xs mt-1.5" style={{ color: '#f87171' }}>{errors.email[0]}</p>
+                  <p className="text-xs mt-1" style={{ color: '#f87171' }}>{errors.email[0]}</p>
                 )}
               </div>
 
               {/* Password */}
-              <div className="mb-5">
+              <div className="mb-3.5">
                 <label
                   htmlFor="password"
-                  className="block text-sm font-medium mb-2"
-                  style={{ color: 'var(--color-text-secondary)' }}
+                  className="block font-medium mb-1.5"
+                  style={{ color: 'var(--color-text-secondary)', fontSize: '0.8rem' }}
                 >
                   Password
                 </label>
@@ -408,6 +411,7 @@ export default function Login() {
                     onChange={handleChange}
                     className={`input-field pr-12 ${errors.password ? 'error' : ''}`}
                     placeholder="Enter your password"
+                    style={{ padding: '0.55rem 0.875rem', fontSize: '0.875rem' }}
                   />
                   <button
                     type="button"
@@ -422,12 +426,12 @@ export default function Login() {
                   </button>
                 </div>
                 {errors.password && (
-                  <p className="text-xs mt-1.5" style={{ color: '#f87171' }}>{errors.password[0]}</p>
+                  <p className="text-xs mt-1" style={{ color: '#f87171' }}>{errors.password[0]}</p>
                 )}
               </div>
 
               {/* Remember Me & Forgot */}
-              <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center justify-between mb-4">
                 <label className="flex items-center gap-2.5 cursor-pointer group">
                   <div
                     className="relative w-4 h-4 rounded flex items-center justify-center flex-shrink-0 transition-all duration-200"
@@ -470,7 +474,8 @@ export default function Login() {
                 disabled={loading}
                 className="btn-primary w-full"
                 style={{
-                  padding: '0.9rem',
+                  padding: '0.65rem',
+                  fontSize: '0.875rem',
                   opacity: loading ? 0.7 : 1,
                   cursor: loading ? 'not-allowed' : 'pointer',
                 }}
@@ -490,7 +495,7 @@ export default function Login() {
               </button>
             </form>
 
-            <p className="mt-6 text-center text-sm" style={{ color: 'var(--color-text-muted)' }}>
+            <p className="mt-4 text-center" style={{ color: 'var(--color-text-muted)', fontSize: '0.8rem' }}>
               Don't have an account?{' '}
               <Link
                 to="/register"
@@ -505,7 +510,7 @@ export default function Login() {
           </div>
 
           {/* Back to home */}
-          <div className="mt-6 text-center">
+          <div className="mt-4 text-center">
             <Link
               to="/"
               className="text-xs transition-colors duration-200 inline-flex items-center gap-1.5"

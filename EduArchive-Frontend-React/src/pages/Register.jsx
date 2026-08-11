@@ -78,15 +78,16 @@ function MoonIcon() {
 function Field({ label, name, type = 'text', value, onChange, placeholder, error, required = true, autoComplete }) {
   return (
     <div>
-      <label htmlFor={name} className="block text-sm font-medium mb-2" style={{ color: 'var(--color-text-secondary)' }}>
+      <label htmlFor={name} className="block font-medium mb-1.5" style={{ color: 'var(--color-text-secondary)', fontSize: '0.8rem' }}>
         {label} {required && <span style={{ color: 'var(--color-primary)' }}>*</span>}
       </label>
       <input
         id={name} name={name} type={type} value={value} onChange={onChange}
         placeholder={placeholder} required={required} autoComplete={autoComplete}
         className={`input-field ${error ? 'error' : ''}`}
+        style={{ padding: '0.55rem 0.875rem', fontSize: '0.875rem' }}
       />
-      {error && <p className="text-xs mt-1.5" style={{ color: '#f87171' }}>{error[0]}</p>}
+      {error && <p className="text-xs mt-1" style={{ color: '#f87171' }}>{error[0]}</p>}
     </div>
   )
 }
@@ -118,7 +119,7 @@ function PwdCheck({ ok, label }) {
 /* ─── Step Progress ──────────────────────────────────────────── */
 function StepProgress({ currentStep }) {
   return (
-    <div className="flex items-center mb-8">
+    <div className="flex items-center mb-5">
       {STEPS.map((step, i) => (
         <div key={step.id} className="flex items-center" style={{ flex: i < STEPS.length - 1 ? 1 : 0 }}>
           {/* Step dot */}
@@ -127,15 +128,15 @@ function StepProgress({ currentStep }) {
               className={`step-dot ${currentStep === step.id ? 'active' : currentStep > step.id ? 'completed' : ''}`}
             >
               {currentStep > step.id ? (
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                   <polyline points="20 6 9 17 4 12" />
                 </svg>
               ) : (
                 step.id
               )}
             </div>
-            <div className="mt-1.5 text-center" style={{ minWidth: 60 }}>
-              <p className="text-xs font-semibold" style={{ color: currentStep >= step.id ? 'var(--color-text)' : 'var(--color-text-faint)' }}>
+            <div className="mt-1 text-center" style={{ minWidth: 52 }}>
+              <p className="font-semibold" style={{ color: currentStep >= step.id ? 'var(--color-text)' : 'var(--color-text-faint)', fontSize: '0.7rem' }}>
                 {step.label}
               </p>
             </div>
@@ -145,7 +146,7 @@ function StepProgress({ currentStep }) {
           {i < STEPS.length - 1 && (
             <div
               className={`step-line mb-5 ${currentStep > step.id ? 'completed' : ''}`}
-              style={{ margin: '0 8px', marginBottom: 20 }}
+              style={{ margin: '0 6px', marginBottom: 16 }}
             />
           )}
         </div>
@@ -158,12 +159,12 @@ function StepProgress({ currentStep }) {
 function RegisterIllustration() {
   return (
     <div
-      className="hidden lg:flex flex-col justify-between p-12 relative overflow-hidden"
+      className="hidden lg:flex flex-col justify-between p-8 relative overflow-hidden"
       style={{
         background: 'linear-gradient(135deg, var(--color-bg) 0%, var(--color-bg-secondary) 50%, var(--color-bg-tertiary) 100%)',
         borderRight: '1px solid var(--color-border)',
         minHeight: '100vh',
-        flex: '0 0 45%',
+        flex: '0 0 40%',
       }}
     >
       {/* Background orbs */}
@@ -195,9 +196,9 @@ function RegisterIllustration() {
       </div>
 
       {/* Center content */}
-      <div className="relative z-10 flex-1 flex flex-col justify-center py-12">
+      <div className="relative z-10 flex-1 flex flex-col justify-center py-6">
         {/* Central abstract visual */}
-        <div className="relative mx-auto" style={{ width: 300, height: 300 }}>
+        <div className="relative mx-auto" style={{ width: 240, height: 240 }}>
           {/* Rotating outer ring */}
           <div className="absolute inset-0 rounded-full border animate-spin-slow"
             style={{ borderColor: 'rgba(91,190,99,0.15)', borderStyle: 'dashed' }} aria-hidden="true" />
@@ -209,13 +210,13 @@ function RegisterIllustration() {
           {/* Center icon */}
           <div className="absolute inset-0 flex items-center justify-center">
             <div style={{
-              width: 96, height: 96,
+              width: 72, height: 72,
               background: 'linear-gradient(135deg, var(--color-primary), var(--color-accent-bright))',
-              borderRadius: 24,
+              borderRadius: 18,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               boxShadow: 'var(--shadow-glow-strong)',
             }}>
-              <svg width="48" height="48" viewBox="0 0 24 24" fill="white" aria-hidden="true">
+              <svg width="36" height="36" viewBox="0 0 24 24" fill="white" aria-hidden="true">
                 <path d="M15 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm-9-2V7H4v3H1v2h3v3h2v-3h3v-2H6zm9 4c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
               </svg>
             </div>
@@ -229,7 +230,7 @@ function RegisterIllustration() {
             { label: 'Secure', icon: '🔒', angle: 270, delay: '1.5s' },
           ].map(({ label, icon, angle, delay }) => {
             const rad = (angle * Math.PI) / 180
-            const r = 130
+            const r = 100
             const x = Math.cos(rad) * r
             const y = Math.sin(rad) * r
             return (
@@ -256,22 +257,22 @@ function RegisterIllustration() {
         </div>
 
         {/* Description */}
-        <div className="text-center mt-8">
-          <h2 className="font-poppins font-bold text-2xl mb-3" style={{ color: 'var(--color-text)' }}>
+        <div className="text-center mt-5">
+          <h2 className="font-poppins font-bold text-lg mb-2" style={{ color: 'var(--color-text)' }}>
             Join the{' '}
             <span className="text-gradient">Community</span>
           </h2>
-          <p className="text-sm leading-relaxed max-w-xs mx-auto" style={{ color: 'var(--color-text-muted)' }}>
+          <p className="leading-relaxed max-w-xs mx-auto" style={{ color: 'var(--color-text-muted)', fontSize: '0.78rem' }}>
             Create your AcadeX account and gain access to thousands of capstone projects from Mindoro State University.
           </p>
         </div>
 
         {/* Stats strip */}
-        <div className="flex justify-center gap-8 mt-8">
+        <div className="flex justify-center gap-6 mt-5">
           {[['1,000+', 'Projects'], ['500+', 'Students'], ['50+', 'Faculty']].map(([val, label]) => (
             <div key={label} className="text-center">
-              <div className="font-poppins font-bold text-xl" style={{ color: 'var(--color-primary)' }}>{val}</div>
-              <div className="text-xs" style={{ color: 'var(--color-text-muted)' }}>{label}</div>
+              <div className="font-poppins font-bold text-base" style={{ color: 'var(--color-primary)' }}>{val}</div>
+              <div style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)' }}>{label}</div>
             </div>
           ))}
         </div>
@@ -442,7 +443,7 @@ export default function Register() {
 
   return (
     <div
-      className="min-h-screen flex"
+      className="h-screen flex overflow-hidden"
       style={{ background: 'var(--color-bg)' }}
     >
       {/* Left — illustration */}
@@ -450,7 +451,7 @@ export default function Register() {
 
       {/* Right — form */}
       <div
-        className="flex-1 flex flex-col items-center justify-center px-6 py-12 min-h-screen relative overflow-y-auto"
+        className="flex-1 flex flex-col items-center justify-center px-6 py-4 h-screen relative overflow-y-auto"
         style={{ background: 'var(--color-bg)' }}
       >
         {/* Theme toggle — top right */}
@@ -465,12 +466,12 @@ export default function Register() {
         <div
           className="w-full"
           style={{
-            maxWidth: 480,
+            maxWidth: 460,
             animation: 'fade-in-up 0.5s ease both',
           }}
         >
           {/* Mobile logo */}
-          <div className="flex lg:hidden items-center justify-center gap-2.5 mb-8">
+          <div className="flex lg:hidden items-center justify-center gap-2.5 mb-5">
             <div style={{
               width: 38, height: 38,
               background: 'linear-gradient(135deg, var(--color-primary), var(--color-accent-bright))',
@@ -487,29 +488,29 @@ export default function Register() {
           </div>
 
           {/* Heading */}
-          <div className="mb-8">
-            <h1 className="font-poppins font-bold text-3xl mb-2" style={{ color: 'var(--color-text)', letterSpacing: '-0.02em' }}>
+          <div className="mb-4">
+            <h1 className="font-poppins font-bold text-xl mb-1" style={{ color: 'var(--color-text)', letterSpacing: '-0.02em' }}>
               Create your account
             </h1>
-            <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
+            <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
               Join the Mindoro State University research repository
             </p>
           </div>
 
         {/* Card */}
-        <div className="glass-card p-8">
+        <div className="glass-card p-5">
 
           {/* Step progress */}
           <StepProgress currentStep={step} />
 
           {/* Step label */}
-          <div className="mb-6">
-            <h2 className="font-poppins font-semibold text-lg" style={{ color: 'var(--color-text)' }}>
+          <div className="mb-3">
+            <h2 className="font-poppins font-semibold text-sm" style={{ color: 'var(--color-text)' }}>
               {step === 1 && 'Personal Information'}
               {step === 2 && 'Academic Information'}
               {step === 3 && 'Set Password'}
             </h2>
-            <p className="text-sm mt-1" style={{ color: 'var(--color-text-muted)' }}>
+            <p className="mt-0.5" style={{ color: 'var(--color-text-muted)', fontSize: '0.75rem' }}>
               {step === 1 && 'Tell us about yourself'}
               {step === 2 && 'Your role and program at MinSU'}
               {step === 3 && 'Choose a strong password to secure your account'}
@@ -519,11 +520,12 @@ export default function Register() {
           {/* Global error */}
           {globalError && (
             <div
-              className="mb-5 p-4 rounded-xl text-sm animate-fade-in-up"
+              className="mb-3 p-3 rounded-xl animate-fade-in-up"
               style={{
                 background: 'rgba(239,68,68,0.08)',
                 border: '1px solid rgba(239,68,68,0.3)',
                 color: '#f87171',
+                fontSize: '0.8rem',
               }}
             >
               {globalError}
@@ -534,8 +536,8 @@ export default function Register() {
 
             {/* ── STEP 1: Personal Information ─── */}
             {step === 1 && (
-              <div className="space-y-4 animate-fade-in">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-3 animate-fade-in">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <Field label="Full Name" name="name" value={form.name} onChange={handleChange}
                     placeholder="Juan Dela Cruz" error={errors.name} autoComplete="name" />
                   <Field label="Username" name="username" value={form.username} onChange={handleChange}
@@ -548,10 +550,10 @@ export default function Register() {
 
             {/* ── STEP 2: Academic Information ─── */}
             {step === 2 && (
-              <div className="space-y-5 animate-fade-in">
+              <div className="space-y-3 animate-fade-in">
                 {/* Role */}
                 <div>
-                  <label htmlFor="role" className="block text-sm font-medium mb-2" style={{ color: 'var(--color-text-secondary)' }}>
+                  <label htmlFor="role" className="block font-medium mb-1.5" style={{ color: 'var(--color-text-secondary)', fontSize: '0.8rem' }}>
                     Role <span style={{ color: 'var(--color-primary)' }}>*</span>
                   </label>
                   <div className="grid grid-cols-2 gap-3">
@@ -576,7 +578,7 @@ export default function Register() {
 
                 {/* Email + verification */}
                 <div>
-                  <label htmlFor="email" className="block text-sm font-medium mb-2" style={{ color: 'var(--color-text-secondary)' }}>
+                  <label htmlFor="email" className="block font-medium mb-1.5" style={{ color: 'var(--color-text-secondary)', fontSize: '0.8rem' }}>
                     Email Address <span style={{ color: 'var(--color-primary)' }}>*</span>
                   </label>
                   <div className="flex gap-2">
@@ -663,7 +665,7 @@ export default function Register() {
 
                 {/* Program */}
                 <div>
-                  <label htmlFor="program" className="block text-sm font-medium mb-2" style={{ color: 'var(--color-text-secondary)' }}>
+                  <label htmlFor="program" className="block font-medium mb-1.5" style={{ color: 'var(--color-text-secondary)', fontSize: '0.8rem' }}>
                     Program <span style={{ color: 'var(--color-primary)' }}>*</span>
                   </label>
                   <select
@@ -707,7 +709,7 @@ export default function Register() {
 
             {/* ── STEP 3: Credentials ─── */}
             {step === 3 && (
-              <div className="space-y-5 animate-fade-in">
+              <div className="space-y-3 animate-fade-in">
                 {/* Password */}
                 <div>
                   <label htmlFor="password" className="block text-sm font-medium mb-2" style={{ color: 'var(--color-text-secondary)' }}>
@@ -812,13 +814,13 @@ export default function Register() {
             )}
 
             {/* Navigation buttons */}
-            <div className="flex gap-3 mt-8">
+            <div className="flex gap-3 mt-5">
               {step > 1 && (
                 <button
                   type="button"
                   onClick={prevStep}
                   className="btn-outline flex-1"
-                  style={{ padding: '0.875rem' }}
+                  style={{ padding: '0.6rem', fontSize: '0.875rem' }}
                 >
                   ← Back
                 </button>
@@ -828,7 +830,7 @@ export default function Register() {
                   type="button"
                   onClick={nextStep}
                   className="btn-primary flex-1"
-                  style={{ padding: '0.875rem' }}
+                  style={{ padding: '0.6rem', fontSize: '0.875rem' }}
                 >
                   Continue →
                 </button>
@@ -838,7 +840,8 @@ export default function Register() {
                   disabled={loading || !emailVerified}
                   className="btn-primary flex-1"
                   style={{
-                    padding: '0.875rem',
+                    padding: '0.6rem',
+                    fontSize: '0.875rem',
                     opacity: (loading || !emailVerified) ? 0.65 : 1,
                     cursor: (loading || !emailVerified) ? 'not-allowed' : 'pointer',
                   }}
@@ -854,7 +857,7 @@ export default function Register() {
             </div>
           </form>
 
-          <p className="mt-6 text-center text-sm" style={{ color: 'var(--color-text-muted)' }}>
+          <p className="mt-4 text-center" style={{ color: 'var(--color-text-muted)', fontSize: '0.8rem' }}>
             Already have an account?{' '}
             <Link
               to="/login"
@@ -869,7 +872,7 @@ export default function Register() {
         </div>
 
           {/* Back to home */}
-          <div className="mt-6 text-center">
+          <div className="mt-4 text-center">
             <Link
               to="/"
               className="text-xs transition-colors duration-200 inline-flex items-center gap-1.5"

@@ -20,10 +20,10 @@ const SAMPLE_CARDS = [
 /* ── Abstract SVG Illustration ───────────────────────────────── */
 function HeroIllustration() {
   return (
-    <div className="relative w-full" style={{ maxWidth: 520 }}>
+    <div className="relative w-full" style={{ maxWidth: 420 }}>
       {/* Main card */}
       <div
-        className="rounded-2xl p-6 relative overflow-hidden"
+        className="rounded-2xl p-4 relative overflow-hidden"
         style={{
           background: 'var(--color-surface)',
           backdropFilter: 'blur(20px)',
@@ -33,8 +33,8 @@ function HeroIllustration() {
         }}
       >
         {/* Mock document header */}
-        <div className="flex items-center gap-3 mb-5">
-          <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+        <div className="flex items-center gap-3 mb-3">
+          <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0"
             style={{ background: 'linear-gradient(135deg, var(--color-primary), var(--color-accent-bright))' }}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="white" aria-hidden="true">
               <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6zm-1 1.5L18.5 9H13V3.5zM6 20V4h5v7h7v9H6z" />
@@ -63,14 +63,15 @@ function HeroIllustration() {
         ].map((row, i) => (
           <div
             key={row.label}
-            className={`mb-3 ${row.full ? '' : 'inline-block mr-4'}`}
+            className={`mb-2 ${row.full ? '' : 'inline-block mr-3'}`}
           >
-            <p className="text-xs mb-0.5 font-medium" style={{ color: 'var(--color-text-muted)' }}>{row.label}</p>
-            <div className="h-7 rounded-lg flex items-center px-3 text-xs font-medium"
+            <p className="text-xs mb-0.5 font-medium" style={{ color: 'var(--color-text-muted)', fontSize: '0.65rem' }}>{row.label}</p>
+            <div className="h-6 rounded-lg flex items-center px-2.5 font-medium"
               style={{
                 background: 'var(--color-bg-tertiary)',
                 color: 'var(--color-text-secondary)',
                 border: '1px solid var(--color-border)',
+                fontSize: '0.7rem',
                 animationDelay: `${i * 0.1}s`,
               }}>
               {row.value}
@@ -79,8 +80,8 @@ function HeroIllustration() {
         ))}
 
         {/* Progress bar - "Indexing" */}
-        <div className="mt-4 pt-4" style={{ borderTop: '1px solid var(--color-border)' }}>
-          <div className="flex justify-between text-xs mb-2" style={{ color: 'var(--color-text-muted)' }}>
+        <div className="mt-3 pt-3" style={{ borderTop: '1px solid var(--color-border)' }}>
+          <div className="flex justify-between mb-1.5" style={{ color: 'var(--color-text-muted)', fontSize: '0.7rem' }}>
             <span>Indexing to repository…</span>
             <span style={{ color: 'var(--color-primary)' }}>94%</span>
           </div>
@@ -175,13 +176,13 @@ function StatsRow({ started }) {
   ]
 
   return (
-    <div className="flex flex-wrap gap-8 justify-center lg:justify-start mt-12">
+    <div className="flex flex-wrap gap-6 justify-center lg:justify-start mt-6">
       {STATS.map((stat, i) => (
         <div key={stat.label} className="text-center lg:text-left animate-fade-in-up" style={{ animationDelay: `${0.6 + i * 0.1}s` }}>
-          <div className="font-poppins font-bold text-3xl" style={{ color: 'var(--color-primary)' }}>
+          <div className="font-poppins font-bold text-2xl" style={{ color: 'var(--color-primary)' }}>
             {counts[i]}{stat.suffix}
           </div>
-          <div className="text-xs mt-1 font-medium" style={{ color: 'var(--color-text-muted)' }}>{stat.label}</div>
+          <div className="font-medium" style={{ color: 'var(--color-text-muted)', fontSize: '0.72rem' }}>{stat.label}</div>
         </div>
       ))}
     </div>
@@ -206,8 +207,8 @@ export default function Hero() {
     <section
       id="home"
       ref={sectionRef}
-      className="relative min-h-screen flex items-center overflow-hidden bg-grid"
-      style={{ background: 'var(--gradient-hero)', paddingTop: 80 }}
+      className="relative flex items-center overflow-hidden bg-grid"
+      style={{ background: 'var(--gradient-hero)', paddingTop: 68, minHeight: '100vh', maxHeight: '100vh' }}
     >
       {/* Background orbs */}
       <div aria-hidden="true" className="absolute top-[-5%] right-[-10%] w-[700px] h-[700px] rounded-full opacity-20 pointer-events-none animate-blob"
@@ -217,21 +218,21 @@ export default function Hero() {
       <div aria-hidden="true" className="absolute top-[40%] left-[40%] w-[300px] h-[300px] rounded-full opacity-10 pointer-events-none animate-float-slow"
         style={{ background: 'radial-gradient(circle, rgba(91,190,99,0.2) 0%, transparent 70%)', filter: 'blur(40px)' }} />
 
-      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 md:py-28 w-full">
-        <div className="flex flex-col lg:flex-row items-center gap-14 lg:gap-20">
+      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 lg:py-10 w-full">
+        <div className="flex flex-col lg:flex-row items-center gap-8 lg:gap-12">
 
           {/* Left — Content */}
           <div className="flex-1 text-center lg:text-left">
             {/* University badge */}
-            <div className="hero-badge mb-6 inline-flex animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
+            <div className="hero-badge mb-4 inline-flex animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
               <span className="w-2 h-2 rounded-full animate-pulse" style={{ background: 'var(--color-primary)' }} aria-hidden="true" />
               Mindoro State University
             </div>
 
             <h1
-              className="font-poppins font-bold leading-tight mb-6 animate-fade-in-up"
+              className="font-poppins font-bold leading-tight mb-4 animate-fade-in-up"
               style={{
-                fontSize: 'clamp(2.25rem, 5vw, 4rem)',
+                fontSize: 'clamp(1.6rem, 3.2vw, 2.75rem)',
                 color: 'var(--color-text)',
                 animationDelay: '0.2s',
                 letterSpacing: '-0.02em',
@@ -244,21 +245,21 @@ export default function Hero() {
             </h1>
 
             <p
-              className="text-base sm:text-lg leading-relaxed mb-8 max-w-xl mx-auto lg:mx-0 animate-fade-in-up"
+              className="text-sm leading-relaxed mb-5 max-w-xl mx-auto lg:mx-0 animate-fade-in-up"
               style={{ color: 'var(--color-text-secondary)', animationDelay: '0.35s' }}
             >
               AcadeX is Mindoro State University's centralized repository for securely storing,
               managing, and discovering approved capstone projects with automated PDF metadata extraction.
             </p>
 
-            <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start animate-fade-in-up" style={{ animationDelay: '0.45s' }}>
-              <Link to="/register" className="btn-primary" style={{ padding: '0.9rem 2rem', fontSize: '0.95rem' }}>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <div className="flex flex-col sm:flex-row gap-3 justify-center lg:justify-start animate-fade-in-up" style={{ animationDelay: '0.45s' }}>
+              <Link to="/register" className="btn-primary" style={{ padding: '0.65rem 1.5rem', fontSize: '0.875rem' }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                   <path d="M5 12h14M12 5l7 7-7 7" />
                 </svg>
                 Get Started
               </Link>
-              <a href="#features" className="btn-outline" style={{ padding: '0.9rem 2rem', fontSize: '0.95rem' }}>
+              <a href="#features" className="btn-outline" style={{ padding: '0.65rem 1.5rem', fontSize: '0.875rem' }}>
                 Learn More
               </a>
             </div>
