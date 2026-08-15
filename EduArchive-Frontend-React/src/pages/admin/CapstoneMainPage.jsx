@@ -1,6 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { HiArrowLeft, HiDownload, HiBookmark, HiShare, HiEye } from 'react-icons/hi';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import {
+    HiArrowLeft, HiDownload, HiBookmark, HiShare, HiEye,
+    HiArrowsExpand, HiX, HiAcademicCap, HiExternalLink,
+} from 'react-icons/hi';
 import { getCapstone, recordView, downloadCapstone, toggleBookmark } from '../../api/admin';
 import { useNotification } from '../../components/Notification';
 import CitationGenerator from '../../components/CitationGenerator';
@@ -24,7 +27,11 @@ export default function CapstoneMainPage() {
     const [pdfUrl, setPdfUrl] = useState(null);
     const [numPages, setNumPages] = useState(null);
     const [pdfWidth, setPdfWidth] = useState(600);
+    const [fullscreen, setFullscreen] = useState(false);
+    const [fsNumPages, setFsNumPages] = useState(null);
+    const [fsWidth, setFsWidth] = useState(900);
     const pdfContainerRef = useRef(null);
+    const fsContainerRef = useRef(null);
     const viewRecorded = useRef(false);
 
     // Push capstone context into chatbot when capstone loads, clear on unmount
@@ -51,6 +58,32 @@ export default function CapstoneMainPage() {
         window.addEventListener('resize', updateWidth);
         return () => window.removeEventListener('resize', updateWidth);
     }, [loading]);
+
+    // Fullscreen PDF width
+    useEffect(() => {
+        if (!fullscreen) return;
+        const updateFsWidth = () => {
+            if (fsContainerRef.current) {
+                setFsWidth(Math.min(fsContainerRef.current.clientWidth - 48, 1100));
+            }
+        };
+        updateFsWidth();
+        window.addEventListener('resize', updateFsWidth);
+        return () => window.removeEventListener('resize', updateFsWidth);
+    }, [fullscreen]);
+
+    // Lock body scroll when fullscreen open
+    useEffect(() => {
+        document.body.style.overflow = fullscreen ? 'hidden' : '';
+        return () => { document.body.style.overflow = ''; };
+    }, [fullscreen]);
+
+    // Escape key closes fullscreen
+    useEffect(() => {
+        const onKey = (e) => { if (e.key === 'Escape') setFullscreen(false); };
+        window.addEventListener('keydown', onKey);
+        return () => window.removeEventListener('keydown', onKey);
+    }, []);
 
     // Cleanup blob URL on unmount
     useEffect(() => {
@@ -140,6 +173,12 @@ export default function CapstoneMainPage() {
         ? new Date(capstone.created_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
         : '—';
 
+    const refs = capstone.referenced_capstones ?? capstone.referencedCapstones ?? [];
+
+    // Derive role prefix from current path so this shared component works for both admin and faculty
+    const location = useLocation();
+    const rolePrefix = location.pathname.startsWith('/faculty') ? '/faculty' : '/admin';
+
     return (
         <div className="flex flex-col h-full min-h-0">
             {/* ── Top bar: Back + Actions ── */}
@@ -167,26 +206,31 @@ export default function CapstoneMainPage() {
             {/* ── Two-column layout: Info left, PDF right ── */}
             <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-12 gap-4">
 
-                {/* Capstone Info — Full-width card */}
+                {/* Capstone Info — scrollable card */}
                 <div className="min-w-0 rounded-xl border border-green-200 bg-green-50/60 shadow-sm lg:col-span-5 h-full flex flex-col overflow-hidden">
                     <div className="p-5 flex flex-col h-full min-h-0 gap-4 overflow-y-auto custom-scrollbar">
-                        {/* Title */}
-                        <h1 className="text-xl font-bold text-gray-900 leading-snug">{capstone.title}</h1>
 
-                        {/* Metadata — horizontal row */}
+                        {/* Title + Published badge */}
+                        <div className="flex items-start gap-2 flex-wrap">
+                            <h1 className="text-xl font-bold text-gray-900 leading-snug flex-1">{capstone.title}</h1>
+                            <PublishedBadge published={capstone.is_published} />
+                        </div>
+
+                        {/* Metadata */}
                         <div className="flex flex-wrap gap-x-8 gap-y-2">
                             <InfoField label="Author" value={capstone.author || '—'} />
                             <InfoField label="Year" value={capstone.year || '—'} />
                             <InfoField label="Program" value={capstone.program || '—'} />
                             <InfoField label="Category" value={capstone.category || '—'} />
+                            <InfoField label="Adviser" value={capstone.adviser?.name || '—'} />
                             <InfoField label="Uploaded By" value={capstone.uploader?.name || '—'} />
                             <InfoField label="Date Uploaded" value={uploadedDate} />
                         </div>
 
-                        {/* Keywords */}
+                        {/* Keywords / Tags */}
                         {capstone.keywords?.length > 0 && (
                             <div>
-                                <label className="text-xs font-semibold text-gray-500 uppercase block mb-2">Keywords</label>
+                                <label className="text-xs font-semibold text-gray-500 uppercase block mb-2">Keywords / Tags</label>
                                 <div className="flex flex-wrap gap-1.5">
                                     {capstone.keywords.map((kw, i) => (
                                         <span key={i} className="px-2.5 py-1 text-xs font-medium bg-white text-green-700 rounded-full border border-green-200">
@@ -212,6 +256,24 @@ export default function CapstoneMainPage() {
                             </details>
                         )}
 
+                        {/* Referenced Capstones (cited works) */}
+                        {refs.length > 0 && (
+                            <details className="group">
+                                <summary className="text-xs font-semibold text-gray-500 uppercase cursor-pointer select-none flex items-center gap-1">
+                                    <HiAcademicCap className="w-3.5 h-3.5" />
+                                    Referenced Capstones ({refs.length})
+                                    <svg className="w-3.5 h-3.5 transition-transform group-open:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                                    </svg>
+                                </summary>
+                                <div className="mt-2 flex flex-col gap-2">
+                                    {refs.map((ref) => (
+                                        <ReferencedCard key={ref.id} item={ref} onOpen={() => navigate(`${rolePrefix}/capstones/${ref.id}`)} />
+                                    ))}
+                                </div>
+                            </details>
+                        )}
+
                         {/* Citation Generator */}
                         <CitationGenerator capstone={capstone} />
 
@@ -224,9 +286,24 @@ export default function CapstoneMainPage() {
                     </div>
                 </div>
 
-                {/* PDF Viewer — Full-width */}
-                <div className="flex-1 min-h-0 min-w-0 lg:col-span-7 h-full" ref={pdfContainerRef}>
-                    <div className="rounded-xl bg-gray-100 overflow-y-auto custom-scrollbar h-full">
+                {/* PDF Viewer */}
+                <div className="flex-1 min-h-0 min-w-0 lg:col-span-7 h-full flex flex-col gap-2" ref={pdfContainerRef}>
+                    {/* PDF toolbar */}
+                    <div className="shrink-0 flex items-center justify-between px-1">
+                        <span className="text-xs text-gray-500 font-medium">
+                            {numPages ? `${numPages} page${numPages !== 1 ? 's' : ''}` : ''}
+                        </span>
+                        {pdfUrl && (
+                            <button
+                                onClick={() => setFullscreen(true)}
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors shadow-sm"
+                            >
+                                <HiArrowsExpand className="w-3.5 h-3.5" />
+                                Fullscreen
+                            </button>
+                        )}
+                    </div>
+                    <div className="flex-1 min-h-0 rounded-xl bg-gray-100 overflow-y-auto custom-scrollbar">
                         {pdfUrl ? (
                             <Document
                                 file={pdfUrl}
@@ -253,6 +330,93 @@ export default function CapstoneMainPage() {
                     </div>
                 </div>
             </div>
+
+            {/* ── Fullscreen PDF Modal ── */}
+            {fullscreen && (
+                <div className="fixed inset-0 z-[999] flex flex-col bg-gray-950/95 backdrop-blur-sm animate-fadeIn">
+                    {/* FS header */}
+                    <div className="shrink-0 flex items-center justify-between gap-4 px-6 py-3 bg-gray-900 border-b border-gray-700 shadow-lg">
+                        <div className="flex items-center gap-3 min-w-0">
+                            <span className="text-white font-semibold text-sm truncate max-w-sm lg:max-w-lg">{capstone.title}</span>
+                            {fsNumPages && (
+                                <span className="shrink-0 text-gray-400 text-xs">{fsNumPages} page{fsNumPages !== 1 ? 's' : ''}</span>
+                            )}
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                            <button
+                                onClick={handleDownload}
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-[#1B5E20] rounded-lg hover:bg-green-700 transition-colors"
+                            >
+                                <HiDownload className="w-3.5 h-3.5" /> Download
+                            </button>
+                            <button
+                                onClick={() => setFullscreen(false)}
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-300 bg-gray-800 border border-gray-600 rounded-lg hover:bg-gray-700 transition-colors"
+                                title="Close (Esc)"
+                            >
+                                <HiX className="w-3.5 h-3.5" /> Close
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* FS scrollable PDF area */}
+                    <div ref={fsContainerRef} className="flex-1 min-h-0 overflow-y-auto" style={{ scrollbarColor: '#4b5563 #111827' }}>
+                        <div className="flex justify-center py-6 px-4">
+                            <Document
+                                file={pdfUrl}
+                                onLoadSuccess={({ numPages }) => setFsNumPages(numPages)}
+                                loading={<div className="flex items-center justify-center py-20"><Loading text="Loading PDF..." /></div>}
+                                error={<div className="text-center py-20 text-gray-400">Failed to load PDF.</div>}
+                            >
+                                {Array.from(new Array(fsNumPages), (_, i) => (
+                                    <Page
+                                        key={`fs_page_${i + 1}`}
+                                        pageNumber={i + 1}
+                                        width={fsWidth}
+                                        className="mb-3 shadow-2xl"
+                                        renderTextLayer={true}
+                                        renderAnnotationLayer={true}
+                                    />
+                                ))}
+                            </Document>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}
+
+function PublishedBadge({ published }) {
+    return (
+        <span className={`shrink-0 inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide border ${
+            published
+                ? 'bg-green-100 text-green-700 border-green-300'
+                : 'bg-gray-100 text-gray-500 border-gray-300'
+        }`}>
+            <span className={`w-1.5 h-1.5 rounded-full ${published ? 'bg-green-500' : 'bg-gray-400'}`} />
+            {published ? 'Published' : 'Unpublished'}
+        </span>
+    );
+}
+
+function ReferencedCard({ item, onOpen }) {
+    return (
+        <div className="flex items-start gap-2 p-2.5 rounded-lg bg-white border border-green-100 hover:border-green-300 transition-colors group">
+            <HiAcademicCap className="w-4 h-4 text-green-500 mt-0.5 shrink-0" />
+            <div className="flex-1 min-w-0">
+                <p className="text-xs font-semibold text-gray-800 leading-snug line-clamp-2">{item.title}</p>
+                <p className="text-[10px] text-gray-500 mt-0.5">
+                    {[item.author, item.year, item.program].filter(Boolean).join(' · ')}
+                </p>
+            </div>
+            <button
+                onClick={onOpen}
+                className="shrink-0 text-gray-400 group-hover:text-green-600 transition-colors"
+                title="Open capstone"
+            >
+                <HiExternalLink className="w-3.5 h-3.5" />
+            </button>
         </div>
     );
 }

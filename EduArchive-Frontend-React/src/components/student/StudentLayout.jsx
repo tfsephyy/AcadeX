@@ -18,13 +18,13 @@ const navItems = [
 ];
 
 export default function StudentLayout({ children }) {
-    const [sidebarOpen, setSidebarOpen]       = useState(false);
+    const [sidebarOpen, setSidebarOpen] = useState(false);
     const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-    const [profileOpen, setProfileOpen]       = useState(false);
-    const [logoutConfirm, setLogoutConfirm]   = useState(false);
+    const [profileOpen, setProfileOpen] = useState(false);
+    const [logoutConfirm, setLogoutConfirm] = useState(false);
     const { user, logout } = useAuth();
     const { theme, toggleTheme } = useTheme();
-    const navigate   = useNavigate();
+    const navigate = useNavigate();
     const profileRef = useRef(null);
 
     useEffect(() => {
@@ -67,9 +67,9 @@ export default function StudentLayout({ children }) {
                 {/* Logo */}
                 <div className="flex items-center gap-3 px-6 py-5 panel-logo-border flex-shrink-0">
                     <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
-                         style={{ background: 'var(--panel-logo-icon-bg)' }}>
+                        style={{ background: 'var(--panel-logo-icon-bg)' }}>
                         <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" viewBox="0 0 24 24"
-                             fill="var(--color-primary)">
+                            fill="var(--color-primary)">
                             <path d="M4 6H2v14a2 2 0 002 2h14v-2H4V6zm16-4H8a2 2 0 00-2 2v12a2 2 0 002 2h12a2 2 0 002-2V4a2 2 0 00-2-2zm-1 9H9V9h10v2zm-4 4H9v-2h6v2zm4-8H9V5h10v2z" />
                         </svg>
                     </div>
@@ -79,7 +79,7 @@ export default function StudentLayout({ children }) {
                             Edu<span style={{ color: 'var(--color-primary)' }}>Archive</span>
                         </h1>
                         <span className="text-[10px] uppercase tracking-widest"
-                              style={{ color: 'var(--panel-profile-muted)' }}>Student</span>
+                            style={{ color: 'var(--panel-profile-muted)' }}>Student</span>
                     </div>
                     <button
                         className="lg:hidden ml-auto p-1 rounded-lg panel-profile-btn transition-colors"
@@ -97,8 +97,7 @@ export default function StudentLayout({ children }) {
                             to={item.to}
                             onClick={() => setSidebarOpen(false)}
                             className={({ isActive }) =>
-                                `flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${
-                                    isActive ? 'panel-nav-active' : 'panel-nav-item'
+                                `flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${isActive ? 'panel-nav-active' : 'panel-nav-item'
                                 }`
                             }
                         >
@@ -122,11 +121,11 @@ export default function StudentLayout({ children }) {
                         </div>
                         <div className="flex-1 text-left min-w-0">
                             <p className="text-sm font-semibold truncate"
-                               style={{ color: 'var(--panel-profile-text)' }}>
+                                style={{ color: 'var(--panel-profile-text)' }}>
                                 {user?.name || 'Student'}
                             </p>
                             <p className="text-xs truncate"
-                               style={{ color: 'var(--panel-profile-muted)' }}>
+                                style={{ color: 'var(--panel-profile-muted)' }}>
                                 {user?.email}
                             </p>
                         </div>
@@ -166,7 +165,7 @@ export default function StudentLayout({ children }) {
                 title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
             >
                 <svg xmlns="http://www.w3.org/2000/svg" className="w-3.5 h-3.5" fill="none"
-                     viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                    viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                     {sidebarCollapsed
                         ? <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
                         : <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
@@ -196,13 +195,13 @@ export default function StudentLayout({ children }) {
                     >
                         {theme === 'dark' ? (
                             <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none"
-                                 viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.7}>
+                                viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.7}>
                                 <path strokeLinecap="round" strokeLinejoin="round"
                                     d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364-.707.707M6.343 17.657l-.707.707m12.728 0-.707-.707M6.343 6.343l-.707-.707M12 7a5 5 0 100 10 5 5 0 000-10z" />
                             </svg>
                         ) : (
                             <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none"
-                                 viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.7}>
+                                viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.7}>
                                 <path strokeLinecap="round" strokeLinejoin="round"
                                     d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" />
                             </svg>

@@ -47,6 +47,7 @@ Route::prefix('v1')->group(function () {
             Route::get('/',           [PublishedCapstoneController::class, 'index']);
             Route::get('/years',      [PublishedCapstoneController::class, 'years']);
             Route::get('/programs',   [PublishedCapstoneController::class, 'programs']);
+            Route::get('/advisers',   [PublishedCapstoneController::class, 'advisers']);
             Route::get('/keywords',   [PublishedCapstoneController::class, 'keywords']);
             Route::get('/categories', [PublishedCapstoneController::class, 'categories']);
         });
@@ -81,6 +82,7 @@ Route::prefix('v1')->group(function () {
             Route::get('/dashboard/most-cited',         [AdminDashboardController::class, 'mostCited']);
 
             // Capstone Management
+            Route::get('/capstones/filter-options',        [CapstoneController::class, 'filterOptions']);
             Route::get('/capstones',                       [CapstoneController::class, 'index']);
             Route::post('/capstones',                      [CapstoneController::class, 'store']);
             Route::post('/capstones/upload',               [CapstoneController::class, 'upload']);
@@ -121,6 +123,7 @@ Route::prefix('v1')->group(function () {
         // ── Faculty routes ───────────────────────────────
         Route::middleware('role:admin,faculty')->prefix('faculty')->group(function () {
             // Faculty Capstone Management (scoped to own uploads)
+            Route::get('/capstones/filter-options',          [CapstoneController::class, 'filterOptions']);
             Route::get('/capstones',                         [CapstoneController::class, 'index']);
             Route::post('/capstones',                        [CapstoneController::class, 'store']);
             Route::post('/capstones/upload',                 [CapstoneController::class, 'upload']);

@@ -24,7 +24,7 @@ const navItems = [
     { to: '/admin/users',          label: 'User Management',   icon: HiOutlineUsers },
     { to: '/admin/capstone-library',label: 'Capstone Library', icon: HiOutlineLibrary },
     { to: '/admin/published',      label: 'Uploaded Capstones',icon: HiOutlineBookOpen },
-    { to: '/admin/activity-logs',  label: 'Activity Logs',     icon: HiOutlineClipboardList },
+    { to: '/admin/activity-logs',  label: 'Logs',              icon: HiOutlineClipboardList },
 ];
 
 export default function AdminLayout({ children }) {

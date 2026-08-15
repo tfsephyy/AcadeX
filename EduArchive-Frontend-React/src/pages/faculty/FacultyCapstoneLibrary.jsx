@@ -7,7 +7,8 @@ import {
 } from 'react-icons/hi';
 import { HiOutlineArchiveBoxArrowDown, HiOutlineArchiveBoxXMark } from 'react-icons/hi2';
 import {
-    getFacultyCapstones,
+    getPublishedCapstones, getPublishedYears, getPublishedPrograms,
+    getPublishedCategories, getPublishedAdvisers,
     deleteFacultyCapstone,
     updateFacultyCapstone,
     getArchivedFacultyCapstones,
@@ -39,7 +40,7 @@ export default function FacultyCapstoneLibrary() {
     const [page, setPage] = useState(1);
     const [lastPage, setLastPage] = useState(1);
     const [confirm, setConfirm] = useState({ open: false, title: '', message: '', action: null, variant: 'danger' });
-    
+
     const [selectedCapstone, setSelectedCapstone] = useState(null);
     const [showViewModal, setShowViewModal] = useState(false);
     const [showEditModal, setShowEditModal] = useState(false);
@@ -58,32 +59,24 @@ export default function FacultyCapstoneLibrary() {
 
     useEffect(() => {
         fetchCapstones();
-    }, [debouncedSearch, filters, page, viewing]);
+    }, [debouncedSearch, filters, page]);
 
     const loadFilters = async () => {
-        if (!user?.id) return;
         try {
-            const cRes = await getFacultyCapstones({ per_page: 500 });
-            const capsData = cRes.data.data;
-            const allCapstones = capsData?.data || [];
-
-            const uniqueYears = [...new Set(allCapstones.map(c => c.year).filter(Boolean))].sort().reverse();
-            const uniquePrograms = [...new Set(allCapstones.map(c => c.program).filter(Boolean))].sort();
-            const uniqueCategories = [...new Set(allCapstones.map(c => c.category).filter(Boolean))].sort();
-
-            setYears(uniqueYears);
-            setPrograms(uniquePrograms);
-            setCategories(uniqueCategories);
+            const [yRes, pRes, cRes] = await Promise.all([
+                getPublishedYears(),
+                getPublishedPrograms(),
+                getPublishedCategories(),
+            ]);
+            setYears(yRes.data.data || []);
+            setPrograms(pRes.data.data || []);
+            setCategories(cRes.data.data || []);
         } catch (err) {
             console.error('Failed to load filters:', err);
         }
     };
 
     const fetchCapstones = useCallback(async () => {
-        if (!user?.id) {
-            setCapstones([]);
-            return;
-        }
         try {
             setLoading(true);
             const params = { page, per_page: 20 };
@@ -92,8 +85,8 @@ export default function FacultyCapstoneLibrary() {
             if (filters.program) params.program = filters.program;
             if (filters.category) params.category = filters.category;
 
-            const api = viewing === 'archived' ? getArchivedFacultyCapstones : getFacultyCapstones;
-            const res = await api(params);
+            // Library shows all published capstones (same as student panel)
+            const res = await getPublishedCapstones(params);
             const data = res.data.data;
             setCapstones(data?.data || data || []);
             setLastPage(data?.last_page || 1);
@@ -102,7 +95,7 @@ export default function FacultyCapstoneLibrary() {
         } finally {
             setLoading(false);
         }
-    }, [debouncedSearch, filters, page, viewing, user, notify]);
+    }, [debouncedSearch, filters, page, notify]);
 
     const handleSearch = (e) => {
         setSearch(e.target.value);
@@ -330,7 +323,7 @@ export default function FacultyCapstoneLibrary() {
                                             <tr key={cap.id} className={`border-b border-gray-100 hover:bg-gray-50 transition-colors ${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
                                                 <td className="py-3 px-4 text-sm">
                                                     <div className="font-medium text-gray-900">{cap.title}</div>
-                                                    <div className="text-xs text-gray-500">{cap.program || '—'} 
+                                                    <div className="text-xs text-gray-500">{cap.program || '—'}
                                                         <span className="mx-1">•</span>
                                                         {cap.year || '—'}
                                                     </div>
@@ -348,7 +341,8 @@ export default function FacultyCapstoneLibrary() {
                                                         >
                                                             <HiOutlineEye className="w-4 h-4" />
                                                         </button>
-                                                        {viewing === 'active' ? (
+                                                        {/* Edit/Archive/Delete only for own uploads */}
+                                                        {cap.uploaded_by === user?.id && (
                                                             <>
                                                                 <button
                                                                     onClick={() => handleEdit(cap)}
@@ -365,23 +359,24 @@ export default function FacultyCapstoneLibrary() {
                                                                     <HiOutlineArchiveBoxArrowDown className="w-4 h-4" />
                                                                 </button>
                                                             </>
-                                                        ) : (
-                                                            <>
-                                                                <button
-                                                                    onClick={() => handleUnarchive(cap)}
-                                                                    title="Restore"
-                                                                    className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
-                                                                >
-                                                                    <HiOutlineArchiveBoxXMark className="w-4 h-4" />
-                                                                </button>
-                                                                <button
-                                                                    onClick={() => handleDelete(cap)}
-                                                                    title="Delete"
-                                                                    className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                                                                >
-                                                                    <HiOutlineTrash className="w-4 h-4" />
-                                                                </button>
-                                                            </>
+                                                        )}
+                                                        {viewing === 'archived' && cap.uploaded_by === user?.id && (
+                                                            <button
+                                                                onClick={() => handleUnarchive(cap)}
+                                                                title="Restore"
+                                                                className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                                                            >
+                                                                <HiOutlineArchiveBoxXMark className="w-4 h-4" />
+                                                            </button>
+                                                        )}
+                                                        {viewing === 'archived' && cap.uploaded_by === user?.id && (
+                                                            <button
+                                                                onClick={() => handleDelete(cap)}
+                                                                title="Delete"
+                                                                className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                                            >
+                                                                <HiOutlineTrash className="w-4 h-4" />
+                                                            </button>
                                                         )}
                                                     </div>
                                                 </td>

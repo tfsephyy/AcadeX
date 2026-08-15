@@ -12,6 +12,7 @@ export const getMostCited = () => axios.get('/admin/dashboard/most-cited');
 
 // ── Capstone Management ────────────────────────────
 export const getCapstones = (params = {}) => axios.get('/admin/capstones', { params });
+export const getCapstoneFilterOptions = () => axios.get('/admin/capstones/filter-options');
 export const uploadCapstone = (formData) => axios.post('/admin/capstones/upload', formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
 });
@@ -46,6 +47,7 @@ export const removeUser = (id) => axios.delete(`/admin/users/${id}`);
 export const getPublishedCapstones = (params = {}) => axios.get('/published', { params });
 export const getPublishedYears = () => axios.get('/published/years');
 export const getPublishedPrograms = () => axios.get('/published/programs');
+export const getPublishedAdvisers = () => axios.get('/published/advisers');
 export const getPublishedKeywords = () => axios.get('/published/keywords');
 export const getPublishedCategories = () => axios.get('/published/categories');
 
@@ -72,6 +74,7 @@ export const getActivityLogTypes = () => axios.get('/admin/activity-logs/types')
 
 // ── Faculty Capstone Management ────────────────────
 export const getFacultyCapstones = (params = {}) => axios.get('/faculty/capstones', { params });
+export const getFacultyCapstoneFilterOptions = () => axios.get('/faculty/capstones/filter-options');
 export const uploadFacultyCapstone = (formData) => axios.post('/faculty/capstones/upload', formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
 });

@@ -111,7 +111,14 @@ class Capstone extends Model
 
     public function scopePublished($query)
     {
-        return $query->where('is_published', true);
+        // A capstone is considered published if is_published is true,
+        // OR if it has been approved and is not archived (safety fallback).
+        return $query->where(function ($q) {
+            $q->where('is_published', true)
+              ->orWhere(function ($q2) {
+                  $q2->where('status', 'approved')->where('is_archived', false);
+              });
+        });
     }
 
     public function scopeArchived($query)

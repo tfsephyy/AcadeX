@@ -950,7 +950,50 @@ input[type="password"]::-ms-clear {
 
   /* ─ Select option background ─────────────────────────────────── */
   select option { background-color: var(--color-bg-secondary); color: var(--color-text); }
+
+  /* ─ Capstone info card (CapstoneMainPage / StudentCapstoneMainPage) ── */
+  /* Card wrapper — green-50/60 opacity variant isn't caught by .bg-green-50 */
+  .bg-green-50\/60 { background-color: rgba(13, 34, 24, 0.75) !important; }
+  /* Card border */
+  .border-green-200 { border-color: rgba(91, 190, 99, 0.22) !important; }
+  /* Keyword / tag pills */
+  .border-green-200.rounded-full,
+  span.border-green-200 { border-color: rgba(91, 190, 99, 0.28) !important; }
+  /* Keyword pill text */
+  .text-green-700 { color: #5BBE63 !important; }
+  /* InfoField label */
+  .text-\[11px\] { color: var(--color-text-muted) !important; }
+  /* InfoField value */
+  .text-gray-800 { color: var(--color-text) !important; }
+  /* Abstract / section heading labels */
+  .text-gray-500 { color: var(--color-text-muted) !important; }
+  /* Abstract body text */
+  .text-gray-700 { color: var(--color-text-secondary) !important; }
+  /* Stats divider border */
+  .border-green-200.mt-auto { border-color: rgba(91, 190, 99, 0.2) !important; }
+  /* Referenced capstone cards — white bg with light border */
+  .border-green-100 { border-color: rgba(91, 190, 99, 0.15) !important; }
+  .hover\:border-green-300:hover { border-color: rgba(91, 190, 99, 0.4) !important; }
+  /* Published badge backgrounds */
+  .bg-green-100 { background-color: rgba(91, 190, 99, 0.15) !important; }
+  .bg-gray-100  { background-color: rgba(255, 255, 255, 0.07) !important; }
+  /* Published badge borders */
+  .border-green-300 { border-color: rgba(91, 190, 99, 0.4) !important; }
+  .border-gray-300  { border-color: var(--color-border-strong) !important; }
+  /* Unpublished badge text */
+  .text-gray-500 { color: var(--color-text-muted) !important; }
+  /* CitationGenerator inner bg box */
+  .bg-gray-50 { background-color: var(--color-bg-secondary) !important; }
+  .border-gray-100 { border-color: var(--color-border) !important; }
+  /* Page count label and PDF toolbar */
+  .text-gray-500.font-medium { color: var(--color-text-muted) !important; }
+  /* PDF toolbar fullscreen button */
+  .border-gray-300 { border-color: var(--color-border-strong) !important; }
+  /* Back button text */
+  .text-gray-600 { color: var(--color-text-secondary) !important; }
+  .hover\:text-gray-900:hover { color: var(--color-text) !important; }
 }
+
 
 /* ═══════════════════════════════════════════════════════════════
    CHATBOT DESIGN SYSTEM

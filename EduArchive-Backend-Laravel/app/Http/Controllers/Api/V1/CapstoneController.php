@@ -68,10 +68,134 @@ class CapstoneController extends Controller
             $query->where('category', $request->category);
         }
 
+        // Filter by adviser
+        if ($request->has('adviser_id') && $request->adviser_id) {
+            $query->where('adviser_id', $request->adviser_id);
+        }
+
         $query->orderByDesc('created_at');
         $capstones = $query->paginate($request->get('per_page', 15));
 
         return $this->successResponse($capstones, 'Capstones retrieved.');
+    }
+
+    /**
+     * Browse all non-archived capstones — accessible to any authenticated user.
+     * Same as admin index() but no role-based scoping so students/faculty
+     * see the full library exactly like the admin panel.
+     */
+    public function browse(Request $request): JsonResponse
+    {
+        $query = Capstone::with(['keywords', 'uploader:id,name', 'approver:id,name', 'adviser:id,name'])
+            ->where('is_archived', false);
+
+        // Search by title, author, or keyword
+        if ($request->has('search') && $request->search) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('title', 'like', "%{$search}%")
+                  ->orWhere('author', 'like', "%{$search}%")
+                  ->orWhereHas('keywords', fn($kq) => $kq->where('name', 'like', "%{$search}%"));
+            });
+        }
+
+        // Filter by year
+        if ($request->has('year') && $request->year) {
+            $query->where('year', $request->year);
+        }
+
+        // Filter by program
+        if ($request->has('program') && $request->program) {
+            $query->where('program', $request->program);
+        }
+
+        // Filter by category
+        if ($request->has('category') && $request->category) {
+            $query->where('category', $request->category);
+        }
+
+        // Filter by adviser
+        if ($request->has('adviser_id') && $request->adviser_id) {
+            $query->where('adviser_id', $request->adviser_id);
+        }
+
+        $query->orderByDesc('created_at');
+        $capstones = $query->paginate($request->get('per_page', 12));
+
+        return $this->successResponse($capstones, 'Capstones retrieved.');
+    }
+
+    /**
+     * Return distinct filter options for the public browse endpoint.
+     * Scoped to non-archived capstones only.
+     */
+    public function browseFilterOptions(): JsonResponse
+    {
+        $base = Capstone::where('is_archived', false);
+
+        $years = (clone $base)->whereNotNull('year')->distinct()->orderByDesc('year')->pluck('year');
+        $programs = (clone $base)->whereNotNull('program')->where('program', '!=', '')->distinct()->orderBy('program')->pluck('program');
+        $categories = (clone $base)->whereNotNull('category')->where('category', '!=', '')->distinct()->orderBy('category')->pluck('category');
+
+        $adviserIds = (clone $base)->whereNotNull('adviser_id')->distinct()->pluck('adviser_id');
+        $advisers = User::whereIn('id', $adviserIds)->orderBy('name')->get(['id', 'name']);
+
+        return $this->successResponse([
+            'years'      => $years,
+            'programs'   => $programs,
+            'categories' => $categories,
+            'advisers'   => $advisers,
+        ], 'Browse filter options retrieved.');
+    }
+
+    /**
+     * Return distinct years, programs, and advisers for filter dropdowns.
+     * Scoped to non-archived capstones visible to the current user.
+     */
+    public function filterOptions(Request $request): JsonResponse
+    {
+        $baseQuery = Capstone::where('is_archived', false);
+
+        // Faculty users only see their own uploads
+        if ($request->user() && $request->user()->hasRole('faculty')) {
+            $baseQuery->where('uploaded_by', $request->user()->id);
+        }
+
+        $years = (clone $baseQuery)
+            ->whereNotNull('year')
+            ->distinct()
+            ->orderByDesc('year')
+            ->pluck('year');
+
+        $programs = (clone $baseQuery)
+            ->whereNotNull('program')
+            ->where('program', '!=', '')
+            ->distinct()
+            ->orderBy('program')
+            ->pluck('program');
+
+        $categories = (clone $baseQuery)
+            ->whereNotNull('category')
+            ->where('category', '!=', '')
+            ->distinct()
+            ->orderBy('category')
+            ->pluck('category');
+
+        $adviserIds = (clone $baseQuery)
+            ->whereNotNull('adviser_id')
+            ->distinct()
+            ->pluck('adviser_id');
+
+        $advisers = User::whereIn('id', $adviserIds)
+            ->orderBy('name')
+            ->get(['id', 'name']);
+
+        return $this->successResponse([
+            'years'      => $years,
+            'programs'   => $programs,
+            'categories' => $categories,
+            'advisers'   => $advisers,
+        ], 'Filter options retrieved.');
     }
 
     /**
@@ -175,7 +299,9 @@ class CapstoneController extends Controller
         }
 
         $publicationStatus = $request->input('publication_status', 'published');
-        $isPublished = $publicationStatus === 'published';
+        // When an admin/faculty uploads a capstone it always gets status=approved,
+        // so is_published must always be true so students can find it.
+        $isPublished = true;
 
         $capstone = Capstone::create([
             'title'              => $request->title,

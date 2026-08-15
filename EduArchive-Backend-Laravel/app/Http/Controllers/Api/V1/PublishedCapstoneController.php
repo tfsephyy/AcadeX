@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Models\Capstone;
 use App\Models\Bookmark;
+use App\Models\User;
 use App\Traits\ApiResponses;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -18,7 +19,7 @@ class PublishedCapstoneController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $query = Capstone::with(['keywords', 'uploader:id,name'])
+        $query = Capstone::with(['keywords', 'uploader:id,name', 'adviser:id,name'])
             ->published()
             ->where('is_archived', false);
 
@@ -57,6 +58,11 @@ class PublishedCapstoneController extends Controller
             });
         }
 
+        // Filter by adviser
+        if ($request->has('adviser_id') && $request->adviser_id) {
+            $query->where('adviser_id', $request->adviser_id);
+        }
+
         // Sort
         $sortBy = $request->get('sort_by', 'created_at');
         $sortDir = $request->get('sort_dir', 'desc');
@@ -87,6 +93,7 @@ class PublishedCapstoneController extends Controller
     public function years(): JsonResponse
     {
         $years = Capstone::published()
+            ->where('is_archived', false)
             ->whereNotNull('year')
             ->distinct()
             ->orderByDesc('year')
@@ -101,11 +108,32 @@ class PublishedCapstoneController extends Controller
     public function programs(): JsonResponse
     {
         $programs = Capstone::published()
+            ->where('is_archived', false)
             ->whereNotNull('program')
+            ->where('program', '!=', '')
             ->distinct()
+            ->orderBy('program')
             ->pluck('program');
 
         return $this->successResponse($programs, 'Programs retrieved.');
+    }
+
+    /**
+     * Get distinct advisers (id + name) for published capstones.
+     */
+    public function advisers(): JsonResponse
+    {
+        $adviserIds = Capstone::published()
+            ->where('is_archived', false)
+            ->whereNotNull('adviser_id')
+            ->distinct()
+            ->pluck('adviser_id');
+
+        $advisers = User::whereIn('id', $adviserIds)
+            ->orderBy('name')
+            ->get(['id', 'name']);
+
+        return $this->successResponse($advisers, 'Advisers retrieved.');
     }
 
     /**
@@ -123,7 +151,9 @@ class PublishedCapstoneController extends Controller
      */
     public function categories(): JsonResponse
     {
-        $categories = Capstone::whereNotNull('category')
+        $categories = Capstone::published()
+            ->where('is_archived', false)
+            ->whereNotNull('category')
             ->where('category', '!=', '')
             ->distinct()
             ->orderBy('category')
