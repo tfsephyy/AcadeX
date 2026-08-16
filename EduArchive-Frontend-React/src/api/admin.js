@@ -69,8 +69,10 @@ export const toggleBookmark = (id) => axios.post(`/capstones/${id}/bookmark`);
 export const getStudentBookmarkedCapstones = (params = {}) => axios.get('/capstones/bookmarked', { params });
 
 // ── Activity Logs ─────────────────────────────────
-export const getActivityLogs = (params = {}) => axios.get('/admin/activity-logs', { params });
-export const getActivityLogTypes = () => axios.get('/admin/activity-logs/types');
+export const getActivityLogs         = (params = {}) => axios.get('/admin/activity-logs',           { params });
+export const getActivityLogTypes     = ()             => axios.get('/admin/activity-logs/types');
+export const getActivityLogUsers     = (params = {}) => axios.get('/admin/activity-logs/users',     { params });
+export const getActivityLogCapstones = (params = {}) => axios.get('/admin/activity-logs/capstones', { params });
 
 // ── Faculty Capstone Management ────────────────────
 export const getFacultyCapstones = (params = {}) => axios.get('/faculty/capstones', { params });

@@ -4,7 +4,9 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Models\AuditLog;
+use App\Models\Capstone;
 use App\Models\LoginAudit;
+use App\Models\User;
 use App\Traits\ApiResponses;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -15,7 +17,7 @@ class ActivityLogController extends Controller
 
     /**
      * Get unified activity logs (audit_logs + login_audits).
-     * Supports search, filter by type/role/date, and pagination.
+     * Supports search, filter by type/role/date, user_id, capstone_id, and pagination.
      */
     public function index(Request $request): JsonResponse
     {
@@ -35,6 +37,16 @@ class ActivityLogController extends Controller
             } elseif (in_array($category, $auditCategories)) {
                 $includeLogin = false;
             }
+        }
+
+        // user_id filter narrows to a single user's logs
+        $userId = $request->get('user_id');
+
+        // capstone_id filter narrows to logs tied to a specific capstone model
+        $capstoneId = $request->get('capstone_id');
+        if ($capstoneId) {
+            // Capstone logs are only in audit_logs
+            $includeLogin = false;
         }
 
         // Collect all logs in-memory, then sort and paginate
@@ -57,6 +69,15 @@ class ActivityLogController extends Controller
             if ($request->has('role') && $request->role) {
                 $role = $request->role;
                 $auditQuery->whereHas('user.role', fn($q) => $q->where('name', $role));
+            }
+
+            if ($userId) {
+                $auditQuery->where('user_id', $userId);
+            }
+
+            if ($capstoneId) {
+                $auditQuery->where('model_id', $capstoneId)
+                           ->where('model_type', 'like', '%Capstone%');
             }
 
             if ($category) {
@@ -117,6 +138,10 @@ class ActivityLogController extends Controller
                 $loginQuery->whereHas('user.role', fn($q) => $q->where('name', $role));
             }
 
+            if ($userId) {
+                $loginQuery->where('user_id', $userId);
+            }
+
             if ($request->has('date_from') && $request->date_from) {
                 $loginQuery->where('attempted_at', '>=', $request->date_from . ' 00:00:00');
             }
@@ -173,6 +198,120 @@ class ActivityLogController extends Controller
         ];
 
         return $this->successResponse($result, 'Activity logs retrieved.');
+    }
+
+    /**
+     * Get a list of users who have activity logs, with counts and last-activity date.
+     */
+    public function usersWithActivity(Request $request): JsonResponse
+    {
+        $search = $request->get('search', '');
+
+        // Get distinct user_ids from audit_logs (exclude null = system)
+        $auditUserIds = AuditLog::whereNotNull('user_id')
+            ->select('user_id')
+            ->distinct()
+            ->pluck('user_id');
+
+        // Get distinct user_ids from login_audits
+        $loginUserIds = LoginAudit::whereNotNull('user_id')
+            ->select('user_id')
+            ->distinct()
+            ->pluck('user_id');
+
+        $allUserIds = $auditUserIds->merge($loginUserIds)->unique();
+
+        $usersQuery = User::with('role')
+            ->whereIn('id', $allUserIds);
+
+        if ($search) {
+            $usersQuery->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('email', 'like', "%{$search}%");
+            });
+        }
+
+        $users = $usersQuery->get()->map(function ($user) {
+            // Count audit logs
+            $auditCount = AuditLog::where('user_id', $user->id)->count();
+            // Count login logs
+            $loginCount = LoginAudit::where('user_id', $user->id)->count();
+
+            // Last activity (most recent of audit or login)
+            $lastAudit = AuditLog::where('user_id', $user->id)
+                ->latest('created_at')
+                ->value('created_at');
+            $lastLogin = LoginAudit::where('user_id', $user->id)
+                ->latest('attempted_at')
+                ->value('attempted_at');
+
+            $lastActivity = null;
+            if ($lastAudit && $lastLogin) {
+                $lastActivity = $lastAudit > $lastLogin ? $lastAudit : $lastLogin;
+            } else {
+                $lastActivity = $lastAudit ?? $lastLogin;
+            }
+
+            return [
+                'id'             => $user->id,
+                'name'           => $user->name,
+                'email'          => $user->email,
+                'role'           => $user->role?->name ?? 'unknown',
+                'activity_count' => $auditCount + $loginCount,
+                'last_activity'  => $lastActivity,
+            ];
+        })->sortByDesc('last_activity')->values();
+
+        return $this->successResponse($users, 'Users with activity retrieved.');
+    }
+
+    /**
+     * Get a list of capstones that have audit log entries, with activity counts.
+     */
+    public function capstonesWithActivity(Request $request): JsonResponse
+    {
+        $search = $request->get('search', '');
+
+        // Find distinct capstone IDs referenced in audit_logs
+        $capstoneIds = AuditLog::whereNotNull('model_id')
+            ->where('model_type', 'like', '%Capstone%')
+            ->select('model_id')
+            ->distinct()
+            ->pluck('model_id');
+
+        $capstonesQuery = Capstone::whereIn('id', $capstoneIds);
+
+        if ($search) {
+            $capstonesQuery->where(function ($q) use ($search) {
+                $q->where('title', 'like', "%{$search}%")
+                  ->orWhere('author', 'like', "%{$search}%")
+                  ->orWhere('program', 'like', "%{$search}%");
+            });
+        }
+
+        $capstones = $capstonesQuery->get()->map(function ($capstone) {
+            $activityCount = AuditLog::where('model_id', $capstone->id)
+                ->where('model_type', 'like', '%Capstone%')
+                ->count();
+
+            $lastActivity = AuditLog::where('model_id', $capstone->id)
+                ->where('model_type', 'like', '%Capstone%')
+                ->latest('created_at')
+                ->value('created_at');
+
+            return [
+                'id'             => $capstone->id,
+                'title'          => $capstone->title,
+                'author'         => $capstone->author,
+                'year'           => $capstone->year,
+                'program'        => $capstone->program,
+                'status'         => $capstone->status,
+                'activity_count' => $activityCount,
+                'last_activity'  => $lastActivity,
+            ];
+        })->sortByDesc('last_activity')->values();
+
+        return $this->successResponse($capstones, 'Capstones with activity retrieved.');
     }
 
     /**

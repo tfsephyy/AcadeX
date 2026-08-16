@@ -116,8 +116,10 @@ Route::prefix('v1')->group(function () {
             Route::put('/notifications/mark-all-read',        [NotificationController::class, 'markAllAsRead']);
 
             // Activity Logs
-            Route::get('/activity-logs',       [ActivityLogController::class, 'index']);
-            Route::get('/activity-logs/types', [ActivityLogController::class, 'types']);
+            Route::get('/activity-logs',           [ActivityLogController::class, 'index']);
+            Route::get('/activity-logs/types',     [ActivityLogController::class, 'types']);
+            Route::get('/activity-logs/users',     [ActivityLogController::class, 'usersWithActivity']);
+            Route::get('/activity-logs/capstones', [ActivityLogController::class, 'capstonesWithActivity']);
         });
 
         // ── Faculty routes ───────────────────────────────
