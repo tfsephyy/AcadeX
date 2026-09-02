@@ -21,6 +21,7 @@ class DatabaseSeeder extends Seeder
         $admin   = Role::firstOrCreate(['name' => 'admin']);
         $student = Role::firstOrCreate(['name' => 'student']);
         $faculty = Role::firstOrCreate(['name' => 'faculty']);
+        $visitor = Role::firstOrCreate(['name' => 'visitor']);
 
         // Create default admin user
         User::firstOrCreate(

@@ -21,10 +21,12 @@ class AdminDashboardController extends Controller
     {
         $studentRoleId = Role::where('name', 'student')->value('id');
         $facultyRoleId = Role::where('name', 'faculty')->value('id');
+        $visitorRoleId = Role::where('name', 'visitor')->value('id');
 
         $data = [
             'students'  => User::where('role_id', $studentRoleId)->where('is_approved', true)->count(),
             'faculty'   => User::where('role_id', $facultyRoleId)->where('is_approved', true)->count(),
+            'visitors'  => User::where('role_id', $visitorRoleId)->where('is_approved', true)->count(),
             'uploaded'  => Capstone::count(),
         ];
 

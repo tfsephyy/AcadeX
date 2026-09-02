@@ -20,6 +20,12 @@ export const storeCapstone = (data) => axios.post('/admin/capstones', data);
 export const uploadAdminResource = (formData) => axios.post('/admin/capstones/upload-resource', formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
 });
+export const uploadAdminImrad = (formData) => axios.post('/admin/capstones/upload-resource', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+});
+export const uploadFacultyImrad = (formData) => axios.post('/faculty/capstones/upload-resource', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+});
 export const updateCapstone = (id, data) => axios.put(`/admin/capstones/${id}`, data);
 export const approveCapstone = (id) => axios.post(`/admin/capstones/${id}/approve`);
 export const rejectCapstone = (id) => axios.post(`/admin/capstones/${id}/reject`);
@@ -38,6 +44,7 @@ export const getAdminBookmarkedCapstones = (params = {}) => axios.get('/admin/ca
 export const getNewUsers = (params = {}) => axios.get('/admin/users/new', { params });
 export const getStudents = (params = {}) => axios.get('/admin/users/students', { params });
 export const getFaculty = (params = {}) => axios.get('/admin/users/faculty', { params });
+export const getVisitors = (params = {}) => axios.get('/admin/users/visitors', { params });
 export const getUser = (id) => axios.get(`/admin/users/${id}`);
 export const approveUser = (id) => axios.post(`/admin/users/${id}/approve`);
 export const denyUser = (id) => axios.post(`/admin/users/${id}/deny`);

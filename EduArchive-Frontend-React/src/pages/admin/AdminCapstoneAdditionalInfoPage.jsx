@@ -3,11 +3,11 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import {
     HiArrowLeft, HiOutlineDocumentText, HiOutlineUpload, HiOutlineX,
     HiOutlinePlus, HiOutlineSearch, HiOutlineTrash, HiOutlineCheck,
-    HiOutlineLink, HiOutlineUser, HiOutlineBookOpen,
+    HiOutlineLink, HiOutlineUser, HiOutlineBookOpen, HiOutlineShieldCheck,
 } from 'react-icons/hi';
-import { HiOutlineGlobeAlt, HiOutlineEyeSlash, HiOutlineClock } from 'react-icons/hi2';
+import { HiOutlineGlobeAlt, HiOutlineEyeSlash, HiOutlineClock, HiOutlineDocumentDuplicate } from 'react-icons/hi2';
 import {
-    storeCapstone, uploadAdminResource,
+    storeCapstone, uploadAdminResource, uploadAdminImrad,
     getPublishedCapstones, getFacultyList,
 } from '../../api/admin';
 import { useNotification } from '../../components/Notification';
@@ -17,6 +17,33 @@ const STATUS_OPTIONS = [
     { value: 'published',   label: 'Published',   desc: 'Visible to all in the library', icon: HiOutlineGlobeAlt,  accent: '#16a34a', bg: 'rgba(22,163,74,0.12)',  border: 'rgba(22,163,74,0.4)' },
     { value: 'unpublished', label: 'Unpublished', desc: 'Saved but hidden from view',    icon: HiOutlineEyeSlash, accent: 'var(--color-text-muted)', bg: 'var(--color-bg-tertiary)', border: 'var(--color-border-strong)' },
     { value: 'in_progress', label: 'In Progress', desc: 'Still being worked on',         icon: HiOutlineClock,    accent: '#d97706', bg: 'rgba(217,119,6,0.1)',  border: 'rgba(217,119,6,0.35)' },
+];
+
+const COPYRIGHT_OPTIONS = [
+    {
+        value: 'copyrighted',
+        label: 'Copyrighted',
+        desc: 'The project is protected by copyright.',
+        accent: '#7c3aed',
+        bg: 'rgba(124,58,237,0.1)',
+        border: 'rgba(124,58,237,0.35)',
+    },
+    {
+        value: 'pending',
+        label: 'Pending',
+        desc: 'Copyright status is still being processed or verified.',
+        accent: '#d97706',
+        bg: 'rgba(217,119,6,0.1)',
+        border: 'rgba(217,119,6,0.35)',
+    },
+    {
+        value: 'unprotected',
+        label: 'Unprotected',
+        desc: 'The project has no copyright protection recorded.',
+        accent: '#6b7280',
+        bg: 'rgba(107,114,128,0.08)',
+        border: 'rgba(107,114,128,0.3)',
+    },
 ];
 
 function SectionCard({ icon: Icon, title, subtitle, children, accent = 'var(--color-primary)' }) {
@@ -51,14 +78,23 @@ export default function AdminCapstoneAdditionalInfoPage() {
     }, []);
 
     const [publicationStatus, setPublicationStatus] = useState('published');
+    const [copyrightStatus, setCopyrightStatus] = useState('');
     const [saving, setSaving] = useState(false);
 
+    // IMRAD
+    const [imradFile, setImradFile] = useState(null);
+    const [imradInfo, setImradInfo] = useState(null); // { file_path, file_original_name }
+    const [uploadingImrad, setUploadingImrad] = useState(false);
+    const imradFileRef = useRef(null);
+
+    // Resources
     const [resources, setResources] = useState([]);
     const [newResourceName, setNewResourceName] = useState('');
     const [uploadingResource, setUploadingResource] = useState(false);
     const resourceFileRef = useRef(null);
     const [pendingResourceFile, setPendingResourceFile] = useState(null);
 
+    // References
     const [references, setReferences] = useState([]);
     const [refSearch, setRefSearch] = useState('');
     const [refResults, setRefResults] = useState([]);
@@ -66,6 +102,7 @@ export default function AdminCapstoneAdditionalInfoPage() {
     const [refDropdownOpen, setRefDropdownOpen] = useState(false);
     const refSearchTimer = useRef(null);
 
+    // Adviser
     const [adviser, setAdviser] = useState(null);
     const [adviserSearch, setAdviserSearch] = useState('');
     const [adviserResults, setAdviserResults] = useState([]);
@@ -108,6 +145,25 @@ export default function AdminCapstoneAdditionalInfoPage() {
         return () => clearTimeout(t);
     }, [adviserSearch, adviserDropdownOpen, searchAdviser]);
 
+    // Upload IMRAD
+    const handleImradSelect = async (file) => {
+        if (!file) return;
+        setImradFile(file);
+        setUploadingImrad(true);
+        try {
+            const fd = new FormData();
+            fd.append('file', file);
+            const res = await uploadAdminImrad(fd);
+            const { file_path, file_original_name } = res.data.data;
+            setImradInfo({ file_path, file_original_name });
+            notify.success('IMRAD file uploaded!');
+        } catch (err) {
+            notify.error(err.response?.data?.message || 'Failed to upload IMRAD file.');
+            setImradFile(null);
+            setImradInfo(null);
+        } finally { setUploadingImrad(false); }
+    };
+
     const handleAddResource = async () => {
         if (!newResourceName.trim()) { notify.error('Resource name is required.'); return; }
         if (!pendingResourceFile) { notify.error('Please select a file.'); return; }
@@ -136,6 +192,9 @@ export default function AdminCapstoneAdditionalInfoPage() {
                 pdf_path: pdfInfo.pdf_path,
                 pdf_original_name: pdfInfo.pdf_original_name,
                 publication_status: publicationStatus,
+                copyright_status: copyrightStatus || null,
+                imrad_path: imradInfo?.file_path || null,
+                imrad_original_name: imradInfo?.file_original_name || null,
                 adviser_id: adviser?.id || null,
                 references: references.map(r => r.id),
                 resources: resources.map(r => ({ name: r.name, file_path: r.file_path, file_original_name: r.file_original_name })),
@@ -151,6 +210,7 @@ export default function AdminCapstoneAdditionalInfoPage() {
 
     if (!initialForm || !pdfInfo) return null;
     const currentStatus = STATUS_OPTIONS.find(o => o.value === publicationStatus);
+    const currentCopyright = COPYRIGHT_OPTIONS.find(o => o.value === copyrightStatus);
 
     return (
         <div className="min-h-screen flex flex-col" style={{ background: 'var(--color-bg)' }}>
@@ -202,7 +262,7 @@ export default function AdminCapstoneAdditionalInfoPage() {
                         </div>
                     </div>
 
-                    {/* Status */}
+                    {/* Publication Status */}
                     <SectionCard icon={HiOutlineGlobeAlt} title="Publication Status" subtitle="Choose who can see this capstone" accent="#16a34a">
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                             {STATUS_OPTIONS.map((opt) => {
@@ -224,6 +284,68 @@ export default function AdminCapstoneAdditionalInfoPage() {
                                 );
                             })}
                         </div>
+                    </SectionCard>
+
+                    {/* Copyright Status */}
+                    <SectionCard icon={HiOutlineShieldCheck} title="Copyright Status" subtitle="Indicate the copyright protection status of this capstone" accent="#7c3aed">
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                            {COPYRIGHT_OPTIONS.map((opt) => {
+                                const isSelected = copyrightStatus === opt.value;
+                                return (
+                                    <button key={opt.value} onClick={() => setCopyrightStatus(isSelected ? '' : opt.value)}
+                                        className="relative text-left p-4 rounded-xl border-2 transition-all"
+                                        style={{ background: isSelected ? opt.bg : 'var(--color-bg-secondary)', borderColor: isSelected ? opt.border : 'var(--color-border)' }}>
+                                        {isSelected && (
+                                            <div className="absolute top-3 right-3 w-5 h-5 rounded-full flex items-center justify-center" style={{ background: opt.accent }}>
+                                                <HiOutlineCheck className="w-3 h-3 text-white" />
+                                            </div>
+                                        )}
+                                        <HiOutlineShieldCheck className="w-5 h-5 mb-2" style={{ color: opt.accent }} />
+                                        <p className="text-sm font-semibold" style={{ color: 'var(--color-text)' }}>{opt.label}</p>
+                                        <p className="text-xs mt-0.5 leading-relaxed" style={{ color: 'var(--color-text-muted)' }}>{opt.desc}</p>
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </SectionCard>
+
+                    {/* IMRAD File */}
+                    <SectionCard icon={HiOutlineDocumentDuplicate} title="IMRAD File" subtitle="Upload the PDF file of the capstone IMRAD (optional)" accent="#0891b2">
+                        {imradInfo ? (
+                            <div className="flex items-center gap-3 p-3 rounded-lg border" style={{ background: 'rgba(8,145,178,0.08)', borderColor: 'rgba(8,145,178,0.3)' }}>
+                                <HiOutlineDocumentDuplicate className="w-5 h-5 flex-shrink-0" style={{ color: '#0891b2' }} />
+                                <div className="flex-1 min-w-0">
+                                    <p className="text-sm font-semibold truncate" style={{ color: 'var(--color-text)' }}>{imradFile?.name || imradInfo.file_original_name}</p>
+                                    <p className="text-xs mt-0.5" style={{ color: 'var(--color-text-muted)' }}>IMRAD file uploaded successfully</p>
+                                </div>
+                                <button onClick={() => { setImradFile(null); setImradInfo(null); if (imradFileRef.current) imradFileRef.current.value = ''; }}
+                                    style={{ color: 'var(--color-text-muted)' }}
+                                    onMouseEnter={e => e.currentTarget.style.color = '#ef4444'}
+                                    onMouseLeave={e => e.currentTarget.style.color = 'var(--color-text-muted)'}>
+                                    <HiOutlineX className="w-4 h-4" />
+                                </button>
+                            </div>
+                        ) : (
+                            <div
+                                onClick={() => imradFileRef.current?.click()}
+                                className="flex flex-col items-center justify-center gap-3 p-8 rounded-xl border-2 border-dashed cursor-pointer transition-colors"
+                                style={{ borderColor: 'rgba(8,145,178,0.35)', background: 'rgba(8,145,178,0.04)' }}
+                                onMouseEnter={e => e.currentTarget.style.background = 'rgba(8,145,178,0.08)'}
+                                onMouseLeave={e => e.currentTarget.style.background = 'rgba(8,145,178,0.04)'}>
+                                {uploadingImrad ? (
+                                    <span className="w-6 h-6 border-2 rounded-full animate-spin" style={{ borderColor: '#0891b2', borderTopColor: 'transparent' }} />
+                                ) : (
+                                    <HiOutlineUpload className="w-7 h-7" style={{ color: '#0891b2' }} />
+                                )}
+                                <div className="text-center">
+                                    <p className="text-sm font-semibold" style={{ color: '#0891b2' }}>
+                                        {uploadingImrad ? 'Uploading…' : 'Click to upload IMRAD PDF'}
+                                    </p>
+                                    <p className="text-xs mt-0.5" style={{ color: 'var(--color-text-muted)' }}>PDF format only · Optional</p>
+                                </div>
+                            </div>
+                        )}
+                        <input ref={imradFileRef} type="file" accept=".pdf" onChange={(e) => handleImradSelect(e.target.files[0])} className="hidden" />
                     </SectionCard>
 
                     {/* Resources + References side by side */}
@@ -333,7 +455,7 @@ export default function AdminCapstoneAdditionalInfoPage() {
                         </SectionCard>
                     </div>
 
-                    {/* Adviser + Summary */}
+                    {/* Adviser + Summary — full width for adviser to give it more room */}
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
                         <SectionCard icon={HiOutlineUser} title="Adviser" subtitle="Faculty member who advised this capstone" accent="#d97706">
                             {adviser ? (
@@ -369,7 +491,7 @@ export default function AdminCapstoneAdditionalInfoPage() {
                                             {adviserResults.length === 0 ? (
                                                 <div className="px-4 py-3 text-xs text-center" style={{ color: 'var(--color-text-muted)' }}>{adviserLoading ? 'Loading…' : 'No faculty found'}</div>
                                             ) : (
-                                                <div className="max-h-48 overflow-y-auto admin-scroll divide-y" style={{ borderColor: 'var(--color-border)' }}>
+                                                <div className="max-h-64 overflow-y-auto admin-scroll divide-y" style={{ borderColor: 'var(--color-border)' }}>
                                                     {adviserResults.filter(f => !adviserSearch || f.name.toLowerCase().includes(adviserSearch.toLowerCase())).map((fac) => (
                                                         <button key={fac.id}
                                                             onClick={() => { setAdviser(fac); setAdviserDropdownOpen(false); setAdviserSearch(''); }}
@@ -404,6 +526,11 @@ export default function AdminCapstoneAdditionalInfoPage() {
                                             {currentStatus.label}
                                         </span>
                                     )},
+                                    { label: 'Copyright', value: currentCopyright
+                                        ? <span className="text-xs font-semibold" style={{ color: currentCopyright.accent }}>{currentCopyright.label}</span>
+                                        : <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>Not set</span>
+                                    },
+                                    { label: 'IMRAD', value: imradInfo ? '✓ Uploaded' : 'Not uploaded' },
                                     { label: 'Resources', value: `${resources.length} file${resources.length !== 1 ? 's' : ''}` },
                                     { label: 'References', value: `${references.length} capstone${references.length !== 1 ? 's' : ''}` },
                                     { label: 'Adviser', value: adviser ? adviser.name : '—' },

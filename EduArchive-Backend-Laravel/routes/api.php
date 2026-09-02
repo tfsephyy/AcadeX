@@ -101,6 +101,7 @@ Route::prefix('v1')->group(function () {
             Route::get('/users/new',                    [UserManagementController::class, 'newUsers']);
             Route::get('/users/students',               [UserManagementController::class, 'students']);
             Route::get('/users/faculty',                [UserManagementController::class, 'faculty']);
+            Route::get('/users/visitors',               [UserManagementController::class, 'visitors']);
             Route::get('/users/archived',               [UserManagementController::class, 'archivedUsers']);
             Route::get('/users/{user}',                 [UserManagementController::class, 'show']);
             Route::post('/users/{user}/approve',        [UserManagementController::class, 'approve']);

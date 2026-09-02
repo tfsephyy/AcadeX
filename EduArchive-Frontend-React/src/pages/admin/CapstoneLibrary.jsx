@@ -198,16 +198,16 @@ export default function CapstoneLibrary() {
         const p = size === 'sm' ? 'p-1.5' : 'p-2';
         return (
             <>
-                <button onClick={() => handleView(cap)} title="View" className={`${p} text-blue-600 hover:bg-blue-50 rounded-lg transition-colors`}><HiOutlineEye className="w-4 h-4" /></button>
+                <button onClick={(e) => { e.stopPropagation(); handleView(cap); }} title="View" className={`${p} text-blue-600 hover:bg-blue-50 rounded-lg transition-colors`}><HiOutlineEye className="w-4 h-4" /></button>
                 {viewing === 'active' ? (
                     <>
-                        <button onClick={() => handleEdit(cap)} title="Edit" className={`${p} text-amber-600 hover:bg-amber-50 rounded-lg transition-colors`}><HiOutlinePencil className="w-4 h-4" /></button>
-                        <button onClick={() => handleArchive(cap)} title="Archive" className={`${p} text-orange-600 hover:bg-orange-50 rounded-lg transition-colors`}><HiOutlineArchiveBoxArrowDown className="w-4 h-4" /></button>
+                        <button onClick={(e) => { e.stopPropagation(); handleEdit(cap); }} title="Edit" className={`${p} text-amber-600 hover:bg-amber-50 rounded-lg transition-colors`}><HiOutlinePencil className="w-4 h-4" /></button>
+                        <button onClick={(e) => { e.stopPropagation(); handleArchive(cap); }} title="Archive" className={`${p} text-orange-600 hover:bg-orange-50 rounded-lg transition-colors`}><HiOutlineArchiveBoxArrowDown className="w-4 h-4" /></button>
                     </>
                 ) : (
                     <>
-                        <button onClick={() => handleUnarchive(cap)} title="Restore" className={`${p} text-green-600 hover:bg-green-50 rounded-lg transition-colors`}><HiOutlineArchiveBoxXMark className="w-4 h-4" /></button>
-                        <button onClick={() => handleDelete(cap)} title="Delete" className={`${p} text-red-600 hover:bg-red-50 rounded-lg transition-colors`}><HiOutlineTrash className="w-4 h-4" /></button>
+                        <button onClick={(e) => { e.stopPropagation(); handleUnarchive(cap); }} title="Restore" className={`${p} text-green-600 hover:bg-green-50 rounded-lg transition-colors`}><HiOutlineArchiveBoxXMark className="w-4 h-4" /></button>
+                        <button onClick={(e) => { e.stopPropagation(); handleDelete(cap); }} title="Delete" className={`${p} text-red-600 hover:bg-red-50 rounded-lg transition-colors`}><HiOutlineTrash className="w-4 h-4" /></button>
                     </>
                 )}
             </>
@@ -219,7 +219,9 @@ export default function CapstoneLibrary() {
         <div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 p-4 lg:p-6">
                 {capstones.map((cap) => (
-                    <div key={cap.id} className="group bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 flex flex-col overflow-hidden">
+                    <div key={cap.id}
+                        onClick={() => handleView(cap)}
+                        className="group bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 flex flex-col overflow-hidden cursor-pointer">
                         <div className="h-1.5 bg-gradient-to-r from-[#1B5E20] to-green-400 w-full" />
                         <div className="p-4 flex flex-col flex-1 gap-3">
                             <h3 className="text-sm font-semibold text-gray-900 leading-snug line-clamp-2 group-hover:text-[#1B5E20] transition-colors">{cap.title}</h3>
@@ -234,8 +236,13 @@ export default function CapstoneLibrary() {
                             </div>
                             <div className="text-xs text-gray-400">{new Date(cap.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</div>
                         </div>
-                        <div className="px-4 py-3 border-t border-gray-100 bg-gray-50 flex items-center justify-end gap-1.5">
-                            <ActionButtons cap={cap} size="sm" />
+                        <div className="px-4 py-3 border-t border-gray-100 bg-gray-50 flex items-center justify-between gap-1.5">
+                            <span className="text-[10px] text-gray-400 italic">
+                                {cap.is_published ? '🟢 Published' : cap.publication_status === 'in_progress' ? '🟡 In Progress' : '⚫ Unpublished'}
+                            </span>
+                            <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
+                                <ActionButtons cap={cap} size="sm" />
+                            </div>
                         </div>
                     </div>
                 ))}
@@ -268,8 +275,12 @@ export default function CapstoneLibrary() {
                     </thead>
                     <tbody>
                         {capstones.map((cap, idx) => (
-                            <tr key={cap.id} className={`border-b border-gray-100 hover:bg-gray-50 transition-colors ${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
-                                <td className="py-3 px-4 text-sm font-medium text-gray-900">{cap.title}</td>
+                            <tr key={cap.id}
+                                onClick={() => handleView(cap)}
+                                className={`border-b border-gray-100 hover:bg-green-50 transition-colors cursor-pointer ${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
+                                <td className="py-3 px-4 text-sm font-medium text-gray-900 hover:text-[#1B5E20] max-w-xs">
+                                    <span className="line-clamp-2">{cap.title}</span>
+                                </td>
                                 <td className="py-3 px-4 text-sm text-gray-600">{cap.program || '—'}</td>
                                 <td className="py-3 px-4 text-sm text-gray-600">
                                     {cap.category ? <span className="px-2 py-0.5 bg-purple-50 text-purple-700 rounded-full text-xs font-medium border border-purple-100">{cap.category}</span> : '—'}
@@ -277,7 +288,7 @@ export default function CapstoneLibrary() {
                                 <td className="py-3 px-4 text-sm text-gray-700">{cap.uploader?.name || '—'}</td>
                                 <td className="py-3 px-4 text-sm text-gray-700">{cap.year || '—'}</td>
                                 <td className="py-3 px-4 text-sm text-gray-700">{new Date(cap.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</td>
-                                <td className="py-3 px-4 text-center">
+                                <td className="py-3 px-4 text-center" onClick={e => e.stopPropagation()}>
                                     <div className="flex items-center justify-center gap-2">
                                         <ActionButtons cap={cap} size="md" />
                                     </div>

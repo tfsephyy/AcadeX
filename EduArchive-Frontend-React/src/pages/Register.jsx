@@ -11,6 +11,8 @@ const INITIAL = {
   password: '', password_confirmation: '',
 }
 
+const VISITOR_ROLE = 'visitor'
+
 function passwordStrength(pwd) {
   let score = 0
   if (pwd.length >= 8) score++
@@ -382,9 +384,10 @@ export default function Register() {
   }
 
   /* Step navigation */
-  const canProceedStep1 = form.name.trim() && form.username.trim() && form.id_number.trim()
-  const canProceedStep2 = form.role && form.program && emailVerified &&
-    (form.role === 'faculty' || (form.year && form.section))
+  const isVisitor = form.role === VISITOR_ROLE
+  const canProceedStep1 = form.name.trim() && form.username.trim() && (isVisitor || form.id_number.trim())
+  const canProceedStep2 = form.role && emailVerified &&
+    (isVisitor || (form.program && (form.role === 'faculty' || (form.year && form.section))))
 
   const nextStep = () => {
     if (step === 1 && !canProceedStep1) {
@@ -507,12 +510,12 @@ export default function Register() {
           <div className="mb-3">
             <h2 className="font-poppins font-semibold text-sm" style={{ color: 'var(--color-text)' }}>
               {step === 1 && 'Personal Information'}
-              {step === 2 && 'Academic Information'}
+              {step === 2 && (isVisitor ? 'Account Role & Email' : 'Academic Information')}
               {step === 3 && 'Set Password'}
             </h2>
             <p className="mt-0.5" style={{ color: 'var(--color-text-muted)', fontSize: '0.75rem' }}>
               {step === 1 && 'Tell us about yourself'}
-              {step === 2 && 'Your role and program at MinSU'}
+              {step === 2 && (isVisitor ? 'Verify your email to continue' : 'Your role and program at MinSU')}
               {step === 3 && 'Choose a strong password to secure your account'}
             </p>
           </div>
@@ -543,8 +546,10 @@ export default function Register() {
                   <Field label="Username" name="username" value={form.username} onChange={handleChange}
                     placeholder="juandc" error={errors.username} autoComplete="username" />
                 </div>
-                <Field label="ID Number" name="id_number" value={form.id_number} onChange={handleChange}
-                  placeholder="MBC2023-*****" error={errors.id_number} />
+                {!isVisitor && (
+                  <Field label="ID Number" name="id_number" value={form.id_number} onChange={handleChange}
+                    placeholder="MBC2023-*****" error={errors.id_number} />
+                )}
               </div>
             )}
 
@@ -556,13 +561,17 @@ export default function Register() {
                   <label htmlFor="role" className="block font-medium mb-1.5" style={{ color: 'var(--color-text-secondary)', fontSize: '0.8rem' }}>
                     Role <span style={{ color: 'var(--color-primary)' }}>*</span>
                   </label>
-                  <div className="grid grid-cols-2 gap-3">
-                    {['student', 'faculty'].map(r => (
+                  <div className="grid grid-cols-3 gap-3">
+                    {[
+                      { value: 'student', label: '🎓 Student' },
+                      { value: 'faculty', label: '👨‍🏫 Faculty' },
+                      { value: 'visitor', label: '🌐 Visitor' },
+                    ].map(({ value: r, label }) => (
                       <button
                         key={r}
                         type="button"
-                        onClick={() => setForm({ ...form, role: r, program: '', year: '', section: '' })}
-                        className="py-3 px-4 rounded-xl text-sm font-semibold transition-all duration-200 capitalize"
+                        onClick={() => setForm({ ...form, role: r, program: '', year: '', section: '', id_number: r === 'visitor' ? '' : form.id_number })}
+                        className="py-3 px-2 rounded-xl text-sm font-semibold transition-all duration-200 capitalize"
                         style={{
                           background: form.role === r ? 'var(--color-primary)' : 'var(--input-bg)',
                           color: form.role === r ? 'white' : 'var(--color-text-muted)',
@@ -570,10 +579,15 @@ export default function Register() {
                           boxShadow: form.role === r ? '0 4px 15px rgba(91,190,99,0.25)' : 'none',
                         }}
                       >
-                        {r === 'student' ? '🎓 Student' : '👨‍🏫 Faculty'}
+                        {label}
                       </button>
                     ))}
                   </div>
+                  {isVisitor && (
+                    <p className="mt-2 text-xs" style={{ color: 'var(--color-text-faint)' }}>
+                      Visitors can browse published research. No ID number or program required.
+                    </p>
+                  )}
                 </div>
 
                 {/* Email + verification */}
@@ -663,46 +677,51 @@ export default function Register() {
                   {emailError && <p className="text-xs mt-1.5" style={{ color: '#f87171' }}>{emailError}</p>}
                 </div>
 
-                {/* Program */}
-                <div>
-                  <label htmlFor="program" className="block font-medium mb-1.5" style={{ color: 'var(--color-text-secondary)', fontSize: '0.8rem' }}>
-                    Program <span style={{ color: 'var(--color-primary)' }}>*</span>
-                  </label>
-                  <select
-                    id="program" name="program" value={form.program} onChange={handleChange}
-                    className={selectClass} required
-                  >
-                    <option value="">Select program</option>
-                    <option value="BSIT">BSIT — BS Information Technology</option>
-                    <option value="BSCpE">BSCpE — BS Computer Engineering</option>
-                  </select>
-                  {errors.program && <p className="text-xs mt-1.5" style={{ color: '#f87171' }}>{errors.program[0]}</p>}
-                </div>
+                {/* Program, Year, Section — hidden for visitors */}
+                {!isVisitor && (
+                  <>
+                    {/* Program */}
+                    <div>
+                      <label htmlFor="program" className="block font-medium mb-1.5" style={{ color: 'var(--color-text-secondary)', fontSize: '0.8rem' }}>
+                        Program <span style={{ color: 'var(--color-primary)' }}>*</span>
+                      </label>
+                      <select
+                        id="program" name="program" value={form.program} onChange={handleChange}
+                        className={selectClass} required
+                      >
+                        <option value="">Select program</option>
+                        <option value="BSIT">BSIT — BS Information Technology</option>
+                        <option value="BSCpE">BSCpE — BS Computer Engineering</option>
+                      </select>
+                      {errors.program && <p className="text-xs mt-1.5" style={{ color: '#f87171' }}>{errors.program[0]}</p>}
+                    </div>
 
-                {/* Year + Section (students only) */}
-                {form.role === 'student' && (
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label htmlFor="year" className="block text-sm font-medium mb-2" style={{ color: 'var(--color-text-secondary)' }}>
-                        Year <span style={{ color: 'var(--color-primary)' }}>*</span>
-                      </label>
-                      <select id="year" name="year" value={form.year} onChange={handleChange} className={selectClass} required>
-                        <option value="">Year</option>
-                        {[1, 2, 3, 4].map(y => <option key={y} value={y}>{y}</option>)}
-                      </select>
-                      {errors.year && <p className="text-xs mt-1.5" style={{ color: '#f87171' }}>{errors.year[0]}</p>}
-                    </div>
-                    <div>
-                      <label htmlFor="section" className="block text-sm font-medium mb-2" style={{ color: 'var(--color-text-secondary)' }}>
-                        Section <span style={{ color: 'var(--color-primary)' }}>*</span>
-                      </label>
-                      <select id="section" name="section" value={form.section} onChange={handleChange} className={selectClass} required>
-                        <option value="">Section</option>
-                        {[1, 2, 3].map(s => <option key={s} value={s}>{s}</option>)}
-                      </select>
-                      {errors.section && <p className="text-xs mt-1.5" style={{ color: '#f87171' }}>{errors.section[0]}</p>}
-                    </div>
-                  </div>
+                    {/* Year + Section (students only) */}
+                    {form.role === 'student' && (
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label htmlFor="year" className="block text-sm font-medium mb-2" style={{ color: 'var(--color-text-secondary)' }}>
+                            Year <span style={{ color: 'var(--color-primary)' }}>*</span>
+                          </label>
+                          <select id="year" name="year" value={form.year} onChange={handleChange} className={selectClass} required>
+                            <option value="">Year</option>
+                            {[1, 2, 3, 4].map(y => <option key={y} value={y}>{y}</option>)}
+                          </select>
+                          {errors.year && <p className="text-xs mt-1.5" style={{ color: '#f87171' }}>{errors.year[0]}</p>}
+                        </div>
+                        <div>
+                          <label htmlFor="section" className="block text-sm font-medium mb-2" style={{ color: 'var(--color-text-secondary)' }}>
+                            Section <span style={{ color: 'var(--color-primary)' }}>*</span>
+                          </label>
+                          <select id="section" name="section" value={form.section} onChange={handleChange} className={selectClass} required>
+                            <option value="">Section</option>
+                            {[1, 2, 3].map(s => <option key={s} value={s}>{s}</option>)}
+                          </select>
+                          {errors.section && <p className="text-xs mt-1.5" style={{ color: '#f87171' }}>{errors.section[0]}</p>}
+                        </div>
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
             )}

@@ -38,7 +38,7 @@ class AuthController extends Controller
             'name'      => $validated['name'],
             'username'  => $validated['username'],
             'email'     => strtolower($validated['email']),
-            'id_number' => $validated['id_number'],
+            'id_number' => $validated['id_number'] ?? null,
             'role_id'   => $role->id,
             'password'  => $validated['password'],
         ]);
@@ -55,6 +55,7 @@ class AuthController extends Controller
             // Update faculty program on user
             $user->update(['faculty_program' => $validated['program']]);
         }
+        // Visitors: no additional profile data needed
 
         $user->load('role', 'studentProfile');
 

@@ -285,6 +285,9 @@ class CapstoneController extends Controller
             'keywords'           => 'nullable|array',
             'keywords.*'         => 'string|max:100',
             'publication_status' => 'nullable|in:published,unpublished,in_progress',
+            'copyright_status'   => 'nullable|in:copyrighted,pending,unprotected',
+            'imrad_path'         => 'nullable|string',
+            'imrad_original_name' => 'nullable|string',
             'adviser_id'         => 'nullable|exists:users,id',
             'references'         => 'nullable|array',
             'references.*'       => 'integer|exists:capstones,id',
@@ -316,6 +319,9 @@ class CapstoneController extends Controller
             'status'             => 'approved',
             'is_published'       => $isPublished,
             'publication_status' => $publicationStatus,
+            'copyright_status'   => $request->copyright_status,
+            'imrad_path'         => $request->imrad_path,
+            'imrad_original_name' => $request->imrad_original_name,
             'adviser_id'         => $request->adviser_id,
         ]);
 
@@ -854,19 +860,45 @@ class CapstoneController extends Controller
             'author'   => 'sometimes|string|max:500',
             'program'  => 'nullable|string|in:BSIT,BSCpE',
             'abstract' => 'nullable|string',
-            'keywords' => 'nullable|array',
-            'keywords.*' => 'string|max:100',
+            'title'               => 'sometimes|string|max:500',
+            'year'                => 'nullable|integer|min:2000|max:2099',
+            'author'              => 'sometimes|string|max:500',
+            'program'             => 'nullable|string|in:BSIT,BSCpE',
+            'category'            => 'nullable|string|max:100',
+            'abstract'            => 'nullable|string',
+            'keywords'            => 'nullable|array',
+            'keywords.*'          => 'string|max:100',
+            'publication_status'  => 'nullable|in:published,unpublished,in_progress',
+            'copyright_status'    => 'nullable|in:copyrighted,pending,unprotected',
+            'imrad_path'          => 'nullable|string',
+            'imrad_original_name' => 'nullable|string',
+            'adviser_id'          => 'nullable|exists:users,id',
+            'references'          => 'nullable|array',
+            'references.*'        => 'integer|exists:capstones,id',
+            'resources'           => 'nullable|array',
+            'resources.*.name'             => 'required|string|max:255',
+            'resources.*.file_path'        => 'required|string',
+            'resources.*.file_original_name' => 'nullable|string',
         ]);
 
         if ($validator->fails()) {
             return $this->errorResponse('Validation failed.', 422, $validator->errors());
         }
 
-        $oldValues = $capstone->only(['title', 'year', 'author', 'program', 'abstract']);
+        $oldValues = $capstone->only(['title', 'year', 'author', 'program', 'category', 'abstract', 'publication_status', 'copyright_status', 'adviser_id']);
 
-        $capstone->update($request->only(['title', 'year', 'author', 'program', 'abstract']));
+        $updateData = $request->only([
+            'title', 'year', 'author', 'program', 'category', 'abstract',
+            'publication_status', 'copyright_status', 'imrad_path', 'imrad_original_name', 'adviser_id',
+        ]);
 
-        $newValues = $capstone->only(['title', 'year', 'author', 'program', 'abstract']);
+        if ($request->has('publication_status')) {
+            $updateData['is_published'] = $request->publication_status === 'published';
+        }
+
+        $capstone->update($updateData);
+
+        $newValues = $capstone->only(['title', 'year', 'author', 'program', 'category', 'abstract', 'publication_status', 'copyright_status', 'adviser_id']);
 
         AuditLog::log(
             'update_capstone',
@@ -886,6 +918,21 @@ class CapstoneController extends Controller
             $capstone->keywords()->sync($keywordIds);
         }
 
+        if ($request->has('references')) {
+            $capstone->references()->sync($request->references);
+        }
+
+        if ($request->has('resources')) {
+            $capstone->resources()->delete();
+            foreach ($request->resources as $res) {
+                $capstone->resources()->create([
+                    'name'               => $res['name'],
+                    'file_path'          => $res['file_path'],
+                    'file_original_name' => $res['file_original_name'] ?? null,
+                ]);
+            }
+        }
+
         // Create notifications for all admins about capstone edit
         $admins = User::whereHas('role', function ($query) {
             $query->where('name', 'admin');
@@ -903,7 +950,7 @@ class CapstoneController extends Controller
             ]);
         }
 
-        $capstone->load('keywords');
+        $capstone->load('keywords', 'references', 'resources', 'adviser');
         return $this->successResponse($capstone, 'Capstone updated.');
     }
 }

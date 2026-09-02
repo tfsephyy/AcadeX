@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { HiOutlineAcademicCap, HiOutlineUserGroup, HiOutlineDocumentAdd, HiOutlineEye, HiOutlineBookOpen } from 'react-icons/hi';
+import { HiOutlineAcademicCap, HiOutlineUserGroup, HiOutlineDocumentAdd, HiOutlineEye, HiOutlineBookOpen, HiOutlineGlobe } from 'react-icons/hi';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 import {
     getDashboardStats, getUploadedByYear, getStudentsPerYear,
@@ -86,9 +86,10 @@ export default function AdminDashboard() {
     const maxCitations = mostCited[0]?.citation_count || 1;
 
     const statCards = [
-        { label: 'Students',  value: stats?.students ?? 0, icon: HiOutlineAcademicCap, color: 'text-blue-600',   bg: 'bg-blue-50'   },
-        { label: 'Faculty',   value: stats?.faculty  ?? 0, icon: HiOutlineUserGroup,   color: 'text-purple-600', bg: 'bg-purple-50' },
-        { label: 'Uploaded',  value: stats?.uploaded ?? 0, icon: HiOutlineDocumentAdd, color: 'text-green-600',  bg: 'bg-green-50'  },
+        { label: 'Students',  value: stats?.students  ?? 0, icon: HiOutlineAcademicCap, color: 'text-blue-600',   bg: 'bg-blue-50'   },
+        { label: 'Faculty',   value: stats?.faculty   ?? 0, icon: HiOutlineUserGroup,   color: 'text-purple-600', bg: 'bg-purple-50' },
+        { label: 'Visitors',  value: stats?.visitors  ?? 0, icon: HiOutlineGlobe,       color: 'text-teal-600',   bg: 'bg-teal-50'   },
+        { label: 'Uploaded',  value: stats?.uploaded  ?? 0, icon: HiOutlineDocumentAdd, color: 'text-green-600',  bg: 'bg-green-50'  },
     ];
 
     return (

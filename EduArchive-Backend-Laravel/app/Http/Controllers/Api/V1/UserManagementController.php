@@ -22,7 +22,7 @@ class UserManagementController extends Controller
     {
         $query = User::with(['role', 'studentProfile'])
             ->where('is_approved', false)
-            ->whereHas('role', fn($q) => $q->whereIn('name', ['student', 'faculty']))
+            ->whereHas('role', fn($q) => $q->whereIn('name', ['student', 'faculty', 'visitor']))
             ->orderByDesc('created_at');
 
         if ($request->has('search') && $request->search) {
@@ -32,6 +32,11 @@ class UserManagementController extends Controller
                   ->orWhere('email', 'like', "%{$search}%")
                   ->orWhere('id_number', 'like', "%{$search}%");
             });
+        }
+
+        if ($request->has('role') && $request->role) {
+            $role = $request->role;
+            $query->whereHas('role', fn($q) => $q->where('name', $role));
         }
 
         $users = $query->paginate($request->get('per_page', 15));
@@ -71,6 +76,30 @@ class UserManagementController extends Controller
         $students = $query->orderBy('name')->paginate($request->get('per_page', 15));
 
         return $this->successResponse($students, 'Students retrieved.');
+    }
+
+    /**
+     * Get all approved visitors (excluding archived).
+     */
+    public function visitors(Request $request): JsonResponse
+    {
+        $visitorRoleId = Role::where('name', 'visitor')->value('id');
+
+        $query = User::where('role_id', $visitorRoleId)
+            ->where('is_approved', true)
+            ->where('is_archived', false);
+
+        if ($request->has('search') && $request->search) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('email', 'like', "%{$search}%");
+            });
+        }
+
+        $visitors = $query->orderBy('name')->paginate($request->get('per_page', 15));
+
+        return $this->successResponse($visitors, 'Visitors retrieved.');
     }
 
     /**
@@ -211,7 +240,7 @@ class UserManagementController extends Controller
     {
         $query = User::with(['role', 'studentProfile'])
             ->where('is_archived', true)
-            ->whereHas('role', fn($q) => $q->whereIn('name', ['student', 'faculty']))
+            ->whereHas('role', fn($q) => $q->whereIn('name', ['student', 'faculty', 'visitor']))
             ->orderByDesc('updated_at');
 
         if ($request->has('search') && $request->search) {

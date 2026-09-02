@@ -1,8 +1,8 @@
-﻿import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
     HiArrowLeft, HiDownload, HiBookmark, HiShare, HiEye,
-    HiArrowsExpand, HiX, HiAcademicCap, HiExternalLink,
+    HiArrowsExpand, HiX, HiAcademicCap, HiExternalLink, HiShieldCheck,
 } from 'react-icons/hi';
 import { getCapstone, recordView, downloadCapstone, toggleBookmark } from '../../api/admin';
 import { useNotification } from '../../components/Notification';
@@ -204,13 +204,40 @@ export default function StudentCapstoneMainPage() {
 
                         {/* Metadata */}
                         <div className="flex flex-wrap gap-x-8 gap-y-2">
-                            <InfoField label="Author" value={capstone.author || 'â€”'} />
-                            <InfoField label="Year" value={capstone.year || 'â€”'} />
-                            <InfoField label="Program" value={capstone.program || 'â€”'} />
-                            <InfoField label="Category" value={capstone.category || 'â€”'} />
-                            <InfoField label="Adviser" value={capstone.adviser?.name || 'â€”'} />
-                            <InfoField label="Uploaded By" value={capstone.uploader?.name || 'â€”'} />
+                            <InfoField label="Author" value={capstone.author || '—'} />
+                            <InfoField label="Year" value={capstone.year || '—'} />
+                            <InfoField label="Program" value={capstone.program || '—'} />
+                            <InfoField label="Category" value={capstone.category || '—'} />
+                            <InfoField label="Adviser" value={capstone.adviser?.name || '—'} />
+                            <InfoField label="Uploaded By" value={capstone.uploader?.name || '—'} />
                             <InfoField label="Date Uploaded" value={uploadedDate} />
+                        </div>
+
+                        {/* Copyright Status */}
+                        {capstone.copyright_status && (
+                            <div className="flex items-center gap-2">
+                                <HiShieldCheck className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+                                <label className="text-[11px] font-semibold text-gray-500 uppercase">Copyright</label>
+                                <CopyrightBadge status={capstone.copyright_status} />
+                            </div>
+                        )}
+
+                        {/* IMRAD Section */}
+                        <div>
+                            <label className="text-[11px] font-semibold text-gray-500 uppercase block mb-1.5">IMRAD File</label>
+                            {capstone.imrad_path ? (
+                                <div className="flex items-center gap-2 p-2.5 rounded-lg bg-cyan-50 border border-cyan-200">
+                                    <HiExternalLink className="w-4 h-4 text-cyan-600 flex-shrink-0" />
+                                    <span className="text-xs text-cyan-800 font-medium flex-1 truncate">
+                                        {capstone.imrad_original_name || 'IMRAD Document'}
+                                    </span>
+                                    <span className="text-[10px] text-cyan-600 bg-cyan-100 px-2 py-0.5 rounded-full font-semibold">Available</span>
+                                </div>
+                            ) : (
+                                <div className="flex items-center gap-2 p-2.5 rounded-lg bg-gray-50 border border-gray-200">
+                                    <span className="text-xs text-gray-400 italic">Not Available</span>
+                                </div>
+                            )}
                         </div>
 
                         {/* Keywords / Tags */}
@@ -423,5 +450,22 @@ function StatInline({ icon, value, label }) {
             <span className="font-bold text-gray-900">{value}</span>
             <span className="text-xs text-gray-500">{label}</span>
         </div>
+    );
+}
+
+const COPYRIGHT_BADGE_STYLES = {
+    copyrighted:  { bg: 'bg-purple-100', text: 'text-purple-700', border: 'border-purple-300', dot: 'bg-purple-500', label: 'Copyrighted' },
+    pending:      { bg: 'bg-amber-100',  text: 'text-amber-700',  border: 'border-amber-300',  dot: 'bg-amber-500',  label: 'Pending' },
+    unprotected:  { bg: 'bg-gray-100',   text: 'text-gray-500',   border: 'border-gray-300',   dot: 'bg-gray-400',   label: 'Unprotected' },
+};
+
+function CopyrightBadge({ status }) {
+    const s = COPYRIGHT_BADGE_STYLES[status];
+    if (!s) return null;
+    return (
+        <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide border ${s.bg} ${s.text} ${s.border}`}>
+            <span className={`w-1.5 h-1.5 rounded-full ${s.dot}`} />
+            {s.label}
+        </span>
     );
 }

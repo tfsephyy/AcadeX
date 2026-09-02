@@ -15,17 +15,16 @@ class RegisterRequest extends FormRequest
 
     public function rules(): array
     {
+        $isVisitor = $this->input('role') === 'visitor';
+
         $rules = [
             'name'      => ['required', 'string', 'max:255'],
             'username'  => ['required', 'string', 'max:100', 'unique:users,username'],
             'email'     => ['required', 'string', 'email', 'max:255', 'unique:users,email'],
-            'id_number' => [
-                'required',
-                'string',
-                'unique:users,id_number',
-                'regex:/^MBC\d{4}-\d{5}$/',
-            ],
-            'role' => ['required', 'string', 'in:student,faculty'],
+            'id_number' => $isVisitor
+                ? ['nullable', 'string', 'unique:users,id_number', 'regex:/^MBC\d{4}-\d{5}$/']
+                : ['required', 'string', 'unique:users,id_number', 'regex:/^MBC\d{4}-\d{5}$/'],
+            'role' => ['required', 'string', 'in:student,faculty,visitor'],
             'password' => [
                 'required',
                 'string',
@@ -47,6 +46,8 @@ class RegisterRequest extends FormRequest
             $rules['program'] = ['required', 'string', 'in:BSIT,BSCpE'];
         }
 
+        // Visitor: no academic fields required
+
         return $rules;
     }
 
@@ -55,7 +56,7 @@ class RegisterRequest extends FormRequest
         return [
             'id_number.regex'  => 'The ID number must follow the format MBC2023-00148.',
             'password.regex'   => 'Password must include uppercase, lowercase, and a number.',
-            'role.in'          => 'Role must be either student or faculty.',
+            'role.in'          => 'Role must be student, faculty, or visitor.',
         ];
     }
 
