@@ -33,6 +33,7 @@ export default function UploadedCapstones() {
     // ── Search & filters ──────────────────────────────────────────────────────────
     const [search, setSearch] = useState('');
     const [filters, setFilters] = useState({ year: '', program: '', category: '', adviser_id: '' });
+    const [selectedCategory, setSelectedCategory] = useState('');
 
     // ── Filter option lists ───────────────────────────────────────────────────────
     const [years, setYears] = useState([]);
@@ -145,8 +146,16 @@ export default function UploadedCapstones() {
     const clearFilters = () => {
         setSearch('');
         setFilters({ year: '', program: '', category: '', adviser_id: '' });
+        setSelectedCategory('');
         setSelectedAdviserName('');
         setAdviserSearch('');
+        setPage(1);
+    };
+
+    const handleCategoryTab = (cat) => {
+        const val = cat === selectedCategory ? '' : cat;
+        setSelectedCategory(val);
+        setFilters(prev => ({ ...prev, category: val }));
         setPage(1);
     };
 
@@ -364,15 +373,7 @@ export default function UploadedCapstones() {
                                 </div>
                             )}
                         </div>
-                        {/* Category */}
-                        <div>
-                            <label className="text-xs text-gray-600 font-semibold uppercase block mb-1">Category</label>
-                            <select value={filters.category} onChange={(e) => handleFilterChange('category', e.target.value)}
-                                className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 bg-white focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none">
-                                <option value="">All Categories</option>
-                                {categories.map((c) => <option key={c} value={c}>{c}</option>)}
-                            </select>
-                        </div>
+                        {/* Category — handled by side tabs */}
                         <div className="flex items-end">
                             <button onClick={clearFilters} className="px-3 py-2 text-sm text-gray-500 hover:text-gray-700 underline">Clear All</button>
                         </div>
@@ -380,21 +381,56 @@ export default function UploadedCapstones() {
                 )}
             </div>
 
-            {/* ── Content Area ── */}
-            <div className="px-4 lg:px-8 py-6">
-                {loading ? (
-                    <Loading text="Loading capstones..." />
-                ) : capstones.length === 0 ? (
-                    <EmptyState
-                        title="No uploaded capstones"
-                        description={search || filters.year || filters.program || filters.category || filters.adviser_id ? 'Try adjusting your search or filters.' : 'Upload capstones to get started.'}
-                        icon={<HiOutlineDocumentText className="w-12 h-12" />}
-                    />
-                ) : displayMode === 'table' ? (
-                    <TableView />
-                ) : (
-                    <CardView />
-                )}
+            {/* ── Content Area with Category Sidebar ── */}
+            <div className="flex gap-0">
+
+                {/* Category Sidebar */}
+                <aside className="hidden lg:flex flex-col w-52 flex-shrink-0 sticky top-[57px] self-start max-h-[calc(100vh-8rem)] overflow-y-auto border-r border-gray-200 bg-white px-3 py-5">
+                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3 px-2">Category</p>
+                    <button
+                        onClick={() => handleCategoryTab('')}
+                        className={`w-full text-left flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium mb-1 transition-colors border-l-2 ${
+                            selectedCategory === ''
+                                ? 'border-[#1B5E20] bg-green-50 text-[#1B5E20]'
+                                : 'border-transparent text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                        }`}>
+                        <span>All Categories</span>
+                    </button>
+                    {categories.map((cat) => (
+                        <button
+                            key={cat.name}
+                            onClick={() => handleCategoryTab(cat.name)}
+                            className={`w-full text-left flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium mb-1 transition-colors border-l-2 ${
+                                selectedCategory === cat.name
+                                    ? 'border-[#1B5E20] bg-green-50 text-[#1B5E20]'
+                                    : 'border-transparent text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                            }`}>
+                            <span className="truncate">{cat.name}</span>
+                            <span className={`ml-1 flex-shrink-0 text-xs font-semibold px-1.5 py-0.5 rounded-full ${
+                                selectedCategory === cat.name
+                                    ? 'bg-green-200 text-green-800'
+                                    : 'bg-gray-100 text-gray-500'
+                            }`}>{cat.count}</span>
+                        </button>
+                    ))}
+                </aside>
+
+                {/* Main content */}
+                <div className="flex-1 min-w-0 px-4 lg:px-8 py-6">
+                    {loading ? (
+                        <Loading text="Loading capstones..." />
+                    ) : capstones.length === 0 ? (
+                        <EmptyState
+                            title="No uploaded capstones"
+                            description={search || filters.year || filters.program || filters.category || filters.adviser_id ? 'Try adjusting your search or filters.' : 'Upload capstones to get started.'}
+                            icon={<HiOutlineDocumentText className="w-12 h-12" />}
+                        />
+                    ) : displayMode === 'table' ? (
+                        <TableView />
+                    ) : (
+                        <CardView />
+                    )}
+                </div>
             </div>
 
             {/* ── Capstone modal ── */}

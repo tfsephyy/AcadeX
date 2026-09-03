@@ -35,7 +35,7 @@ Route::prefix('v1')->group(function () {
     Route::post('/verify-email-code',      [PasswordResetController::class, 'verifyEmailCode'])->middleware('throttle:10,1');
 
     // ── Protected routes (Sanctum) ───────────────────────
-    Route::middleware('auth:sanctum')->group(function () {
+    Route::middleware(['auth:sanctum', \App\Http\Middleware\TrackLastActive::class])->group(function () {
 
         Route::post('/logout', [AuthController::class, 'logout']);
         Route::get('/user',    [AuthController::class, 'user']);
@@ -79,7 +79,10 @@ Route::prefix('v1')->group(function () {
             Route::get('/dashboard/students-per-year',  [AdminDashboardController::class, 'studentsPerYear']);
             Route::get('/dashboard/recent-approved',    [AdminDashboardController::class, 'recentApproved']);
             Route::get('/dashboard/most-viewed',        [AdminDashboardController::class, 'mostViewed']);
-            Route::get('/dashboard/most-cited',         [AdminDashboardController::class, 'mostCited']);
+            Route::get('/dashboard/most-cited',              [AdminDashboardController::class, 'mostCited']);
+            Route::get('/dashboard/copyrighted-capstones',    [AdminDashboardController::class, 'copyrightedCapstones']);
+            Route::get('/dashboard/published-capstones',      [AdminDashboardController::class, 'publishedCapstones']);
+            Route::get('/dashboard/platform-activity',        [AdminDashboardController::class, 'platformActivity']);
 
             // Capstone Management
             Route::get('/capstones/filter-options',        [CapstoneController::class, 'filterOptions']);
@@ -98,6 +101,7 @@ Route::prefix('v1')->group(function () {
             Route::delete('/capstones/{capstone}',         [CapstoneController::class, 'destroy']);
 
             // User Management
+            Route::get('/users/online',                 [UserManagementController::class, 'onlineUsers']);
             Route::get('/users/new',                    [UserManagementController::class, 'newUsers']);
             Route::get('/users/students',               [UserManagementController::class, 'students']);
             Route::get('/users/faculty',                [UserManagementController::class, 'faculty']);

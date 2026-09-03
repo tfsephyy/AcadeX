@@ -27,6 +27,7 @@ class User extends Authenticatable
         'faculty_program',
         'login_attempts',
         'locked_until',
+        'last_active_at',
     ];
 
     protected $hidden = [
@@ -39,6 +40,7 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'locked_until'      => 'datetime',
+            'last_active_at'    => 'datetime',
             'password'          => 'hashed',
             'is_locked'         => 'boolean',
             'is_approved'       => 'boolean',

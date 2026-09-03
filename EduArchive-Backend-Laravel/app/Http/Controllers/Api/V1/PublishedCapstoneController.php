@@ -155,9 +155,10 @@ class PublishedCapstoneController extends Controller
             ->where('is_archived', false)
             ->whereNotNull('category')
             ->where('category', '!=', '')
-            ->distinct()
+            ->selectRaw('category as name, COUNT(*) as count')
+            ->groupBy('category')
             ->orderBy('category')
-            ->pluck('category');
+            ->get();
 
         return $this->successResponse($categories, 'Categories retrieved.');
     }

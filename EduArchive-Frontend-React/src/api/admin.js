@@ -9,6 +9,9 @@ export const getStudentsPerYear = () => axios.get('/admin/dashboard/students-per
 export const getRecentApproved = () => axios.get('/admin/dashboard/recent-approved');
 export const getMostViewed = () => axios.get('/admin/dashboard/most-viewed');
 export const getMostCited = () => axios.get('/admin/dashboard/most-cited');
+export const getCopyrightedCapstones = () => axios.get('/admin/dashboard/copyrighted-capstones');
+export const getPublishedCapstonesCount = () => axios.get('/admin/dashboard/published-capstones');
+export const getPlatformActivity = () => axios.get('/admin/dashboard/platform-activity');
 
 // ── Capstone Management ────────────────────────────
 export const getCapstones = (params = {}) => axios.get('/admin/capstones', { params });
@@ -41,6 +44,7 @@ export const unpublishCapstone = (id) => axios.post(`/admin/capstones/${id}/unpu
 export const getAdminBookmarkedCapstones = (params = {}) => axios.get('/admin/capstones/bookmarked', { params });
 
 // ── User Management ────────────────────────────────
+export const getOnlineUsers = (params = {}) => axios.get('/admin/users/online', { params });
 export const getNewUsers = (params = {}) => axios.get('/admin/users/new', { params });
 export const getStudents = (params = {}) => axios.get('/admin/users/students', { params });
 export const getFaculty = (params = {}) => axios.get('/admin/users/faculty', { params });

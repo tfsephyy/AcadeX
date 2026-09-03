@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { HiOutlineUserAdd, HiOutlineAcademicCap, HiOutlineBriefcase, HiOutlineEye, HiOutlineCheck, HiOutlineX, HiOutlineTrash, HiOutlineSearch, HiOutlineGlobe } from 'react-icons/hi';
+import { HiOutlineUserAdd, HiOutlineAcademicCap, HiOutlineBriefcase, HiOutlineEye, HiOutlineCheck, HiOutlineX, HiOutlineTrash, HiOutlineSearch, HiOutlineGlobe, HiOutlineWifi } from 'react-icons/hi';
 import { HiOutlineArchiveBoxArrowDown, HiOutlineArchiveBoxXMark } from 'react-icons/hi2';
-import { getNewUsers, getStudents, getFaculty, getVisitors, approveUser, denyUser, removeUser, archiveUser, unarchiveUser, getArchivedUsers } from '../../api/admin';
+import { getNewUsers, getStudents, getFaculty, getVisitors, approveUser, denyUser, removeUser, archiveUser, unarchiveUser, getArchivedUsers, getOnlineUsers } from '../../api/admin';
 import { useNotification } from '../../components/Notification';
 import ConfirmDialog from '../../components/ConfirmDialog';
 import Loading, { TableSkeleton } from '../../components/Loading';
@@ -16,11 +16,13 @@ export default function UserManagement() {
     const [faculty, setFaculty] = useState([]);
     const [visitors, setVisitors] = useState([]);
     const [archivedList, setArchivedList] = useState([]);
+    const [onlineUsers, setOnlineUsers] = useState([]);
     const [newTotal, setNewTotal] = useState(0);
     const [studentsTotal, setStudentsTotal] = useState(0);
     const [facultyTotal, setFacultyTotal] = useState(0);
     const [visitorsTotal, setVisitorsTotal] = useState(0);
     const [archivedTotal, setArchivedTotal] = useState(0);
+    const [onlineTotal, setOnlineTotal] = useState(0);
     const [loading, setLoading] = useState(true);
     const [viewUser, setViewUser] = useState(null);
     const [confirm, setConfirm] = useState({ open: false, title: '', message: '', action: null, variant: 'danger' });
@@ -93,6 +95,12 @@ export default function UserManagement() {
                 const res = await getArchivedUsers(params);
                 const data = res.data.data;
                 setArchivedList(data?.data || data || []);
+            } else if (activeTab === 'online') {
+                const res = await getOnlineUsers(params);
+                const data = res.data.data;
+                const list = Array.isArray(data) ? data : [];
+                setOnlineUsers(list);
+                setOnlineTotal(list.length);
             }
         } catch (err) {
             notify.error('Failed to fetch users.');
@@ -199,10 +207,11 @@ export default function UserManagement() {
     };
 
     const tabs = [
-        { id: 'new',      label: 'New Users', icon: HiOutlineUserAdd,           count: newTotal },
-        { id: 'students', label: 'Students',  icon: HiOutlineAcademicCap,       count: studentsTotal },
-        { id: 'faculty',  label: 'Faculty',   icon: HiOutlineBriefcase,         count: facultyTotal },
-        { id: 'visitors', label: 'Visitors',  icon: HiOutlineGlobe,             count: visitorsTotal },
+        { id: 'new',      label: 'New Users', icon: HiOutlineUserAdd,            count: newTotal },
+        { id: 'students', label: 'Students',  icon: HiOutlineAcademicCap,        count: studentsTotal },
+        { id: 'faculty',  label: 'Faculty',   icon: HiOutlineBriefcase,          count: facultyTotal },
+        { id: 'visitors', label: 'Visitors',  icon: HiOutlineGlobe,              count: visitorsTotal },
+        { id: 'online',   label: 'Online',    icon: HiOutlineWifi,               count: onlineTotal,  dot: true },
         { id: 'archived', label: 'Archive',   icon: HiOutlineArchiveBoxArrowDown, count: archivedTotal },
     ];
 
@@ -210,6 +219,7 @@ export default function UserManagement() {
         : activeTab === 'students' ? students
         : activeTab === 'faculty'  ? faculty
         : activeTab === 'visitors' ? visitors
+        : activeTab === 'online'   ? onlineUsers
         : archivedList;
 
     return (
@@ -235,10 +245,17 @@ export default function UserManagement() {
                         >
                             <tab.icon className="w-4 h-4" />
                             {tab.label}
-                            <span className={`px-2 py-0.5 text-xs font-medium rounded-full
-                                ${activeTab === tab.id ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
-                                {tab.count}
-                            </span>
+                            {tab.dot && tab.count > 0 ? (
+                                <span className="flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full bg-emerald-100 text-emerald-700">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                    {tab.count}
+                                </span>
+                            ) : (
+                                <span className={`px-2 py-0.5 text-xs font-medium rounded-full
+                                    ${activeTab === tab.id ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
+                                    {tab.count}
+                                </span>
+                            )}
                         </button>
                     ))}
                 </div>
@@ -278,6 +295,7 @@ export default function UserManagement() {
                             <option value="BSCpE">BSCpE</option>
                         </select>
                     )}
+                    {/* hide search bar on online tab — data is live */}
                 </div>
             </div>
 
@@ -294,6 +312,7 @@ export default function UserManagement() {
                   : activeTab === 'students' ? 'No students'
                   : activeTab === 'faculty'  ? 'No faculty'
                   : activeTab === 'visitors' ? 'No visitors'
+                  : activeTab === 'online'   ? 'No users online'
                   : 'No archived users'
                 }
                 description={
@@ -303,10 +322,12 @@ export default function UserManagement() {
                         : activeTab === 'students' ? 'Approved students will appear here.'
                         : activeTab === 'faculty'  ? 'Approved faculty members will appear here.'
                         : activeTab === 'visitors' ? 'Approved visitors will appear here.'
+                        : activeTab === 'online'   ? 'Users who are active will show up here.'
                         : 'Archived users will appear here.'
                 }
                 icon={
                     activeTab === 'archived' ? <HiOutlineArchiveBoxArrowDown className="w-12 h-12" />
+                  : activeTab === 'online'   ? <HiOutlineWifi className="w-12 h-12" />
                   : activeTab === 'new'      ? <HiOutlineUserAdd className="w-12 h-12" />
                   : activeTab === 'students' ? <HiOutlineAcademicCap className="w-12 h-12" />
                   : activeTab === 'visitors' ? <HiOutlineGlobe className="w-12 h-12" />
@@ -357,6 +378,14 @@ export default function UserManagement() {
                                         <th className="text-right py-3 px-4 text-xs font-semibold text-gray-500 uppercase">Actions</th>
                                     </tr>
                                 )}
+                                {activeTab === 'online' && (
+                                    <tr>
+                                        <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase">User</th>
+                                        <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase">Role</th>
+                                        <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase">Last Active</th>
+                                        <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase">Status</th>
+                                    </tr>
+                                )}
                             </thead>
                             <tbody className="divide-y divide-gray-50">
                                 {currentList.map((user) => (
@@ -386,6 +415,32 @@ export default function UserManagement() {
                                         {activeTab === 'faculty' && (
                                             <td className="py-3 px-4 text-gray-600">{user.faculty_program || '—'}</td>
                                         )}
+                                        {activeTab === 'online' && (() => {
+                                            const roleColors = { student: 'bg-blue-100 text-blue-700', faculty: 'bg-purple-100 text-purple-700', visitor: 'bg-teal-100 text-teal-700', admin: 'bg-red-100 text-red-700' };
+                                            const lastActive = user.last_active_at ? new Date(user.last_active_at) : null;
+                                            const diffMs = lastActive ? Date.now() - lastActive.getTime() : null;
+                                            const diffSec = diffMs !== null ? Math.floor(diffMs / 1000) : null;
+                                            const lastSeenLabel = diffSec === null ? '—'
+                                                : diffSec < 60   ? 'Just now'
+                                                : diffSec < 3600 ? `${Math.floor(diffSec / 60)}m ago`
+                                                : `${Math.floor(diffSec / 3600)}h ago`;
+                                            return (
+                                                <>
+                                                    <td className="py-3 px-4">
+                                                        <span className={`px-2.5 py-0.5 text-xs font-medium rounded-full capitalize ${roleColors[user.role] || 'bg-gray-100 text-gray-600'}`}>
+                                                            {user.role}
+                                                        </span>
+                                                    </td>
+                                                    <td className="py-3 px-4 text-gray-500 text-xs">{lastSeenLabel}</td>
+                                                    <td className="py-3 px-4">
+                                                        <span className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-700">
+                                                            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                                                            Online
+                                                        </span>
+                                                    </td>
+                                                </>
+                                            );
+                                        })()}
                                         {activeTab === 'visitors' && (
                                             <>
                                                 <td className="py-3 px-4 text-gray-500 text-xs">{user.email}</td>
@@ -475,9 +530,7 @@ export default function UserManagement() {
                             <div className="grid grid-cols-2 gap-4 pt-4 border-t border-gray-100">
                                 <DetailField label="Email" value={viewUser.email} />
                                 <DetailField label="Username" value={viewUser.username} />
-                                {viewUser.id_number && (
-                                    <DetailField label="ID Number" value={viewUser.id_number} />
-                                )}
+                                <DetailField label="ID Number" value={viewUser.id_number || '—'} />
                                 <DetailField label="Registered" value={new Date(viewUser.created_at).toLocaleDateString()} />
                                 {viewUser.student_profile && (
                                     <>

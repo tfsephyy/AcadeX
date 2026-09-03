@@ -469,7 +469,13 @@ export default function CapstoneLibrary() {
             {showEditModal && selectedCapstone && (
                 <EditCapstoneModal capstone={selectedCapstone}
                     onClose={() => { setShowEditModal(false); setSelectedCapstone(null); }}
-                    onSuccess={() => { setShowEditModal(false); setSelectedCapstone(null); fetchCapstones(); }} />
+                    onSuccess={(updatedCapstone) => {
+                        if (updatedCapstone) {
+                            setCapstones(prev => prev.map(c => c.id === updatedCapstone.id ? { ...c, ...updatedCapstone } : c));
+                        }
+                        setShowEditModal(false);
+                        setSelectedCapstone(null);
+                    }} />
             )}
             {uploadOpen && <UploadCapstoneModal open={uploadOpen} onClose={() => setUploadOpen(false)} />}
 

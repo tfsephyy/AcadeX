@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { HiOutlineAcademicCap, HiOutlineUserGroup, HiOutlineDocumentAdd, HiOutlineEye, HiOutlineBookOpen, HiOutlineGlobe } from 'react-icons/hi';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
+import { HiOutlineAcademicCap, HiOutlineUserGroup, HiOutlineDocumentAdd, HiOutlineEye, HiOutlineBookOpen, HiOutlineGlobe, HiOutlineShieldCheck, HiOutlineShare } from 'react-icons/hi';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend, LineChart, Line } from 'recharts';
 import {
     getDashboardStats, getUploadedByYear, getStudentsPerYear,
     getRecentApproved, getMostViewed, getMostCited,
+    getCopyrightedCapstones, getPublishedCapstonesCount, getPlatformActivity,
 } from '../../api/admin';
 import Loading from '../../components/Loading';
 import CapstoneModal from '../../components/admin/CapstoneModal';
@@ -50,6 +51,9 @@ export default function AdminDashboard() {
     const [recentApproved, setRecentApproved] = useState([]);
     const [mostViewed, setMostViewed] = useState([]);
     const [mostCited, setMostCited] = useState([]);
+    const [copyrightedCount, setCopyrightedCount] = useState(0);
+    const [publishedCount, setPublishedCount] = useState(0);
+    const [platformActivity, setPlatformActivity] = useState([]);
     const [loading, setLoading] = useState(true);
     const [selectedCapstone, setSelectedCapstone] = useState(null);
 
@@ -58,20 +62,35 @@ export default function AdminDashboard() {
     const fetchData = async () => {
         try {
             setLoading(true);
-            const [statsRes, uploadRes, studRes, recentRes, viewedRes, citedRes] = await Promise.all([
+            const results = await Promise.allSettled([
                 getDashboardStats(),
                 getUploadedByYear(),
                 getStudentsPerYear(),
                 getRecentApproved(),
                 getMostViewed(),
                 getMostCited(),
+                getCopyrightedCapstones(),
+                getPublishedCapstonesCount(),
+                getPlatformActivity(),
             ]);
-            setStats(statsRes.data.data);
-            setUploadedByYear(uploadRes.data.data || []);
-            setStudentsPerYear(studRes.data.data || []);
-            setRecentApproved(recentRes.data.data || []);
-            setMostViewed(viewedRes.data.data || []);
-            setMostCited(citedRes.data.data || []);
+
+            const get = (i, fallback) =>
+                results[i].status === 'fulfilled' ? results[i].value.data.data : fallback;
+
+            setStats(get(0, {}));
+            setUploadedByYear(get(1, []) || []);
+            setStudentsPerYear(get(2, []) || []);
+            setRecentApproved(get(3, []) || []);
+            setMostViewed(get(4, []) || []);
+            setMostCited(get(5, []) || []);
+            setCopyrightedCount(get(6, { count: 0 })?.count ?? 0);
+            setPublishedCount(get(7, { count: 0 })?.count ?? 0);
+            setPlatformActivity(get(8, []) || []);
+
+            // Log any individual failures for debugging
+            results.forEach((r, i) => {
+                if (r.status === 'rejected') console.warn(`Dashboard request [${i}] failed:`, r.reason);
+            });
         } catch (err) {
             console.error('Dashboard fetch error:', err);
         } finally {
@@ -86,10 +105,12 @@ export default function AdminDashboard() {
     const maxCitations = mostCited[0]?.citation_count || 1;
 
     const statCards = [
-        { label: 'Students',  value: stats?.students  ?? 0, icon: HiOutlineAcademicCap, color: 'text-blue-600',   bg: 'bg-blue-50'   },
-        { label: 'Faculty',   value: stats?.faculty   ?? 0, icon: HiOutlineUserGroup,   color: 'text-purple-600', bg: 'bg-purple-50' },
-        { label: 'Visitors',  value: stats?.visitors  ?? 0, icon: HiOutlineGlobe,       color: 'text-teal-600',   bg: 'bg-teal-50'   },
-        { label: 'Uploaded',  value: stats?.uploaded  ?? 0, icon: HiOutlineDocumentAdd, color: 'text-green-600',  bg: 'bg-green-50'  },
+        { label: 'Students',             value: stats?.students  ?? 0, icon: HiOutlineAcademicCap,  color: 'text-blue-600',   bg: 'bg-blue-50'   },
+        { label: 'Faculty',              value: stats?.faculty   ?? 0, icon: HiOutlineUserGroup,    color: 'text-purple-600', bg: 'bg-purple-50' },
+        { label: 'Visitors',             value: stats?.visitors  ?? 0, icon: HiOutlineGlobe,        color: 'text-teal-600',   bg: 'bg-teal-50'   },
+        { label: 'Uploaded',             value: stats?.uploaded  ?? 0, icon: HiOutlineDocumentAdd,  color: 'text-green-600',  bg: 'bg-green-50'  },
+        { label: 'Copyrighted Capstone', value: copyrightedCount,       icon: HiOutlineShieldCheck,  color: 'text-orange-600', bg: 'bg-orange-50' },
+        { label: 'Published Capstone',   value: publishedCount,         icon: HiOutlineShare,        color: 'text-indigo-600', bg: 'bg-indigo-50' },
     ];
 
     return (
@@ -100,62 +121,96 @@ export default function AdminDashboard() {
                 <p className="text-sm text-gray-500 mt-1">Overview of the EduArchive system</p>
             </div>
 
-            {/* Stat Cards + Charts */}
-            <div className="flex flex-col lg:flex-row gap-6 items-start lg:items-center">
-                <div className="flex flex-col gap-3 lg:w-1/4">
-                    {statCards.map((card) => (
-                        <div key={card.label} className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 hover:shadow-md transition-shadow">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <p className="text-xs font-medium text-gray-500">{card.label}</p>
-                                    <p className="text-2xl font-bold text-gray-900 mt-1">{card.value}</p>
-                                </div>
-                                <div className={`p-2 rounded-lg ${card.bg}`}>
-                                    <card.icon className={`w-5 h-5 ${card.color}`} />
-                                </div>
+            {/* ── Stat Cards — full width single row ─────────────── */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+                {statCards.map((card) => (
+                    <div key={card.label} className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 hover:shadow-md transition-shadow">
+                        <div className="flex items-center justify-between">
+                            <div className="min-w-0">
+                                <p className="text-xs font-medium text-gray-500 truncate">{card.label}</p>
+                                <p className="text-2xl font-bold text-gray-900 mt-1">{card.value}</p>
+                            </div>
+                            <div className={`p-2 rounded-lg flex-shrink-0 ml-2 ${card.bg}`}>
+                                <card.icon className={`w-5 h-5 ${card.color}`} />
                             </div>
                         </div>
-                    ))}
+                    </div>
+                ))}
+            </div>
+
+            {/* ── Charts row: Bar + Pie + Line ────────────────────── */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+
+                {/* Bar Graph */}
+                <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+                    <h3 className="text-sm font-semibold text-gray-700 mb-4">Uploaded Capstones by Year</h3>
+                    <div className="h-64">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={[...uploadedByYear].reverse()}>
+                                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
+                                <XAxis dataKey="year" tick={{ fontSize: 12 }} />
+                                <YAxis tick={{ fontSize: 12 }} allowDecimals={false} />
+                                <Tooltip contentStyle={{ borderRadius: '8px', fontSize: '12px', border: '1px solid #e5e7eb' }} />
+                                <Bar dataKey="count" fill="#8BC34A" radius={[6, 6, 0, 0]} name="Capstones" />
+                            </BarChart>
+                        </ResponsiveContainer>
+                    </div>
                 </div>
 
-                <div className="flex flex-col lg:flex-row gap-4 lg:w-3/4">
-                    {/* Bar Graph */}
-                    <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 flex-1">
-                        <h3 className="text-sm font-semibold text-gray-700 mb-4">Uploaded Capstones by Year</h3>
-                        <div className="h-72">
-                            <ResponsiveContainer width="100%" height="100%">
-                                <BarChart data={[...uploadedByYear].reverse()}>
-                                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
-                                    <XAxis dataKey="year" tick={{ fontSize: 12 }} />
-                                    <YAxis tick={{ fontSize: 12 }} allowDecimals={false} />
-                                    <Tooltip contentStyle={{ borderRadius: '8px', fontSize: '12px', border: '1px solid #e5e7eb' }} />
-                                    <Bar dataKey="count" fill="#8BC34A" radius={[6, 6, 0, 0]} name="Capstones" />
-                                </BarChart>
-                            </ResponsiveContainer>
+                {/* Doughnut */}
+                <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+                    <h3 className="text-sm font-semibold text-gray-700 mb-4">Students per Year Level</h3>
+                    <div className="h-64">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <PieChart>
+                                <Pie data={studentsPerYear} cx="50%" cy="50%" innerRadius="35%" outerRadius="75%"
+                                    paddingAngle={2} dataKey="count" nameKey="year" stroke="none">
+                                    {studentsPerYear.map((entry, idx) => (
+                                        <Cell key={`cell-${idx}`} fill={getYearColor(entry.year)} />
+                                    ))}
+                                </Pie>
+                                <Tooltip contentStyle={{ borderRadius: '8px', fontSize: '12px', border: '1px solid #e5e7eb' }}
+                                    formatter={(value, name) => name === 'year' ? [`Year ${value}`, 'Level'] : [value, 'Students']}
+                                    labelFormatter={() => ''} />
+                                <Legend layout="vertical" align="right" verticalAlign="middle"
+                                    formatter={(value, entry) => `Year ${entry.payload.year}`}
+                                    wrapperStyle={{ fontSize: '12px', paddingLeft: '0.5rem' }} />
+                            </PieChart>
+                        </ResponsiveContainer>
+                    </div>
+                </div>
+
+                {/* Line Chart — Platform Activity */}
+                <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+                    <div className="flex items-start justify-between mb-3">
+                        <div>
+                            <h3 className="text-sm font-semibold text-gray-700">Platform Activity</h3>
+                            <p className="text-xs text-gray-400 mt-0.5">Last 6 months</p>
+                        </div>
+                        <div className="flex flex-col gap-1 text-xs text-gray-500">
+                            <span className="flex items-center gap-1.5"><span className="inline-block w-3 h-0.5 rounded bg-blue-500" />Users</span>
+                            <span className="flex items-center gap-1.5"><span className="inline-block w-3 h-0.5 rounded bg-orange-400" />Views</span>
+                            <span className="flex items-center gap-1.5"><span className="inline-block w-3 h-0.5 rounded bg-green-500" />Uploads</span>
                         </div>
                     </div>
-
-                    {/* Doughnut */}
-                    <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 flex-1">
-                        <h3 className="text-sm font-semibold text-gray-700 mb-4">Students per Year Level</h3>
-                        <div className="h-72">
-                            <ResponsiveContainer width="100%" height="100%">
-                                <PieChart>
-                                    <Pie data={studentsPerYear} cx="50%" cy="50%" innerRadius="35%" outerRadius="75%"
-                                        paddingAngle={2} dataKey="count" nameKey="year" stroke="none">
-                                        {studentsPerYear.map((entry, idx) => (
-                                            <Cell key={`cell-${idx}`} fill={getYearColor(entry.year)} />
-                                        ))}
-                                    </Pie>
-                                    <Tooltip contentStyle={{ borderRadius: '8px', fontSize: '12px', border: '1px solid #e5e7eb' }}
-                                        formatter={(value, name) => name === 'year' ? [`Year ${value}`, 'Level'] : [value, 'Students']}
-                                        labelFormatter={() => ''} />
-                                    <Legend layout="vertical" align="right" verticalAlign="middle"
-                                        formatter={(value, entry) => `Year ${entry.payload.year}`}
-                                        wrapperStyle={{ fontSize: '12px', paddingLeft: '0.5rem' }} />
-                                </PieChart>
-                            </ResponsiveContainer>
-                        </div>
+                    <div className="h-64">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <LineChart data={platformActivity} margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>
+                                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
+                                <XAxis dataKey="month" tick={{ fontSize: 10 }} tickLine={false} axisLine={false} />
+                                <YAxis tick={{ fontSize: 10 }} tickLine={false} axisLine={false} allowDecimals={false} />
+                                <Tooltip
+                                    contentStyle={{ borderRadius: '8px', fontSize: '12px', border: '1px solid #e5e7eb', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.07)' }}
+                                    formatter={(value, name) => {
+                                        const labels = { users: 'New Users', views: 'Capstone Views', uploads: 'Uploads' };
+                                        return [value, labels[name] || name];
+                                    }}
+                                />
+                                <Line type="monotone" dataKey="users"   stroke="#3b82f6" strokeWidth={2} dot={{ r: 3, fill: '#3b82f6', strokeWidth: 0 }} activeDot={{ r: 5 }} />
+                                <Line type="monotone" dataKey="views"   stroke="#f97316" strokeWidth={2} dot={{ r: 3, fill: '#f97316', strokeWidth: 0 }} activeDot={{ r: 5 }} />
+                                <Line type="monotone" dataKey="uploads" stroke="#22c55e" strokeWidth={2} dot={{ r: 3, fill: '#22c55e', strokeWidth: 0 }} activeDot={{ r: 5 }} />
+                            </LineChart>
+                        </ResponsiveContainer>
                     </div>
                 </div>
             </div>

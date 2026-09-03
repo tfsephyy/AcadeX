@@ -135,7 +135,7 @@ class CapstoneController extends Controller
 
         $years = (clone $base)->whereNotNull('year')->distinct()->orderByDesc('year')->pluck('year');
         $programs = (clone $base)->whereNotNull('program')->where('program', '!=', '')->distinct()->orderBy('program')->pluck('program');
-        $categories = (clone $base)->whereNotNull('category')->where('category', '!=', '')->distinct()->orderBy('category')->pluck('category');
+        $categories = (clone $base)->whereNotNull('category')->where('category', '!=', '')->selectRaw('category as name, COUNT(*) as count')->groupBy('category')->orderBy('category')->get();
 
         $adviserIds = (clone $base)->whereNotNull('adviser_id')->distinct()->pluck('adviser_id');
         $advisers = User::whereIn('id', $adviserIds)->orderBy('name')->get(['id', 'name']);
@@ -177,9 +177,10 @@ class CapstoneController extends Controller
         $categories = (clone $baseQuery)
             ->whereNotNull('category')
             ->where('category', '!=', '')
-            ->distinct()
+            ->selectRaw('category as name, COUNT(*) as count')
+            ->groupBy('category')
             ->orderBy('category')
-            ->pluck('category');
+            ->get();
 
         $adviserIds = (clone $baseQuery)
             ->whereNotNull('adviser_id')
@@ -919,7 +920,8 @@ class CapstoneController extends Controller
         }
 
         if ($request->has('references')) {
-            $capstone->references()->sync($request->references);
+            $refs = array_filter($request->references ?? [], fn($id) => $id !== $capstone->id);
+            $capstone->referencedCapstones()->sync($refs);
         }
 
         if ($request->has('resources')) {
@@ -950,7 +952,7 @@ class CapstoneController extends Controller
             ]);
         }
 
-        $capstone->load('keywords', 'references', 'resources', 'adviser');
+        $capstone->load('keywords', 'referencedCapstones', 'resources', 'adviser');
         return $this->successResponse($capstone, 'Capstone updated.');
     }
 }

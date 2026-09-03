@@ -16,6 +16,45 @@ class UserManagementController extends Controller
     use ApiResponses;
 
     /**
+     * Get currently online users (active within last 5 minutes).
+     */
+    public function onlineUsers(Request $request): JsonResponse
+    {
+        $threshold = now()->subMinutes(5);
+
+        $query = User::with(['role', 'studentProfile'])
+            ->where('is_approved', true)
+            ->where('is_archived', false)
+            ->whereNotNull('last_active_at')
+            ->where('last_active_at', '>=', $threshold)
+            ->whereHas('role', fn($q) => $q->whereIn('name', ['student', 'faculty', 'visitor', 'admin']))
+            ->orderByDesc('last_active_at');
+
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('email', 'like', "%{$search}%")
+                  ->orWhere('id_number', 'like', "%{$search}%");
+            });
+        }
+
+        $users = $query->get()->map(fn($u) => [
+            'id'             => $u->id,
+            'name'           => $u->name,
+            'email'          => $u->email,
+            'id_number'      => $u->id_number,
+            'role'           => $u->role?->name,
+            'last_active_at' => $u->last_active_at,
+            'faculty_program'=> $u->faculty_program,
+            'year'           => $u->studentProfile?->year,
+            'program'        => $u->studentProfile?->program,
+        ]);
+
+        return $this->successResponse($users, 'Online users retrieved.');
+    }
+
+    /**
      * Get new (unapproved) users.
      */
     public function newUsers(Request $request): JsonResponse

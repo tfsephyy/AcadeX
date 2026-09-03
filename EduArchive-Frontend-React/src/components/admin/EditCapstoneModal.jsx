@@ -193,7 +193,7 @@ export default function EditCapstoneModal({ capstone, onClose, onSuccess, update
         if (!form.author.trim()) { notify.error('Author is required.'); return; }
         setSaving(true);
         try {
-            await actualUpdate(capstone.id, {
+            const res = await actualUpdate(capstone.id, {
                 ...form,
                 publication_status:  publicationStatus,
                 copyright_status:    copyrightStatus || null,
@@ -204,7 +204,7 @@ export default function EditCapstoneModal({ capstone, onClose, onSuccess, update
                 resources:           resources.map(r => ({ name: r.name, file_path: r.file_path, file_original_name: r.file_original_name })),
             });
             notify.success('Capstone updated successfully!');
-            onSuccess();
+            onSuccess(res.data.data);
         } catch (err) {
             notify.error(err.response?.data?.message || 'Failed to update capstone.');
         } finally { setSaving(false); }

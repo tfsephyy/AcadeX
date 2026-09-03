@@ -117,6 +117,72 @@ class AdminDashboardController extends Controller
     }
 
     /**
+     * Get monthly platform activity for the last 12 months:
+     * new users, capstone views, and capstone uploads.
+     */
+    public function platformActivity(): JsonResponse
+    {
+        $start = now()->subMonths(5)->startOfMonth();
+
+        // New approved users per month
+        $users = DB::table('users')
+            ->where('created_at', '>=', $start)
+            ->where('is_approved', true)
+            ->select(DB::raw("DATE_FORMAT(created_at, '%Y-%m') as month"), DB::raw('COUNT(*) as count'))
+            ->groupBy('month')
+            ->pluck('count', 'month');
+
+        // Capstone views per month
+        $views = DB::table('capstone_views')
+            ->where('created_at', '>=', $start)
+            ->select(DB::raw("DATE_FORMAT(created_at, '%Y-%m') as month"), DB::raw('COUNT(*) as count'))
+            ->groupBy('month')
+            ->pluck('count', 'month');
+
+        // Capstones uploaded per month
+        $uploads = DB::table('capstones')
+            ->where('created_at', '>=', $start)
+            ->select(DB::raw("DATE_FORMAT(created_at, '%Y-%m') as month"), DB::raw('COUNT(*) as count'))
+            ->groupBy('month')
+            ->pluck('count', 'month');
+
+        // Build a complete 6-month series (5 past + current)
+        $data = [];
+        for ($i = 5; $i >= 0; $i--) {
+            $key   = now()->subMonths($i)->format('Y-m');
+            $label = now()->subMonths($i)->format('M Y');
+            $data[] = [
+                'month'   => $label,
+                'users'   => $users[$key]   ?? 0,
+                'views'   => $views[$key]   ?? 0,
+                'uploads' => $uploads[$key] ?? 0,
+            ];
+        }
+
+        return $this->successResponse($data, 'Platform activity over time.');
+    }
+
+    /**
+     * Get the count of capstones with copyright_status = 'Copyrighted'.
+     */
+    public function copyrightedCapstones(): JsonResponse
+    {
+        $count = Capstone::where('copyright_status', 'Copyrighted')->count();
+
+        return $this->successResponse(['count' => $count], 'Copyrighted capstones count.');
+    }
+
+    /**
+     * Get the count of capstones with publication_status = 'Published'.
+     */
+    public function publishedCapstones(): JsonResponse
+    {
+        $count = Capstone::where('publication_status', 'Published')->count();
+
+        return $this->successResponse(['count' => $count], 'Published capstones count.');
+    }
+
+    /**
      * Get the top 5 most-cited capstones (referenced by other capstones).
      */
     public function mostCited(): JsonResponse
