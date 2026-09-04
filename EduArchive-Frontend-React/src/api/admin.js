@@ -64,6 +64,7 @@ export const getPublishedCategories = () => axios.get('/published/categories');
 
 // ── Capstone Actions (all users) ───────────────────
 export const getCapstone = (id) => axios.get(`/capstones/${id}`);
+export const getCapstoneAnalytics = (id) => axios.get(`/capstones/${id}/analytics`);
 export const recordView = (id) => axios.post(`/capstones/${id}/view`);
 export const downloadCapstone = (id) => axios.get(`/capstones/${id}/download`, { responseType: 'blob' });
 // PDF is fetched as a blob (decrypted in-memory on the server, never exposed as a raw file URL)

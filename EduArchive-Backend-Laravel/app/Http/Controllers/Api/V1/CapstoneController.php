@@ -955,4 +955,84 @@ class CapstoneController extends Controller
         $capstone->load('keywords', 'referencedCapstones', 'resources', 'adviser');
         return $this->successResponse($capstone, 'Capstone updated.');
     }
+
+    /**
+     * Return individual analytics for a single capstone.
+     * Includes daily trends (last 30 days) for views, downloads, bookmarks,
+     * plus summary totals, unique viewers, engagement rate, and peak day.
+     */
+    public function getAnalytics(Request $request, Capstone $capstone): JsonResponse
+    {
+        $days = 30;
+        $start = now()->subDays($days - 1)->startOfDay();
+
+        // Build a full date range so days with zero activity are included
+        $dateRange = collect();
+        for ($i = 0; $i < $days; $i++) {
+            $dateRange->push(now()->subDays($days - 1 - $i)->format('Y-m-d'));
+        }
+
+        // Daily views
+        $viewsByDay = \App\Models\CapstoneView::where('capstone_id', $capstone->id)
+            ->where('created_at', '>=', $start)
+            ->selectRaw('DATE(created_at) as date, COUNT(*) as count')
+            ->groupBy('date')
+            ->pluck('count', 'date');
+
+        // Daily downloads
+        $downloadsByDay = \App\Models\Download::where('capstone_id', $capstone->id)
+            ->where('created_at', '>=', $start)
+            ->selectRaw('DATE(created_at) as date, COUNT(*) as count')
+            ->groupBy('date')
+            ->pluck('count', 'date');
+
+        // Daily bookmarks
+        $bookmarksByDay = \App\Models\Bookmark::where('capstone_id', $capstone->id)
+            ->where('created_at', '>=', $start)
+            ->selectRaw('DATE(created_at) as date, COUNT(*) as count')
+            ->groupBy('date')
+            ->pluck('count', 'date');
+
+        // Merge into unified trend array
+        $trend = $dateRange->map(function ($date) use ($viewsByDay, $downloadsByDay, $bookmarksByDay) {
+            return [
+                'date'      => $date,
+                'views'     => (int) ($viewsByDay[$date] ?? 0),
+                'downloads' => (int) ($downloadsByDay[$date] ?? 0),
+                'bookmarks' => (int) ($bookmarksByDay[$date] ?? 0),
+            ];
+        })->values();
+
+        // Unique viewers (distinct user_id, falling back to ip_address for guests)
+        $uniqueViewers = \App\Models\CapstoneView::where('capstone_id', $capstone->id)
+            ->whereNotNull('user_id')
+            ->distinct('user_id')
+            ->count('user_id');
+
+        // Peak activity day (most views in a single day, all-time)
+        $peakDay = \App\Models\CapstoneView::where('capstone_id', $capstone->id)
+            ->selectRaw('DATE(created_at) as date, COUNT(*) as count')
+            ->groupBy('date')
+            ->orderByDesc('count')
+            ->first();
+
+        // Engagement rate: (downloads / views) * 100, capped at 100
+        $totalViews     = $capstone->view_count ?? 0;
+        $totalDownloads = $capstone->download_count ?? 0;
+        $engagementRate = $totalViews > 0
+            ? round(min(($totalDownloads / $totalViews) * 100, 100), 1)
+            : 0;
+
+        return $this->successResponse([
+            'summary' => [
+                'total_views'      => $totalViews,
+                'total_downloads'  => $totalDownloads,
+                'total_bookmarks'  => $capstone->bookmark_count ?? 0,
+                'unique_viewers'   => $uniqueViewers,
+                'engagement_rate'  => $engagementRate,
+                'peak_day'         => $peakDay ? ['date' => $peakDay->date, 'views' => (int) $peakDay->count] : null,
+            ],
+            'trend'   => $trend,
+        ], 'Capstone analytics retrieved.');
+    }
 }

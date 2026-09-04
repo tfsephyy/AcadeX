@@ -7,6 +7,7 @@ import {
 import { getCapstone, recordView, downloadCapstone, toggleBookmark } from '../../api/admin';
 import { useNotification } from '../../components/Notification';
 import CitationGenerator from '../../components/CitationGenerator';
+import CapstoneAnalyticsPanel from '../../components/CapstoneAnalyticsPanel';
 import Loading from '../../components/Loading';
 import { Document, Page, pdfjs } from 'react-pdf';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
@@ -193,8 +194,11 @@ export default function StudentCapstoneMainPage() {
 
             {/* â”€â”€ Two-column layout: Info left, PDF right â”€â”€ */}
             <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-12 gap-4">
-                <div className="min-w-0 rounded-xl border border-green-200 bg-green-50/60 shadow-sm lg:col-span-5 h-full flex flex-col overflow-hidden">
-                    <div className="p-5 flex flex-col h-full min-h-0 gap-4 overflow-y-auto custom-scrollbar">
+                <div
+                    className="min-w-0 rounded-xl border border-green-200 bg-green-50/60 shadow-sm lg:col-span-5 flex flex-col overflow-y-auto custom-scrollbar"
+                    style={{ maxHeight: 'calc(100vh - 140px)' }}
+                >
+                    <div className="p-5 flex flex-col gap-4">
 
                         {/* Title + Published badge */}
                         <div className="flex items-start gap-2 flex-wrap">
@@ -290,12 +294,9 @@ export default function StudentCapstoneMainPage() {
                         {/* Citation Generator */}
                         <CitationGenerator capstone={capstone} />
 
-                        {/* Stats bar */}
-                        <div className="flex items-center gap-6 pt-4 border-t border-green-200 mt-auto">
-                            <StatInline icon={<HiEye className="w-4 h-4" />} value={capstone.view_count || 0} label="Views" />
-                            <StatInline icon={<HiDownload className="w-4 h-4" />} value={capstone.download_count || 0} label="Downloads" />
-                            <StatInline icon={<HiBookmark className="w-4 h-4" />} value={capstone.bookmark_count || 0} label="Saved" />
-                        </div>
+                        {/* Individual Analytics */}
+                        <CapstoneAnalyticsPanel capstoneId={capstone.id} compact={false} />
+
                     </div>
                 </div>
 

@@ -59,6 +59,7 @@ Route::prefix('v1')->group(function () {
         // ── Shared capstone utilities (all authenticated users) ──
         Route::get('/capstones/faculty-list',              [CapstoneController::class, 'getFacultyList']);
         Route::get('/capstones/bookmarked',                [CapstoneController::class, 'userBookmarks']);
+        Route::get('/capstones/{capstone}/analytics',      [CapstoneController::class, 'getAnalytics']);
         Route::post('/capstones/{capstone}/view',          [CapstoneController::class, 'recordView']);
         // PDF serving — decrypts in-memory, no raw file exposed
         Route::get('/capstones/{capstone}/pdf',            [CapstoneController::class, 'servePdf']);
