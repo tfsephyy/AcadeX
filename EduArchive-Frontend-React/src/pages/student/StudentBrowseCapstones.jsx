@@ -121,7 +121,7 @@ export default function StudentBrowseCapstones() {
                         className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 bg-white focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none"
                     >
                         <option value="">All Categories</option>
-                        {categories.map(c => <option key={c} value={c}>{c}</option>)}
+                        {categories.map(c => { const val = typeof c === 'string' ? c : c.name; return <option key={val} value={val}>{val}</option>; })}
                     </select>
                 </div>
                 <button

@@ -142,5 +142,15 @@ Route::prefix('v1')->group(function () {
             Route::put('/capstones/{capstone}',              [CapstoneController::class, 'update']);
             Route::delete('/capstones/{capstone}',           [CapstoneController::class, 'destroy']);
         });
+
+        // ── Student capstone library routes ──────────────
+        Route::middleware('role:student')->prefix('student')->group(function () {
+            // Students can only see/manage their own uploaded capstones
+            Route::get('/capstones',                         [CapstoneController::class, 'index']);
+            Route::post('/capstones/upload',                 [CapstoneController::class, 'upload']);
+            Route::post('/capstones/upload-resource',        [CapstoneController::class, 'uploadResource']);
+            Route::get('/capstones/archived',                [CapstoneController::class, 'archived']);
+            Route::delete('/capstones/{capstone}',           [CapstoneController::class, 'destroy']);
+        });
     });
 });

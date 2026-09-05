@@ -4,6 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import {
     HiOutlineBookOpen,
+    HiOutlineLibrary,
     HiOutlineMenu,
     HiOutlineX,
     HiOutlineLogout,
@@ -15,6 +16,7 @@ import Chatbot from '../Chatbot';
 
 const navItems = [
     { to: '/student/uploads', label: 'Uploaded Capstones', icon: HiOutlineBookOpen },
+    { to: '/student/capstone-library', label: 'My Capstone Library', icon: HiOutlineLibrary },
 ];
 
 export default function StudentLayout({ children }) {

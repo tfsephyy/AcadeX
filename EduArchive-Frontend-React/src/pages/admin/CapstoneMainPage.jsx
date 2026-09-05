@@ -26,6 +26,7 @@ export default function CapstoneMainPage() {
     const [loading, setLoading] = useState(true);
     const [bookmarked, setBookmarked] = useState(false);
     const [pdfUrl, setPdfUrl] = useState(null);
+    const [pdfError, setPdfError] = useState(null);
     const [numPages, setNumPages] = useState(null);
     const [pdfWidth, setPdfWidth] = useState(600);
     const [fullscreen, setFullscreen] = useState(false);
@@ -119,8 +120,16 @@ export default function CapstoneMainPage() {
                 const pdfRes = await api.get(`/capstones/${id}/pdf`, { responseType: 'blob' });
                 const blob = new Blob([pdfRes.data], { type: 'application/pdf' });
                 setPdfUrl(URL.createObjectURL(blob));
-            } catch {
-                console.error('Could not load PDF blob');
+                setPdfError(null);
+            } catch (e) {
+                const status = e?.response?.status;
+                if (status === 403) {
+                    setPdfError('You do not have permission to view this PDF.');
+                } else if (status === 404) {
+                    setPdfError('PDF file not found on the server.');
+                } else {
+                    setPdfError('Could not load PDF. Please try again.');
+                }
             }
         } catch (err) {
             notify.error('Failed to load capstone.');
@@ -181,7 +190,7 @@ export default function CapstoneMainPage() {
     const rolePrefix = location.pathname.startsWith('/faculty') ? '/faculty' : '/admin';
 
     return (
-        <div className="flex flex-col h-full min-h-0">
+        <div className="space-y-4">
             {/* ── Top bar: Back + Actions ── */}
             <div className="shrink-0 flex flex-wrap items-center justify-between gap-3 pb-4">
                 <button
@@ -205,13 +214,10 @@ export default function CapstoneMainPage() {
             </div>
 
             {/* ── Two-column layout: Info left, PDF right ── */}
-            <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-12 gap-4">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
 
-                {/* Capstone Info — scrollable card */}
-                <div
-                    className="min-w-0 rounded-xl border border-green-200 bg-green-50/60 shadow-sm lg:col-span-5 flex flex-col overflow-y-auto custom-scrollbar"
-                    style={{ maxHeight: 'calc(100vh - 140px)' }}
-                >
+                {/* Capstone Info — natural flow, page scrolls */}
+                <div className="min-w-0 rounded-xl border border-green-200 bg-green-50/60 shadow-sm lg:col-span-5">
                     <div className="p-5 flex flex-col gap-4">
 
                         {/* Title + Published badge */}
@@ -314,8 +320,12 @@ export default function CapstoneMainPage() {
                     </div>
                 </div>
 
-                {/* PDF Viewer */}
-                <div className="flex-1 min-h-0 min-w-0 lg:col-span-7 h-full flex flex-col gap-2" ref={pdfContainerRef}>
+                {/* PDF Viewer — sticky so it stays in view while left column scrolls */}
+                <div
+                    className="min-w-0 lg:col-span-7 flex flex-col gap-2 lg:sticky lg:top-0"
+                    style={{ height: 'calc(100vh - 140px)' }}
+                    ref={pdfContainerRef}
+                >
                     {/* PDF toolbar */}
                     <div className="shrink-0 flex items-center justify-between px-1">
                         <span className="text-xs text-gray-500 font-medium">
@@ -350,6 +360,11 @@ export default function CapstoneMainPage() {
                                     />
                                 ))}
                             </Document>
+                        ) : pdfError ? (
+                            <div className="flex flex-col items-center justify-center py-20 gap-3 text-center px-6">
+                                <span className="text-4xl">⚠️</span>
+                                <p className="text-sm font-medium text-gray-600">{pdfError}</p>
+                            </div>
                         ) : (
                             <div className="flex items-center justify-center py-20 text-gray-400">
                                 No PDF available.

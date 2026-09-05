@@ -1,10 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
-    HiArrowLeft, HiDownload, HiBookmark, HiShare, HiEye,
+    HiArrowLeft, HiBookmark, HiShare, HiEye,
     HiArrowsExpand, HiX, HiAcademicCap, HiExternalLink, HiShieldCheck,
 } from 'react-icons/hi';
-import { getCapstone, recordView, downloadCapstone, toggleBookmark } from '../../api/admin';
+import { getCapstone, recordView, toggleBookmark } from '../../api/admin';
 import { useNotification } from '../../components/Notification';
 import CitationGenerator from '../../components/CitationGenerator';
 import CapstoneAnalyticsPanel from '../../components/CapstoneAnalyticsPanel';
@@ -26,6 +26,7 @@ export default function StudentCapstoneMainPage() {
     const [loading, setLoading] = useState(true);
     const [bookmarked, setBookmarked] = useState(false);
     const [pdfUrl, setPdfUrl] = useState(null);
+    const [pdfError, setPdfError] = useState(null);
     const [numPages, setNumPages] = useState(null);
     const [pdfWidth, setPdfWidth] = useState(600);
     const [fullscreen, setFullscreen] = useState(false);
@@ -114,8 +115,16 @@ export default function StudentCapstoneMainPage() {
                 const pdfRes = await api.get(`/capstones/${id}/pdf`, { responseType: 'blob' });
                 const blob = new Blob([pdfRes.data], { type: 'application/pdf' });
                 setPdfUrl(URL.createObjectURL(blob));
-            } catch {
-                console.error('Could not load PDF blob');
+                setPdfError(null);
+            } catch (e) {
+                const status = e?.response?.status;
+                if (status === 403) {
+                    setPdfError('You do not have permission to view this PDF.');
+                } else if (status === 404) {
+                    setPdfError('PDF file not found on the server.');
+                } else {
+                    setPdfError('Could not load PDF. Please try again.');
+                }
             }
         } catch (err) {
             notify.error('Failed to load capstone.');
@@ -124,23 +133,6 @@ export default function StudentCapstoneMainPage() {
         }
     };
 
-    const handleDownload = async () => {
-        try {
-            const res = await downloadCapstone(id);
-            const url = window.URL.createObjectURL(new Blob([res.data]));
-            const link = document.createElement('a');
-            link.href = url;
-            link.setAttribute('download', capstone.pdf_original_name || `${capstone.title}.pdf`);
-            document.body.appendChild(link);
-            link.click();
-            link.remove();
-            window.URL.revokeObjectURL(url);
-            setCapstone(prev => ({ ...prev, download_count: (prev.download_count || 0) + 1 }));
-            notify.success('Download started.');
-        } catch (err) {
-            notify.error('Download failed.');
-        }
-    };
 
     const handleBookmark = async () => {
         try {
@@ -172,7 +164,7 @@ export default function StudentCapstoneMainPage() {
     const refs = capstone.referenced_capstones ?? capstone.referencedCapstones ?? [];
 
     return (
-        <div className="flex flex-col h-full min-h-0">
+        <div className="space-y-4">
             {/* â”€â”€ Top bar â”€â”€ */}
             <div className="shrink-0 flex flex-wrap items-center justify-between gap-3 pb-4">
                 <button onClick={() => navigate(-1)}
@@ -180,9 +172,6 @@ export default function StudentCapstoneMainPage() {
                     <HiArrowLeft className="w-4 h-4" /> Back
                 </button>
                 <div className="flex flex-wrap items-center gap-2">
-                    <button onClick={handleDownload} className="inline-flex items-center gap-2 px-4 py-2 bg-[#1B5E20] text-white text-sm font-medium rounded-lg hover:bg-green-800 transition-colors shadow-sm">
-                        <HiDownload className="w-4 h-4" /> Download
-                    </button>
                     <button onClick={handleBookmark} className={`inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg border transition-colors shadow-sm ${bookmarked ? 'bg-amber-50 text-amber-700 border-amber-300' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}`}>
                         <HiBookmark className="w-4 h-4" /> {bookmarked ? 'Saved' : 'Save'}
                     </button>
@@ -192,12 +181,10 @@ export default function StudentCapstoneMainPage() {
                 </div>
             </div>
 
-            {/* â”€â”€ Two-column layout: Info left, PDF right â”€â”€ */}
-            <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-12 gap-4">
-                <div
-                    className="min-w-0 rounded-xl border border-green-200 bg-green-50/60 shadow-sm lg:col-span-5 flex flex-col overflow-y-auto custom-scrollbar"
-                    style={{ maxHeight: 'calc(100vh - 140px)' }}
-                >
+            {/* ── Two-column layout: Info left, PDF right ── */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
+                {/* Capstone Info — natural flow, page scrolls */}
+                <div className="min-w-0 rounded-xl border border-green-200 bg-green-50/60 shadow-sm lg:col-span-5">
                     <div className="p-5 flex flex-col gap-4">
 
                         {/* Title + Published badge */}
@@ -300,8 +287,12 @@ export default function StudentCapstoneMainPage() {
                     </div>
                 </div>
 
-                {/* PDF Viewer */}
-                <div className="flex-1 min-h-0 min-w-0 lg:col-span-7 h-full flex flex-col gap-2" ref={pdfContainerRef}>
+                {/* PDF Viewer — sticky so it stays in view while left column scrolls */}
+                <div
+                    className="min-w-0 lg:col-span-7 flex flex-col gap-2 lg:sticky lg:top-0"
+                    style={{ height: 'calc(100vh - 140px)' }}
+                    ref={pdfContainerRef}
+                >
                     {/* PDF toolbar */}
                     <div className="shrink-0 flex items-center justify-between px-1">
                         <span className="text-xs text-gray-500 font-medium">
@@ -336,6 +327,11 @@ export default function StudentCapstoneMainPage() {
                                     />
                                 ))}
                             </Document>
+                        ) : pdfError ? (
+                            <div className="flex flex-col items-center justify-center py-20 gap-3 text-center px-6">
+                                <span className="text-4xl">⚠️</span>
+                                <p className="text-sm font-medium text-gray-600">{pdfError}</p>
+                            </div>
                         ) : (
                             <div className="flex items-center justify-center py-20 text-gray-400">
                                 No PDF available.
@@ -357,12 +353,6 @@ export default function StudentCapstoneMainPage() {
                             )}
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
-                            <button
-                                onClick={handleDownload}
-                                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-[#1B5E20] rounded-lg hover:bg-green-700 transition-colors"
-                            >
-                                <HiDownload className="w-3.5 h-3.5" /> Download
-                            </button>
                             <button
                                 onClick={() => setFullscreen(false)}
                                 className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-300 bg-gray-800 border border-gray-600 rounded-lg hover:bg-gray-700 transition-colors"

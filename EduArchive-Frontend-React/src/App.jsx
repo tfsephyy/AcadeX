@@ -30,6 +30,7 @@ import FacultyProfile from './pages/faculty/FacultyProfile'
 import StudentLayout from './components/student/StudentLayout'
 import StudentUploadedCapstones from './pages/student/StudentUploadedCapstones'
 import StudentCapstoneMainPage from './pages/student/StudentCapstoneMainPage'
+import StudentCapstoneLibrary from './pages/student/StudentCapstoneLibrary'
 import StudentProfile from './pages/student/StudentProfile'
 
 // Faculty extra pages
@@ -125,6 +126,7 @@ function App() {
 
                 {/* Student routes */}
                 <Route path="/student/uploads" element={<StudentRoute><StudentUploadedCapstones /></StudentRoute>} />
+                <Route path="/student/capstone-library" element={<StudentRoute><StudentCapstoneLibrary /></StudentRoute>} />
                 <Route path="/student/capstones/:id" element={<StudentRoute><StudentCapstoneMainPage /></StudentRoute>} />
                 <Route path="/student/profile" element={<StudentRoute><StudentProfile /></StudentRoute>} />
                 <Route path="/student" element={<Navigate to="/student/uploads" replace />} />

@@ -31,8 +31,8 @@ class CapstoneController extends Controller
     {
         $query = Capstone::with(['keywords', 'uploader:id,name', 'approver:id,name', 'adviser:id,name']);
 
-        // Faculty users only see their own uploaded capstones
-        if ($request->user() && $request->user()->hasRole('faculty')) {
+        // Faculty and students only see their own uploaded capstones
+        if ($request->user() && ($request->user()->hasRole('faculty') || $request->user()->hasRole('student'))) {
             $query->where('uploaded_by', $request->user()->id);
         }
 
@@ -498,8 +498,8 @@ class CapstoneController extends Controller
             ->archived()
             ->orderByDesc('updated_at');
 
-        // Faculty users only see their own archived capstones
-        if ($request->user() && $request->user()->hasRole('faculty')) {
+        // Faculty and student users only see their own archived capstones
+        if ($request->user() && ($request->user()->hasRole('faculty') || $request->user()->hasRole('student'))) {
             $query->where('uploaded_by', $request->user()->id);
         }
 
@@ -722,9 +722,14 @@ class CapstoneController extends Controller
     {
         $user = $request->user();
 
-        // Non-admins and non-faculty can only access published capstones
+        // Non-admins and non-faculty can only access published capstones.
+        // Faculty can access published capstones OR their own uploads.
         if (!$user->hasRole('admin') && !$user->hasRole('faculty')) {
             if (!$capstone->is_published) {
+                return $this->errorResponse('Capstone not available.', 403);
+            }
+        } elseif ($user->hasRole('faculty') && !$capstone->is_published) {
+            if ((int) $capstone->uploader_id !== (int) $user->id) {
                 return $this->errorResponse('Capstone not available.', 403);
             }
         }
@@ -742,9 +747,9 @@ class CapstoneController extends Controller
     {
         $user = $request->user();
 
-        // Non-admins can only download published capstones
-        if (!$user->hasRole('admin') && !$capstone->is_published) {
-            return $this->errorResponse('You are not authorized to download this capstone.', 403);
+        // Students are not permitted to download capstone PDFs.
+        if ($user->hasRole('student')) {
+            return $this->errorResponse('Students are not authorised to download capstone files.', 403);
         }
 
         if (!$capstone->pdf_path || !Storage::disk('local')->exists($capstone->pdf_path)) {
@@ -799,10 +804,8 @@ class CapstoneController extends Controller
     {
         $user = $request->user();
 
-        // Non-admins can only view published capstones
-        if (!$user->hasRole('admin') && !$capstone->is_published) {
-            return $this->errorResponse('Capstone not available.', 403);
-        }
+        // All authenticated users can view any capstone PDF.
+        // (Route is already protected by auth:sanctum middleware.)
 
         if (!$capstone->pdf_path || !Storage::disk('local')->exists($capstone->pdf_path)) {
             return $this->errorResponse('PDF file not found.', 404);

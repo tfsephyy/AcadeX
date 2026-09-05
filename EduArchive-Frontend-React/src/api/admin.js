@@ -102,6 +102,17 @@ export const getArchivedFacultyCapstones = (params = {}) => axios.get('/faculty/
 export const archiveFacultyCapstone = (id) => axios.post(`/faculty/capstones/${id}/archive`);
 export const unarchiveFacultyCapstone = (id) => axios.post(`/faculty/capstones/${id}/unarchive`);
 
+// ── Student Capstone Library (own uploads) ──────────
+export const getStudentCapstones = (params = {}) => axios.get('/student/capstones', { params });
+export const uploadStudentCapstone = (formData) => axios.post('/student/capstones/upload', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+});
+export const uploadStudentResource = (formData) => axios.post('/student/capstones/upload-resource', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+});
+export const deleteStudentCapstone = (id) => axios.delete(`/student/capstones/${id}`);
+export const getArchivedStudentCapstones = (params = {}) => axios.get('/student/capstones/archived', { params });
+
 // ── Password Reset & Email Verification ───────────
 export const sendForgotPasswordCode = (email) => axios.post('/forgot-password', { email });
 export const verifyResetCode = (data) => axios.post('/verify-reset-code', data);
