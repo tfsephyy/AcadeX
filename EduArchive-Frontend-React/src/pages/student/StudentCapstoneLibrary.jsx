@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { HiOutlineSearch, HiOutlineFilter, HiOutlineDocumentText, HiOutlineEye, HiOutlineTrash } from 'react-icons/hi';
+import { HiOutlineFilter, HiOutlineDocumentText, HiOutlineEye, HiOutlineTrash } from 'react-icons/hi';
 import {
     getStudentCapstones, deleteStudentCapstone, getArchivedStudentCapstones,
     getPublishedYears, getPublishedPrograms, getPublishedCategories,
@@ -9,6 +9,7 @@ import { useNotification } from '../../components/Notification';
 import Loading from '../../components/Loading';
 import EmptyState from '../../components/EmptyState';
 import ConfirmDialog from '../../components/ConfirmDialog';
+import SearchWithSuggestions from '../../components/SearchWithSuggestions';
 
 const STATUS_MAP = {
     pending:  { bg: 'bg-amber-100',  text: 'text-amber-700',  border: 'border-amber-300',  dot: 'bg-amber-500',  label: 'Pending Review' },
@@ -37,7 +38,6 @@ export default function StudentCapstoneLibrary() {
     const [loading, setLoading] = useState(true);
     const [viewing, setViewing] = useState('active');
     const [search, setSearch] = useState('');
-    const [debouncedSearch, setDebouncedSearch] = useState('');
     const [filters, setFilters] = useState({ year: '', program: '', category: '' });
     const [years, setYears] = useState([]);
     const [programs, setPrograms] = useState([]);
@@ -46,13 +46,6 @@ export default function StudentCapstoneLibrary() {
     const [page, setPage] = useState(1);
     const [lastPage, setLastPage] = useState(1);
     const [confirm, setConfirm] = useState({ open: false, title: '', message: '', action: null, variant: 'danger' });
-    const searchTimer = useRef(null);
-
-    useEffect(() => {
-        clearTimeout(searchTimer.current);
-        searchTimer.current = setTimeout(() => setDebouncedSearch(search), 350);
-        return () => clearTimeout(searchTimer.current);
-    }, [search]);
 
     useEffect(() => { loadFilters(); }, []);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -71,7 +64,7 @@ export default function StudentCapstoneLibrary() {
         try {
             setLoading(true);
             const params = { page, per_page: 20 };
-            if (debouncedSearch) params.search = debouncedSearch;
+            if (search) params.search = search;
             if (filters.year) params.year = filters.year;
             if (filters.program) params.program = filters.program;
             if (filters.category) params.category = filters.category;
@@ -86,7 +79,7 @@ export default function StudentCapstoneLibrary() {
         } finally {
             setLoading(false);
         }
-    }, [debouncedSearch, filters, page, viewing, notify]);
+    }, [search, filters, page, viewing, notify]);
 
     const handleDelete = (cap) => setConfirm({
         open: true,
@@ -130,12 +123,13 @@ export default function StudentCapstoneLibrary() {
 
             {/* Search + Filters */}
             <div className="flex flex-wrap gap-3 items-center">
-                <div className="relative flex-1 min-w-[200px]">
-                    <HiOutlineSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                    <input type="text" value={search} onChange={e => { setSearch(e.target.value); setPage(1); }}
-                        placeholder="Search by title or author..."
-                        className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg text-sm placeholder-gray-400 bg-white focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none" />
-                </div>
+                <SearchWithSuggestions
+                    id="student-library-search"
+                    value={search}
+                    onChange={(val) => { setSearch(val); setPage(1); }}
+                    placeholder="Search by title or author…"
+                    className="flex-1 min-w-[200px]"
+                />
                 <select value={filters.category} onChange={e => setFilter('category', e.target.value)}
                     className="px-3 py-2.5 border border-gray-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-green-500 outline-none">
                     <option value="">All Categories</option>

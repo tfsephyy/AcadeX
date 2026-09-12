@@ -42,6 +42,12 @@ import AdminCapstoneAdditionalInfoPage from './pages/admin/AdminCapstoneAddition
 // Shared
 import ReviewExtractedDataPage from './components/ReviewExtractedDataPage'
 
+// Visitor pages
+import VisitorLayout from './components/visitor/VisitorLayout'
+import VisitorCapstones from './pages/visitor/VisitorCapstones'
+import VisitorCapstoneMainPage from './pages/visitor/VisitorCapstoneMainPage'
+import VisitorProfile from './pages/visitor/VisitorProfile'
+
 function AdminRoute({ children }) {
   return (
     <ProtectedRoute roles={['admin']}>
@@ -80,6 +86,14 @@ function StudentRoute({ children }) {
   return (
     <ProtectedRoute roles={['student']}>
       <StudentLayout>{children}</StudentLayout>
+    </ProtectedRoute>
+  )
+}
+
+function VisitorRoute({ children }) {
+  return (
+    <ProtectedRoute roles={['visitor']}>
+      <VisitorLayout>{children}</VisitorLayout>
     </ProtectedRoute>
   )
 }
@@ -130,6 +144,13 @@ function App() {
                 <Route path="/student/capstones/:id" element={<StudentRoute><StudentCapstoneMainPage /></StudentRoute>} />
                 <Route path="/student/profile" element={<StudentRoute><StudentProfile /></StudentRoute>} />
                 <Route path="/student" element={<Navigate to="/student/uploads" replace />} />
+
+                {/* Visitor routes */}
+                <Route path="/visitor/capstones" element={<VisitorRoute><VisitorCapstones /></VisitorRoute>} />
+                <Route path="/visitor/capstones/:id" element={<VisitorRoute><VisitorCapstoneMainPage /></VisitorRoute>} />
+                <Route path="/visitor/saved" element={<VisitorRoute><VisitorCapstones /></VisitorRoute>} />
+                <Route path="/visitor/profile" element={<VisitorRoute><VisitorProfile /></VisitorRoute>} />
+                <Route path="/visitor" element={<Navigate to="/visitor/capstones" replace />} />
               </Routes>
             </ChatbotProvider>
           </AuthProvider>

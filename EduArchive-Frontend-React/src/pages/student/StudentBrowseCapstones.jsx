@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { HiOutlineSearch, HiOutlineFilter, HiOutlineBookmark, HiBookmark, HiOutlineDownload, HiOutlineEye } from 'react-icons/hi';
+import { HiOutlineFilter, HiOutlineBookmark, HiBookmark, HiOutlineDownload, HiOutlineEye } from 'react-icons/hi';
 import { getPublishedCapstones, getPublishedYears, getPublishedPrograms, getPublishedCategories, toggleBookmark } from '../../api/admin';
 import { useNotification } from '../../components/Notification';
 import Loading from '../../components/Loading';
 import EmptyState from '../../components/EmptyState';
+import SearchWithSuggestions from '../../components/SearchWithSuggestions';
 
 export default function StudentBrowseCapstones() {
     const navigate = useNavigate();
@@ -12,7 +13,6 @@ export default function StudentBrowseCapstones() {
     const [capstones, setCapstones] = useState([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
-    const [debouncedSearch, setDebouncedSearch] = useState('');
     const [filters, setFilters] = useState({ year: '', program: '', category: '' });
     const [showFilters, setShowFilters] = useState(false);
     const [page, setPage] = useState(1);
@@ -20,13 +20,6 @@ export default function StudentBrowseCapstones() {
     const [years, setYears] = useState([]);
     const [programs, setPrograms] = useState([]);
     const [categories, setCategories] = useState([]);
-    const searchTimer = useRef(null);
-
-    useEffect(() => {
-        clearTimeout(searchTimer.current);
-        searchTimer.current = setTimeout(() => setDebouncedSearch(search), 350);
-        return () => clearTimeout(searchTimer.current);
-    }, [search]);
 
     useEffect(() => {
         loadFilterOptions();
@@ -34,7 +27,7 @@ export default function StudentBrowseCapstones() {
 
     useEffect(() => {
         fetchCapstones();
-    }, [debouncedSearch, filters, page]);
+    }, [search, filters, page]);
 
     const loadFilterOptions = async () => {
         try {
@@ -53,7 +46,7 @@ export default function StudentBrowseCapstones() {
         try {
             setLoading(true);
             const params = { page, per_page: 20 };
-            if (debouncedSearch) params.search = debouncedSearch;
+            if (search) params.search = search;
             if (filters.year) params.year = filters.year;
             if (filters.program) params.program = filters.program;
             if (filters.category) params.category = filters.category;
@@ -66,7 +59,7 @@ export default function StudentBrowseCapstones() {
         } finally {
             setLoading(false);
         }
-    }, [debouncedSearch, filters, page]);
+    }, [search, filters, page]);
 
     const handleFilterChange = (key, value) => {
         setFilters(prev => ({ ...prev, [key]: value }));
@@ -103,16 +96,13 @@ export default function StudentBrowseCapstones() {
 
             {/* Search & Category Filter */}
             <div className="flex flex-col sm:flex-row gap-3 items-end flex-wrap">
-                <div className="relative flex-1 min-w-[250px]">
-                    <HiOutlineSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                    <input
-                        type="text"
-                        value={search}
-                        onChange={(e) => setSearch(e.target.value)}
-                        placeholder="Search by title, author, or keyword..."
-                        className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg text-sm text-gray-900 placeholder-gray-400 bg-white focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none"
-                    />
-                </div>
+                <SearchWithSuggestions
+                    id="student-browse-search"
+                    value={search}
+                    onChange={(val) => { setSearch(val); setPage(1); }}
+                    placeholder="Search by title, author, or keyword…"
+                    className="flex-1 min-w-[250px]"
+                />
                 <div>
                     <label className="text-xs text-gray-600 font-semibold uppercase block mb-1">Category</label>
                     <select

@@ -17,9 +17,10 @@ export default function ProtectedRoute({ children, roles }) {
   }
 
   if (roles && !roles.includes(user.role)) {
-    if (user.role === 'admin') return <Navigate to="/admin/dashboard" replace />
+    if (user.role === 'admin')   return <Navigate to="/admin/dashboard" replace />
     if (user.role === 'faculty') return <Navigate to="/faculty/dashboard" replace />
     if (user.role === 'student') return <Navigate to="/student/uploads" replace />
+    if (user.role === 'visitor') return <Navigate to="/visitor/capstones" replace />
     return <Navigate to="/dashboard" replace />
   }
 

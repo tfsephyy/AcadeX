@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Models\Capstone;
+use App\Services\NlpSearchService;
 use App\Traits\ApiResponses;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -15,26 +16,6 @@ class ChatbotController extends Controller
 
     private const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
     private const GROQ_MODEL   = 'llama-3.3-70b-versatile';
-
-    /**
-     * Words stripped before building DB keyword search.
-     * These are too generic to be useful search terms.
-     */
-    private const STOP_WORDS = [
-        'what','which','find','show','me','about','the','a','an','is','are','was','were',
-        'do','does','can','could','would','should','have','has','had','this','that','these',
-        'those','for','with','from','to','in','on','at','by','of','and','or','but','not',
-        'any','all','some','tell','how','why','when','where','who','give','list','please',
-        'thank','hello','hi','hey','using','used','use','look','looking','their','there',
-        'here','my','your','our','its','it','they','them','also','get','want','need','help',
-        'make','know','see','just','more','than','then','been','will','very','other','into',
-        'such','most','after','before','between','under','over','again','further','once',
-        // capstone-specific stop words (too generic for meaningful DB search)
-        'capstone','capstones','research','study','studies','project','projects','thesis',
-        'work','author','authors','title','year','program','category','information',
-        'details','topic','topics','related','similar','tell','explain','describe',
-        'open','current','this','selected','opened',
-    ];
 
     public function message(Request $request): JsonResponse
     {
@@ -256,13 +237,14 @@ SYSTEM;
     }
 
     /**
-     * Search the database for relevant capstones using terms from the user message.
+     * Search the database for relevant capstones using NLP-expanded terms from the user message.
      * Also uses the open capstone's keywords/category for "related" queries.
      * PHP does the searching — AI only receives real records.
      */
     private function searchDatabase(string $message, ?Capstone $openCapstone = null): \Illuminate\Database\Eloquent\Collection
     {
-        $terms = $this->extractTerms($message);
+        $nlp   = new NlpSearchService();
+        $terms = $nlp->expandTerms($message);
 
         // If user asks about "related" or "similar" to the open capstone,
         // add that capstone's keywords as search terms automatically
@@ -272,7 +254,12 @@ SYSTEM;
                 ->map(fn($k) => strtolower(trim($k)))
                 ->filter(fn($k) => strlen($k) > 2)
                 ->toArray();
-            $terms = array_unique(array_merge($terms, $kwTerms));
+            // Expand the open capstone's keywords through NLP as well
+            $expandedKw = [];
+            foreach ($kwTerms as $kw) {
+                $expandedKw = array_merge($expandedKw, $nlp->expandTerms($kw));
+            }
+            $terms = array_unique(array_merge($terms, $kwTerms, $expandedKw));
 
             if (!empty($openCapstone->category)) {
                 $terms[] = strtolower($openCapstone->category);
@@ -311,18 +298,5 @@ SYSTEM;
 
         // No meaningful terms → return empty so fallback kicks in
         return collect();
-    }
-
-    /**
-     * Strip stop words and return only meaningful search terms.
-     */
-    private function extractTerms(string $message): array
-    {
-        $clean = preg_replace('/[^a-zA-Z0-9\s]/', ' ', mb_strtolower($message));
-        $words = preg_split('/\s+/', trim($clean), -1, PREG_SPLIT_NO_EMPTY);
-
-        return array_values(array_unique(
-            array_filter($words, fn($w) => strlen($w) > 2 && !in_array($w, self::STOP_WORDS))
-        ));
     }
 }

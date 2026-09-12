@@ -16,6 +16,7 @@ import Loading from '../../components/Loading';
 import EmptyState from '../../components/EmptyState';
 import ConfirmDialog from '../../components/ConfirmDialog';
 import CapstoneModal from '../../components/admin/CapstoneModal';
+import SearchWithSuggestions from '../../components/SearchWithSuggestions';
 
 export default function FacultyUploadedCapstones() {
     const navigate = useNavigate();
@@ -135,7 +136,7 @@ export default function FacultyUploadedCapstones() {
     const openCapstoneModal = (cap) => { setSelectedCapstone(cap); setShowModal(true); };
     const openCapstoneViewer = (capId) => navigate(`/faculty/capstones/${capId}`);
 
-    const handleSearch = (e) => { setSearch(e.target.value); setPage(1); };
+    const handleSearch = (val) => { setSearch(val); setPage(1); };
     const handleFilterChange = (key, value) => { setFilters(prev => ({ ...prev, [key]: value })); setPage(1); };
 
     const handleAdviserSelect = (adviser) => {
@@ -305,11 +306,13 @@ export default function FacultyUploadedCapstones() {
             {/* ── Search & Filter Bar (sticky) ── */}
             <div className="sticky top-0 z-20 bg-white border-b border-gray-200 shadow-sm px-4 lg:px-8 py-3">
                 <div className="flex flex-col sm:flex-row gap-3 items-end flex-wrap">
-                    <div className="relative flex-1 min-w-[250px]">
-                        <HiOutlineSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                        <input type="text" value={search} onChange={handleSearch} placeholder="Search by title, author, keyword..."
-                            className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg text-sm text-gray-900 placeholder-gray-400 bg-white focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none" />
-                    </div>
+                    <SearchWithSuggestions
+                        id="faculty-capstone-search"
+                        value={search}
+                        onChange={handleSearch}
+                        placeholder="Search by title, author, keyword…"
+                        className="flex-1 min-w-[250px]"
+                    />
                     <button onClick={() => setShowFilters(!showFilters)}
                         className={`relative inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg border transition-colors ${showFilters ? 'bg-green-50 text-green-700 border-green-200' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}`}>
                         <HiOutlineFilter className="w-4 h-4" />

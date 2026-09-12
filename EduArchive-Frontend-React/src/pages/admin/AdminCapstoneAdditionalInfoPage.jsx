@@ -198,6 +198,7 @@ export default function AdminCapstoneAdditionalInfoPage() {
                 adviser_id: adviser?.id || null,
                 references: references.map(r => r.id),
                 resources: resources.map(r => ({ name: r.name, file_path: r.file_path, file_original_name: r.file_original_name })),
+                author_details: initialForm.author_details || [],
             });
             notify.success('Capstone saved successfully!');
             navigate('/admin/capstone-library', { replace: true });

@@ -5,7 +5,9 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Models\Capstone;
 use App\Models\Bookmark;
+use App\Models\Keyword;
 use App\Models\User;
+use App\Services\NlpSearchService;
 use App\Traits\ApiResponses;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -23,17 +25,9 @@ class PublishedCapstoneController extends Controller
             ->published()
             ->where('is_archived', false);
 
-        // Search
+        // NLP-enhanced search
         if ($request->has('search') && $request->search) {
-            $search = $request->search;
-            $query->where(function ($q) use ($search) {
-                $q->where('title', 'like', "%{$search}%")
-                  ->orWhere('author', 'like', "%{$search}%")
-                  ->orWhere('abstract', 'like', "%{$search}%")
-                  ->orWhereHas('keywords', function ($kq) use ($search) {
-                      $kq->where('name', 'like', "%{$search}%");
-                  });
-            });
+            $this->applyNlpSearch($query, $request->search);
         }
 
         // Filter by year
@@ -161,5 +155,79 @@ class PublishedCapstoneController extends Controller
             ->get();
 
         return $this->successResponse($categories, 'Categories retrieved.');
+    }
+    /**
+     * Keyword autocomplete suggest — returns up to $limit keywords matching ?q=
+     * Used by the SearchWithSuggestions frontend component.
+     */
+    public function suggest(Request $request): JsonResponse
+    {
+        $q     = trim($request->get('q', ''));
+        $limit = min((int) $request->get('limit', 8), 20);
+
+        if (strlen($q) < 1) {
+            return $this->successResponse([], 'No query.');
+        }
+
+        // Also expand abbreviations so "ML" suggests "machine learning" keywords
+        $nlp   = new NlpSearchService();
+        $terms = $nlp->extractMeaningfulTerms($q);
+
+        $keywords = Keyword::where(function ($kq) use ($q, $terms) {
+            $kq->where('name', 'LIKE', "%{$q}%");
+            foreach ($terms as $term) {
+                $kq->orWhere('name', 'LIKE', "%{$term}%");
+            }
+        })
+        ->orderByRaw('LENGTH(name) ASC')
+        ->limit($limit)
+        ->pluck('name');
+
+        return $this->successResponse($keywords, 'Keyword suggestions retrieved.');
+    }
+
+    // ────────────────────────────────────────────────────────────────────────
+    // NLP Search Helper
+    // ────────────────────────────────────────────────────────────────────────
+
+    private function applyNlpSearch(
+        \Illuminate\Database\Eloquent\Builder $query,
+        string $rawSearch
+    ): void {
+        $nlp           = new NlpSearchService();
+        $expandedTerms = $nlp->expandTerms($rawSearch);
+        $fulltextQuery = $nlp->buildFulltextQuery($rawSearch);
+
+        $query->where(function ($q) use ($rawSearch, $expandedTerms, $fulltextQuery) {
+            // 1. FULLTEXT ranked search
+            if (!empty($fulltextQuery)) {
+                try {
+                    $q->orWhereRaw(
+                        'MATCH(title, author, abstract, category) AGAINST(? IN BOOLEAN MODE)',
+                        [$fulltextQuery]
+                    );
+                } catch (\Throwable) {}
+            }
+            // 2. LIKE per expanded term
+            foreach ($expandedTerms as $term) {
+                $like = "%{$term}%";
+                $q->orWhere('title',    'LIKE', $like)
+                  ->orWhere('author',   'LIKE', $like)
+                  ->orWhere('abstract', 'LIKE', $like)
+                  ->orWhere('category', 'LIKE', $like);
+            }
+            // 3. Raw LIKE safety net
+            $q->orWhere('title',  'LIKE', "%{$rawSearch}%")
+              ->orWhere('author', 'LIKE', "%{$rawSearch}%");
+            // 4. Keyword relation
+            $q->orWhereHas('keywords', function ($kq) use ($expandedTerms, $rawSearch) {
+                $kq->where(function ($inner) use ($expandedTerms, $rawSearch) {
+                    foreach ($expandedTerms as $term) {
+                        $inner->orWhere('name', 'LIKE', "%{$term}%");
+                    }
+                    $inner->orWhere('name', 'LIKE', "%{$rawSearch}%");
+                });
+            });
+        });
     }
 }

@@ -94,13 +94,17 @@ class PdfExtractorService
             $abstract = $this->autoCorrectText($abstract);
         }
 
+        $authorField   = $this->extractAuthor($firstPageText);
+        $authorDetails = $this->extractAuthorDetails($fullText, $authorField);
+
         return [
-            'title'    => $this->extractTitle($firstPageText),
-            'year'     => $this->extractYear($rawFirstPage),
-            'author'   => $this->extractAuthor($firstPageText),
-            'program'  => $this->extractProgram($fullText),
-            'abstract' => $abstract,
-            'keywords' => $this->extractKeywords($fullText),
+            'title'          => $this->extractTitle($firstPageText),
+            'year'           => $this->extractYear($rawFirstPage),
+            'author'         => $authorField,
+            'author_details' => $authorDetails,
+            'program'        => $this->extractProgram($fullText),
+            'abstract'       => $abstract,
+            'keywords'       => $this->extractKeywords($fullText),
         ];
     }
 
@@ -820,6 +824,149 @@ class PdfExtractorService
         }
 
         return $found;
+    }
+
+    // ──────────────────────────────────────────────────────────
+    //  AUTHOR DETAILS — Email & Contact from CV / Appendix N
+    // ──────────────────────────────────────────────────────────
+
+    /**
+     * Extract per-author contact details (email + phone) from the PDF.
+     *
+     * Strategy:
+     *  1. Isolate the section of the document that starts at "APPENDIX N",
+     *     "Curriculum Vitae", or similar headings.
+     *  2. Split the author field by comma to get individual names.
+     *  3. For each author, find the nearest email and phone in the CV block
+     *     within a window of 200 lines after the author's name appears.
+     *  4. If a field cannot be found, leave it as an empty string.
+     *
+     * @param  string $fullText    Full extracted PDF text
+     * @param  string $authorField Comma-separated author string from extract()
+     * @return array<int,array{name:string,email:string,contact:string}>
+     */
+    public function extractAuthorDetails(string $fullText, string $authorField): array
+    {
+        // Parse individual author names from the comma-separated field
+        $names = array_values(array_filter(
+            array_map('trim', explode(',', $authorField)),
+            fn($n) => strlen($n) > 1 && strtolower($n) !== 'unknown author'
+        ));
+
+        if (empty($names)) {
+            return [];
+        }
+
+        // Email regex
+        $emailRe = '/[\w.+\-]+@[\w\-]+(?:\.[\w\-]+)+/';
+        // Philippine phone regex: 09XXXXXXXXX, +639XXXXXXXXX, (0XX) XXX XXXX variants
+        $phoneRe = '/(?:\+?63|0)9\d{9}|(?:\(0\d{2,3}\)\s*\d{3,4}[\-\s]?\d{4})|09\d{2}[\-\s]?\d{3}[\-\s]?\d{4}/';
+
+        // Isolate the CV/Appendix section — everything after the first match
+        $cvSectionPatterns = [
+            '/APPENDIX\s+N[\s\S]/i',
+            '/APPENDIX\s+[A-Z]\s*[:\-]?\s*(?:Curriculum|CV|Vitae)/i',
+            '/Curriculum\s+Vitae/i',
+            '/ABOUT\s+THE\s+(?:AUTHORS?|RESEARCHERS?|PROPONENTS?)/i',
+        ];
+
+        $cvText = '';
+        foreach ($cvSectionPatterns as $pattern) {
+            if (preg_match($pattern, $fullText, $m, PREG_OFFSET_CAPTURE)) {
+                $cvText = substr($fullText, $m[0][1]);
+                break;
+            }
+        }
+
+        // If no dedicated CV section found, use the last 30% of the document
+        if (empty($cvText)) {
+            $cvText = substr($fullText, (int)(strlen($fullText) * 0.70));
+        }
+
+        $cvLines = explode("\n", $cvText);
+        $results = [];
+
+        foreach ($names as $name) {
+            $email   = '';
+            $contact = '';
+
+            // Find the line where this author's name appears in the CV section
+            $nameParts    = array_filter(array_map('trim', preg_split('/\s+/', strtolower($name))));
+            $authorLineIdx = null;
+
+            foreach ($cvLines as $idx => $line) {
+                $lowerLine = strtolower($line);
+                // Match if at least 2 name parts appear on the same line
+                $hits = 0;
+                foreach ($nameParts as $part) {
+                    if (strlen($part) > 2 && str_contains($lowerLine, $part)) {
+                        $hits++;
+                    }
+                }
+                if ($hits >= min(2, count($nameParts))) {
+                    $authorLineIdx = $idx;
+
+                    // Also check if email/phone is on the same line
+                    if (preg_match($emailRe, $line, $em)) {
+                        $email = $em[0];
+                    }
+                    if (preg_match($phoneRe, $line, $pm)) {
+                        $contact = preg_replace('/[^0-9+]/', '', $pm[0]);
+                        // Normalise to 09XXXXXXXXX format
+                        if (str_starts_with($contact, '639')) {
+                            $contact = '0' . substr($contact, 2);
+                        } elseif (str_starts_with($contact, '+639')) {
+                            $contact = '0' . substr($contact, 3);
+                        }
+                    }
+                    break;
+                }
+            }
+
+            // Scan the next 200 lines after the author's name for email / phone
+            if ($authorLineIdx !== null && (empty($email) || empty($contact))) {
+                $window = array_slice($cvLines, $authorLineIdx + 1, 200);
+                foreach ($window as $wLine) {
+                    $lowerWLine = strtolower($wLine);
+
+                    // Stop if we hit another author's name block
+                    $hitOtherAuthor = false;
+                    foreach ($names as $otherName) {
+                        if ($otherName === $name) continue;
+                        $otherParts = array_filter(array_map('trim', preg_split('/\s+/', strtolower($otherName))));
+                        $otherHits  = 0;
+                        foreach ($otherParts as $op) {
+                            if (strlen($op) > 2 && str_contains($lowerWLine, $op)) $otherHits++;
+                        }
+                        if ($otherHits >= min(2, count($otherParts))) {
+                            $hitOtherAuthor = true;
+                            break;
+                        }
+                    }
+                    if ($hitOtherAuthor) break;
+
+                    if (empty($email) && preg_match($emailRe, $wLine, $em)) {
+                        $email = $em[0];
+                    }
+                    if (empty($contact) && preg_match($phoneRe, $wLine, $pm)) {
+                        $raw = preg_replace('/[^0-9+]/', '', $pm[0]);
+                        if (str_starts_with($raw, '639'))  $raw = '0' . substr($raw, 2);
+                        if (str_starts_with($raw, '+639')) $raw = '0' . substr($raw, 3);
+                        $contact = $raw;
+                    }
+
+                    if (!empty($email) && !empty($contact)) break;
+                }
+            }
+
+            $results[] = [
+                'name'    => $name,
+                'email'   => $email,
+                'contact' => $contact,
+            ];
+        }
+
+        return $results;
     }
 
     /**

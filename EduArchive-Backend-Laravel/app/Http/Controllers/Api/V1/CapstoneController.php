@@ -10,12 +10,14 @@ use App\Models\CapstoneResource;
 use App\Models\Keyword;
 use App\Models\Notification;
 use App\Models\User;
+use App\Services\NlpSearchService;
 use App\Services\PdfEncryptorService;
 use App\Services\PdfExtractorService;
 use App\Services\PdfTextService;
 use App\Traits\ApiResponses;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 
@@ -44,13 +46,9 @@ class CapstoneController extends Controller
             $query->where('status', $request->status);
         }
 
-        // Search by title or author
+        // NLP-enhanced search: synonym/abbreviation expansion + FULLTEXT ranking
         if ($request->has('search') && $request->search) {
-            $search = $request->search;
-            $query->where(function ($q) use ($search) {
-                $q->where('title', 'like', "%{$search}%")
-                  ->orWhere('author', 'like', "%{$search}%");
-            });
+            $this->applyNlpSearch($query, $request->search, ['title', 'author', 'abstract', 'category']);
         }
 
         // Filter by year
@@ -89,14 +87,9 @@ class CapstoneController extends Controller
         $query = Capstone::with(['keywords', 'uploader:id,name', 'approver:id,name', 'adviser:id,name'])
             ->where('is_archived', false);
 
-        // Search by title, author, or keyword
+        // NLP-enhanced search: synonym/abbreviation expansion + FULLTEXT + keyword table
         if ($request->has('search') && $request->search) {
-            $search = $request->search;
-            $query->where(function ($q) use ($search) {
-                $q->where('title', 'like', "%{$search}%")
-                  ->orWhere('author', 'like', "%{$search}%")
-                  ->orWhereHas('keywords', fn($kq) => $kq->where('name', 'like', "%{$search}%"));
-            });
+            $this->applyNlpSearch($query, $request->search, ['title', 'author', 'abstract', 'category'], includeKeywords: true);
         }
 
         // Filter by year
@@ -278,6 +271,10 @@ class CapstoneController extends Controller
             'title'              => 'required|string|max:500|unique:capstones,title',
             'year'               => 'nullable|integer|min:2000|max:2099',
             'author'             => 'required|string|max:500',
+            'author_details'     => 'nullable|array',
+            'author_details.*.name'    => 'required|string|max:255',
+            'author_details.*.email'   => 'nullable|string|max:255',
+            'author_details.*.contact' => 'nullable|string|max:50',
             'program'            => 'nullable|string|in:BSIT,BSCpE',
             'category'           => 'nullable|string|max:100',
             'abstract'           => 'nullable|string',
@@ -311,6 +308,7 @@ class CapstoneController extends Controller
             'title'              => $request->title,
             'year'               => $request->year,
             'author'             => $request->author,
+            'author_details'     => $request->input('author_details'),
             'program'            => $request->program,
             'category'           => $request->category,
             'abstract'           => $request->abstract,
@@ -503,13 +501,9 @@ class CapstoneController extends Controller
             $query->where('uploaded_by', $request->user()->id);
         }
 
-        // Search by title or author
+        // NLP-enhanced search
         if ($request->has('search') && $request->search) {
-            $search = $request->search;
-            $query->where(function ($q) use ($search) {
-                $q->where('title', 'like', "%{$search}%")
-                  ->orWhere('author', 'like', "%{$search}%");
-            });
+            $this->applyNlpSearch($query, $request->search, ['title', 'author', 'abstract', 'category']);
         }
 
         // Filter by program
@@ -587,11 +581,7 @@ class CapstoneController extends Controller
             ->withCount('bookmarks');
 
         if ($request->has('search') && $request->search) {
-            $search = $request->search;
-            $query->where(function ($q) use ($search) {
-                $q->where('title', 'like', "%{$search}%")
-                  ->orWhere('author', 'like', "%{$search}%");
-            });
+            $this->applyNlpSearch($query, $request->search, ['title', 'author', 'abstract', 'category']);
         }
 
         $capstones = $query->orderByDesc('bookmark_count')
@@ -613,11 +603,7 @@ class CapstoneController extends Controller
             ->withCount('bookmarks');
 
         if ($request->has('search') && $request->search) {
-            $search = $request->search;
-            $query->where(function ($q) use ($search) {
-                $q->where('title', 'like', "%{$search}%")
-                  ->orWhere('author', 'like', "%{$search}%");
-            });
+            $this->applyNlpSearch($query, $request->search, ['title', 'author', 'abstract', 'category']);
         }
 
         $capstones = $query->orderByDesc('created_at')
@@ -835,6 +821,39 @@ class CapstoneController extends Controller
     }
 
     /**
+     * Serve IMRAD PDF (decrypted in-memory, no raw file exposed).
+     * Available to all authenticated users (same auth as servePdf).
+     */
+    public function serveImrad(Request $request, Capstone $capstone): \Symfony\Component\HttpFoundation\StreamedResponse|JsonResponse
+    {
+        if (!$capstone->imrad_path || !Storage::disk('local')->exists($capstone->imrad_path)) {
+            return $this->errorResponse('IMRAD file not found.', 404);
+        }
+
+        $encryptor = new PdfEncryptorService();
+        $rawBytes  = $encryptor->decryptFromDisk($capstone->imrad_path);
+
+        if ($rawBytes === null) {
+            return $this->errorResponse('IMRAD file could not be decrypted.', 500);
+        }
+
+        $size = strlen($rawBytes);
+
+        return response()->stream(
+            function () use ($rawBytes) { echo $rawBytes; },
+            200,
+            [
+                'Content-Type'           => 'application/pdf',
+                'Content-Disposition'    => 'inline',
+                'Content-Length'         => $size,
+                'Cache-Control'          => 'no-store, no-cache, must-revalidate, max-age=0',
+                'Pragma'                 => 'no-cache',
+                'X-Content-Type-Options' => 'nosniff',
+            ]
+        );
+    }
+
+    /**
      * Toggle bookmark.
      */
     public function toggleBookmark(Request $request, Capstone $capstone): JsonResponse
@@ -1037,5 +1056,76 @@ class CapstoneController extends Controller
             ],
             'trend'   => $trend,
         ], 'Capstone analytics retrieved.');
+    }
+
+    // ────────────────────────────────────────────────────────────────────────
+    // NLP Search Helper
+    // ────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Apply NLP-enhanced search to an Eloquent query.
+     *
+     * Strategy (in order):
+     *  1. MySQL FULLTEXT BOOLEAN MODE on indexed columns — ranked, handles phrases.
+     *  2. LIKE fallback for every expanded NLP term (catches short words, partials).
+     *  3. Raw search LIKE for original input (safety net).
+     *  4. Keyword relation search when $includeKeywords is true.
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder $query
+     * @param  string   $rawSearch       Raw user input
+     * @param  string[] $fulltextColumns Columns in the FULLTEXT index
+     * @param  bool     $includeKeywords Also search the keywords relation
+     */
+    private function applyNlpSearch(
+        \Illuminate\Database\Eloquent\Builder $query,
+        string $rawSearch,
+        array $fulltextColumns,
+        bool $includeKeywords = false
+    ): void {
+        $nlp           = new NlpSearchService();
+        $expandedTerms = $nlp->expandTerms($rawSearch);
+        $fulltextQuery = $nlp->buildFulltextQuery($rawSearch);
+        $columns       = implode(', ', $fulltextColumns);
+
+        $query->where(function ($q) use ($rawSearch, $expandedTerms, $fulltextQuery, $columns, $includeKeywords) {
+
+            // 1. MySQL FULLTEXT boolean mode — relevance ranked, handles phrases
+            if (!empty($fulltextQuery)) {
+                try {
+                    $q->orWhereRaw(
+                        "MATCH({$columns}) AGAINST(? IN BOOLEAN MODE)",
+                        [$fulltextQuery]
+                    );
+                } catch (\Throwable) {
+                    // FULLTEXT not available — fall through to LIKE below
+                }
+            }
+
+            // 2. LIKE fallbacks for each expanded NLP term
+            foreach ($expandedTerms as $term) {
+                $like = "%{$term}%";
+                $q->orWhere('title',    'LIKE', $like)
+                  ->orWhere('author',   'LIKE', $like)
+                  ->orWhere('abstract', 'LIKE', $like)
+                  ->orWhere('category', 'LIKE', $like);
+            }
+
+            // 3. Raw term LIKE safety net (catches very short terms)
+            $rawLike = "%{$rawSearch}%";
+            $q->orWhere('title',  'LIKE', $rawLike)
+              ->orWhere('author', 'LIKE', $rawLike);
+
+            // 4. Keyword relation search
+            if ($includeKeywords && !empty($expandedTerms)) {
+                $q->orWhereHas('keywords', function ($kq) use ($expandedTerms, $rawSearch) {
+                    $kq->where(function ($inner) use ($expandedTerms, $rawSearch) {
+                        foreach ($expandedTerms as $term) {
+                            $inner->orWhere('name', 'LIKE', "%{$term}%");
+                        }
+                        $inner->orWhere('name', 'LIKE', "%{$rawSearch}%");
+                    });
+                });
+            }
+        });
     }
 }

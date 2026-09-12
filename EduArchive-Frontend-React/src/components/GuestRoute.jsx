@@ -25,6 +25,9 @@ export default function GuestRoute({ children }) {
     if (user.role === 'student') {
       return <Navigate to="/student/uploads" replace />
     }
+    if (user.role === 'visitor') {
+      return <Navigate to="/visitor/capstones" replace />
+    }
     return <Navigate to="/dashboard" replace />
   }
 

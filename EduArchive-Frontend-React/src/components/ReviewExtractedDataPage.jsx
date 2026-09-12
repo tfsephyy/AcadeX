@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
     HiArrowLeft, HiArrowRight, HiOutlineDocumentText,
-    HiOutlinePlus, HiOutlineX,
+    HiOutlinePlus, HiOutlineX, HiOutlineUserGroup,
 } from 'react-icons/hi';
 import CategoryCombobox from './CategoryCombobox';
 import { useNotification } from './Notification';
@@ -29,7 +29,37 @@ export default function ReviewExtractedDataPage({ nextPath, backPath }) {
     });
     const [newKeyword, setNewKeyword] = useState('');
 
+    // ── Author details: [{name, email, contact}] — synced from author field
+    const parseAuthorsFromString = (authorStr) => {
+        return (authorStr || '').split(',').map(s => s.trim()).filter(s => s.length > 1).map(name => ({ name, email: '', contact: '' }));
+    };
+
+    const [authorDetails, setAuthorDetails] = useState(() => {
+        // Prefer pre-extracted details from PDF extractor
+        if (extracted?.author_details && Array.isArray(extracted.author_details) && extracted.author_details.length > 0) {
+            return extracted.author_details;
+        }
+        return parseAuthorsFromString(extracted?.author || '');
+    });
+
     if (!pdfInfo || !extracted) return null;
+
+    // Keep authorDetails rows in sync when the author field changes
+    const handleAuthorFieldChange = (newAuthorStr) => {
+        setForm(prev => ({ ...prev, author: newAuthorStr }));
+        const newNames = (newAuthorStr || '').split(',').map(s => s.trim()).filter(s => s.length > 1);
+        setAuthorDetails(prev => {
+            const updated = newNames.map(name => {
+                const existing = prev.find(r => r.name.trim().toLowerCase() === name.toLowerCase());
+                return existing ? { ...existing, name } : { name, email: '', contact: '' };
+            });
+            return updated;
+        });
+    };
+
+    const updateAuthorDetail = (index, field, value) => {
+        setAuthorDetails(prev => prev.map((row, i) => i === index ? { ...row, [field]: value } : row));
+    };
 
     const addKeyword = () => {
         const kw = newKeyword.trim().toLowerCase();
@@ -46,7 +76,7 @@ export default function ReviewExtractedDataPage({ nextPath, backPath }) {
     const handleNext = () => {
         if (!form.title.trim()) { notify.error('Title is required.'); return; }
         if (!form.author.trim()) { notify.error('Author is required.'); return; }
-        navigate(nextPath, { state: { form, pdfInfo } });
+        navigate(nextPath, { state: { form: { ...form, author_details: authorDetails }, pdfInfo } });
     };
 
     const inputCls = "w-full px-3.5 py-2.5 rounded-lg text-sm outline-none transition border"
@@ -122,13 +152,14 @@ export default function ReviewExtractedDataPage({ nextPath, backPath }) {
                                 onChange={(e) => setForm(prev => ({ ...prev, title: e.target.value }))}
                                 className={inputCls} placeholder="Capstone title..." />
                         </div>
-                        <div className="rounded-2xl border p-5" style={{ background: 'var(--color-surface)', borderColor: 'var(--color-border)' }}>
+                        <div className="rounded-2xl border p-5 space-y-1" style={{ background: 'var(--color-surface)', borderColor: 'var(--color-border)' }}>
                             <label className="block text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--color-text-muted)' }}>
                                 Author <span className="text-red-400">*</span>
                             </label>
                             <input type="text" value={form.author}
-                                onChange={(e) => setForm(prev => ({ ...prev, author: e.target.value }))}
-                                className={inputCls} placeholder="Author name(s)..." />
+                                onChange={(e) => handleAuthorFieldChange(e.target.value)}
+                                className={inputCls} placeholder="Author name(s) separated by commas..." />
+                            <p className="text-xs mt-1" style={{ color: 'var(--color-text-muted)' }}>Separate multiple authors with commas</p>
                         </div>
                     </div>
 
@@ -199,6 +230,60 @@ export default function ReviewExtractedDataPage({ nextPath, backPath }) {
                             </div>
                         </div>
                     </div>
+
+                    {/* ── Row 4: Author Contact Details Table ── */}
+                    {authorDetails.length > 0 && (
+                        <div className="rounded-2xl border overflow-hidden" style={{ background: 'var(--color-surface)', borderColor: 'var(--color-border)' }}>
+                            <div className="px-5 py-3.5 border-b flex items-center gap-3" style={{ background: 'var(--color-bg-tertiary)', borderColor: 'var(--color-border)' }}>
+                                <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(27,94,32,0.15)' }}>
+                                    <HiOutlineUserGroup className="w-4 h-4" style={{ color: '#1B5E20' }} />
+                                </div>
+                                <div>
+                                    <h3 className="text-sm font-semibold" style={{ color: 'var(--color-text)' }}>Authors Contact Details</h3>
+                                    <p className="text-xs mt-0.5" style={{ color: 'var(--color-text-muted)' }}>Auto-extracted from PDF (Appendix N / Curriculum Vitae) — edit if needed</p>
+                                </div>
+                            </div>
+                            <div className="p-5 overflow-x-auto">
+                                <table className="w-full text-sm border-collapse">
+                                    <thead>
+                                        <tr style={{ background: 'var(--color-bg-tertiary)' }}>
+                                            <th className="text-left text-xs font-semibold uppercase tracking-wider px-4 py-2.5 rounded-tl-lg" style={{ color: 'var(--color-text-muted)', width: '35%' }}>Name</th>
+                                            <th className="text-left text-xs font-semibold uppercase tracking-wider px-4 py-2.5" style={{ color: 'var(--color-text-muted)', width: '35%' }}>Email</th>
+                                            <th className="text-left text-xs font-semibold uppercase tracking-wider px-4 py-2.5 rounded-tr-lg" style={{ color: 'var(--color-text-muted)', width: '30%' }}>Contact Number</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y" style={{ borderColor: 'var(--color-border)' }}>
+                                        {authorDetails.map((row, idx) => (
+                                            <tr key={idx} style={{ background: idx % 2 === 0 ? 'transparent' : 'var(--color-bg-tertiary)' }}>
+                                                <td className="px-4 py-2.5">
+                                                    <span className="text-sm font-medium" style={{ color: 'var(--color-text)' }}>{row.name}</span>
+                                                </td>
+                                                <td className="px-4 py-2.5">
+                                                    <input
+                                                        type="email"
+                                                        value={row.email}
+                                                        onChange={(e) => updateAuthorDetail(idx, 'email', e.target.value)}
+                                                        placeholder="email@example.com"
+                                                        className="w-full px-2.5 py-1.5 rounded-lg text-sm outline-none transition border bg-[var(--input-bg)] border-[var(--input-border)] text-[var(--input-text)] placeholder-[var(--input-placeholder)] focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)]/30"
+                                                    />
+                                                </td>
+                                                <td className="px-4 py-2.5">
+                                                    <input
+                                                        type="tel"
+                                                        value={row.contact}
+                                                        onChange={(e) => updateAuthorDetail(idx, 'contact', e.target.value)}
+                                                        placeholder="09XXXXXXXXX"
+                                                        className="w-full px-2.5 py-1.5 rounded-lg text-sm outline-none transition border bg-[var(--input-bg)] border-[var(--input-border)] text-[var(--input-text)] placeholder-[var(--input-placeholder)] focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)]/30"
+                                                    />
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    )}
+
                 </div>
             </div>
 

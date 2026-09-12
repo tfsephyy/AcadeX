@@ -4,10 +4,11 @@ import {
     HiArrowLeft, HiBookmark, HiShare, HiEye,
     HiArrowsExpand, HiX, HiAcademicCap, HiExternalLink, HiShieldCheck,
 } from 'react-icons/hi';
-import { getCapstone, recordView, toggleBookmark } from '../../api/admin';
+import { getCapstone, recordView, toggleBookmark, getCapstoneImradBlob } from '../../api/admin';
 import { useNotification } from '../../components/Notification';
 import CitationGenerator from '../../components/CitationGenerator';
 import CapstoneAnalyticsPanel from '../../components/CapstoneAnalyticsPanel';
+import AuthorDetailsModal from '../../components/AuthorDetailsModal';
 import Loading from '../../components/Loading';
 import { Document, Page, pdfjs } from 'react-pdf';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
@@ -25,7 +26,10 @@ export default function StudentCapstoneMainPage() {
     const [capstone, setCapstone] = useState(null);
     const [loading, setLoading] = useState(true);
     const [bookmarked, setBookmarked] = useState(false);
+    const [showAuthors, setShowAuthors] = useState(false);
     const [pdfUrl, setPdfUrl] = useState(null);
+    const [imradUrl, setImradUrl] = useState(null);
+    const [activePdf, setActivePdf] = useState('capstone');
     const [pdfError, setPdfError] = useState(null);
     const [numPages, setNumPages] = useState(null);
     const [pdfWidth, setPdfWidth] = useState(600);
@@ -35,6 +39,8 @@ export default function StudentCapstoneMainPage() {
     const pdfContainerRef = useRef(null);
     const fsContainerRef = useRef(null);
     const viewRecorded = useRef(false);
+    // Track blob URLs for safe revocation on unmount only
+    const blobUrlsRef = useRef({ pdf: null, imrad: null });
 
     // Push capstone context into chatbot when capstone loads, clear on unmount
     useEffect(() => {
@@ -86,11 +92,13 @@ export default function StudentCapstoneMainPage() {
         return () => window.removeEventListener('keydown', onKey);
     }, []);
 
+    // Cleanup blob URLs on unmount only (not on every state change)
     useEffect(() => {
         return () => {
-            if (pdfUrl) URL.revokeObjectURL(pdfUrl);
+            if (blobUrlsRef.current.pdf)   URL.revokeObjectURL(blobUrlsRef.current.pdf);
+            if (blobUrlsRef.current.imrad) URL.revokeObjectURL(blobUrlsRef.current.imrad);
         };
-    }, [pdfUrl]);
+    }, []);
 
     const fetchCapstone = async () => {
         try {
@@ -114,7 +122,9 @@ export default function StudentCapstoneMainPage() {
             try {
                 const pdfRes = await api.get(`/capstones/${id}/pdf`, { responseType: 'blob' });
                 const blob = new Blob([pdfRes.data], { type: 'application/pdf' });
-                setPdfUrl(URL.createObjectURL(blob));
+                const url = URL.createObjectURL(blob);
+                blobUrlsRef.current.pdf = url;
+                setPdfUrl(url);
                 setPdfError(null);
             } catch (e) {
                 const status = e?.response?.status;
@@ -133,6 +143,23 @@ export default function StudentCapstoneMainPage() {
         }
     };
 
+
+    // Load IMRAD PDF blob on demand
+    const loadImradPdf = async () => {
+        if (imradUrl) { setActivePdf('imrad'); setNumPages(null); return; }
+        try {
+            const res = await getCapstoneImradBlob(id);
+            const url = URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }));
+            blobUrlsRef.current.imrad = url;
+            setImradUrl(url);
+            setActivePdf('imrad');
+            setNumPages(null);
+        } catch {
+            notify.error('Could not load IMRAD file.');
+        }
+    };
+
+    const switchToCapstone = () => { setActivePdf('capstone'); setNumPages(null); };
 
     const handleBookmark = async () => {
         try {
@@ -165,6 +192,7 @@ export default function StudentCapstoneMainPage() {
 
     return (
         <div className="space-y-4">
+            <AuthorDetailsModal open={showAuthors} onClose={() => setShowAuthors(false)} capstone={capstone} />
             {/* â”€â”€ Top bar â”€â”€ */}
             <div className="shrink-0 flex flex-wrap items-center justify-between gap-3 pb-4">
                 <button onClick={() => navigate(-1)}
@@ -172,6 +200,12 @@ export default function StudentCapstoneMainPage() {
                     <HiArrowLeft className="w-4 h-4" /> Back
                 </button>
                 <div className="flex flex-wrap items-center gap-2">
+                    <button
+                        onClick={() => setShowAuthors(true)}
+                        className="inline-flex items-center gap-2 px-4 py-2 bg-white text-gray-700 text-sm font-medium rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors shadow-sm"
+                    >
+                        <HiAcademicCap className="w-4 h-4" /> View Authors Details
+                    </button>
                     <button onClick={handleBookmark} className={`inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg border transition-colors shadow-sm ${bookmarked ? 'bg-amber-50 text-amber-700 border-amber-300' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}`}>
                         <HiBookmark className="w-4 h-4" /> {bookmarked ? 'Saved' : 'Save'}
                     </button>
@@ -187,9 +221,15 @@ export default function StudentCapstoneMainPage() {
                 <div className="min-w-0 rounded-xl border border-green-200 bg-green-50/60 shadow-sm lg:col-span-5">
                     <div className="p-5 flex flex-col gap-4">
 
-                        {/* Title + Published badge */}
+                        {/* Title — clickable to restore capstone PDF when IMRAD is active */}
                         <div className="flex items-start gap-2 flex-wrap">
-                            <h1 className="text-xl font-bold text-gray-900 leading-snug flex-1">{capstone.title}</h1>
+                            <h1
+                                className={`text-xl font-bold leading-snug flex-1 transition-colors ${activePdf === 'imrad' ? 'cursor-pointer text-[#1B5E20] underline decoration-dotted underline-offset-2 hover:text-green-800' : 'text-gray-900'}`}
+                                onClick={activePdf === 'imrad' ? switchToCapstone : undefined}
+                                title={activePdf === 'imrad' ? 'Click to view original capstone PDF' : undefined}
+                            >
+                                {capstone.title}
+                            </h1>
                             <PublishedBadge published={capstone.is_published} />
                         </div>
 
@@ -213,17 +253,29 @@ export default function StudentCapstoneMainPage() {
                             </div>
                         )}
 
-                        {/* IMRAD Section */}
+                        {/* IMRAD Section — clickable to swap PDF viewer */}
                         <div>
                             <label className="text-[11px] font-semibold text-gray-500 uppercase block mb-1.5">IMRAD File</label>
                             {capstone.imrad_path ? (
-                                <div className="flex items-center gap-2 p-2.5 rounded-lg bg-cyan-50 border border-cyan-200">
+                                <button
+                                    onClick={activePdf === 'imrad' ? switchToCapstone : loadImradPdf}
+                                    className={`w-full flex items-center gap-2 p-2.5 rounded-lg border transition-all text-left ${
+                                        activePdf === 'imrad'
+                                            ? 'bg-cyan-100 border-cyan-400 ring-2 ring-cyan-300'
+                                            : 'bg-cyan-50 border-cyan-200 hover:bg-cyan-100 hover:border-cyan-300'
+                                    }`}
+                                    title={activePdf === 'imrad' ? 'Click to view original capstone PDF' : 'Click to view IMRAD PDF'}
+                                >
                                     <HiExternalLink className="w-4 h-4 text-cyan-600 flex-shrink-0" />
                                     <span className="text-xs text-cyan-800 font-medium flex-1 truncate">
                                         {capstone.imrad_original_name || 'IMRAD Document'}
                                     </span>
-                                    <span className="text-[10px] text-cyan-600 bg-cyan-100 px-2 py-0.5 rounded-full font-semibold">Available</span>
-                                </div>
+                                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${
+                                        activePdf === 'imrad' ? 'bg-cyan-500 text-white' : 'bg-cyan-100 text-cyan-600'
+                                    }`}>
+                                        {activePdf === 'imrad' ? 'Viewing' : 'View'}
+                                    </span>
+                                </button>
                             ) : (
                                 <div className="flex items-center gap-2 p-2.5 rounded-lg bg-gray-50 border border-gray-200">
                                     <span className="text-xs text-gray-400 italic">Not Available</span>
@@ -295,10 +347,17 @@ export default function StudentCapstoneMainPage() {
                 >
                     {/* PDF toolbar */}
                     <div className="shrink-0 flex items-center justify-between px-1">
-                        <span className="text-xs text-gray-500 font-medium">
-                            {numPages ? `${numPages} page${numPages !== 1 ? 's' : ''}` : ''}
-                        </span>
-                        {pdfUrl && (
+                        <div className="flex items-center gap-2">
+                            <span className="text-xs text-gray-500 font-medium">
+                                {numPages ? `${numPages} page${numPages !== 1 ? 's' : ''}` : ''}
+                            </span>
+                            {activePdf === 'imrad' && (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold rounded-full bg-cyan-100 text-cyan-700 border border-cyan-200">
+                                    IMRAD View
+                                </span>
+                            )}
+                        </div>
+                        {(pdfUrl || imradUrl) && (
                             <button
                                 onClick={() => setFullscreen(true)}
                                 className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors shadow-sm"
@@ -309,9 +368,9 @@ export default function StudentCapstoneMainPage() {
                         )}
                     </div>
                     <div className="flex-1 min-h-0 rounded-xl bg-gray-100 overflow-y-auto custom-scrollbar">
-                        {pdfUrl ? (
+                        {(activePdf === 'capstone' ? pdfUrl : imradUrl) ? (
                             <Document
-                                file={pdfUrl}
+                                file={activePdf === 'capstone' ? pdfUrl : imradUrl}
                                 onLoadSuccess={({ numPages }) => setNumPages(numPages)}
                                 loading={<div className="flex items-center justify-center py-20"><Loading text="Loading PDF..." /></div>}
                                 error={<div className="text-center py-20 text-gray-500">Failed to load PDF.</div>}
@@ -327,7 +386,7 @@ export default function StudentCapstoneMainPage() {
                                     />
                                 ))}
                             </Document>
-                        ) : pdfError ? (
+                        ) : pdfError && activePdf === 'capstone' ? (
                             <div className="flex flex-col items-center justify-center py-20 gap-3 text-center px-6">
                                 <span className="text-4xl">⚠️</span>
                                 <p className="text-sm font-medium text-gray-600">{pdfError}</p>
@@ -367,7 +426,7 @@ export default function StudentCapstoneMainPage() {
                     <div ref={fsContainerRef} className="flex-1 min-h-0 overflow-y-auto" style={{ scrollbarColor: '#4b5563 #111827' }}>
                         <div className="flex justify-center py-6 px-4">
                             <Document
-                                file={pdfUrl}
+                                file={activePdf === 'capstone' ? pdfUrl : imradUrl}
                                 onLoadSuccess={({ numPages }) => setFsNumPages(numPages)}
                                 loading={<div className="flex items-center justify-center py-20"><Loading text="Loading PDF..." /></div>}
                                 error={<div className="text-center py-20 text-gray-400">Failed to load PDF.</div>}

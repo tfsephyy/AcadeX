@@ -16,6 +16,7 @@ class Capstone extends Model
         'title',
         'year',
         'author',
+        'author_details',     // JSON: [{name, email, contact}, ...]
         'program',
         'category',
         'abstract',
@@ -41,10 +42,11 @@ class Capstone extends Model
     protected function casts(): array
     {
         return [
-            'is_published' => 'boolean',
-            'is_archived'  => 'boolean',
-            'approved_at'  => 'datetime',
-            'year'         => 'integer',
+            'is_published'   => 'boolean',
+            'is_archived'    => 'boolean',
+            'approved_at'    => 'datetime',
+            'year'           => 'integer',
+            'author_details' => 'array',
         ];
     }
 

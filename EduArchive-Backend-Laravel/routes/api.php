@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\V1\NotificationController;
 use App\Http\Controllers\Api\V1\PasswordResetController;
 use App\Http\Controllers\Api\V1\PublishedCapstoneController;
 use App\Http\Controllers\Api\V1\UserManagementController;
+use App\Http\Controllers\Api\V1\VisitorCapstoneController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -50,6 +51,7 @@ Route::prefix('v1')->group(function () {
             Route::get('/advisers',   [PublishedCapstoneController::class, 'advisers']);
             Route::get('/keywords',   [PublishedCapstoneController::class, 'keywords']);
             Route::get('/categories', [PublishedCapstoneController::class, 'categories']);
+            Route::get('/suggest',    [PublishedCapstoneController::class, 'suggest']);
         });
 
         // ── Chatbot (all authenticated users) ──────────────────────
@@ -64,6 +66,8 @@ Route::prefix('v1')->group(function () {
         // PDF serving — decrypts in-memory, no raw file exposed
         Route::get('/capstones/{capstone}/pdf',            [CapstoneController::class, 'servePdf']);
         Route::get('/capstones/{capstone}/pdf-token',      [CapstoneController::class, 'getPdfToken']);
+        // IMRAD serving — all authenticated roles
+        Route::get('/capstones/{capstone}/imrad',          [CapstoneController::class, 'serveImrad']);
         // Download — rate-limited to 10 per hour per user
         Route::get('/capstones/{capstone}/download',       [CapstoneController::class, 'download'])
             ->middleware('throttle:10,60');
@@ -151,6 +155,23 @@ Route::prefix('v1')->group(function () {
             Route::post('/capstones/upload-resource',        [CapstoneController::class, 'uploadResource']);
             Route::get('/capstones/archived',                [CapstoneController::class, 'archived']);
             Route::delete('/capstones/{capstone}',           [CapstoneController::class, 'destroy']);
+        });
+
+        // ── Visitor routes ───────────────────────────────
+        Route::middleware('role:visitor')->prefix('visitor')->group(function () {
+            Route::get('/capstones',                         [VisitorCapstoneController::class, 'index']);
+            Route::get('/capstones/years',                   [VisitorCapstoneController::class, 'years']);
+            Route::get('/capstones/programs',                [VisitorCapstoneController::class, 'programs']);
+            Route::get('/capstones/categories',              [VisitorCapstoneController::class, 'categories']);
+            Route::get('/capstones/advisers',                [VisitorCapstoneController::class, 'advisers']);
+            Route::get('/capstones/keywords',                [VisitorCapstoneController::class, 'keywords']);
+            Route::get('/capstones/suggest',                 [VisitorCapstoneController::class, 'suggest']);
+            Route::get('/capstones/{capstone}',              [VisitorCapstoneController::class, 'show']);
+            // PDF: only if published/copyrighted — enforced in controller
+            Route::get('/capstones/{capstone}/pdf',          [VisitorCapstoneController::class, 'servePdf']);
+            // IMRAD: available whenever imrad_path is set
+            Route::get('/capstones/{capstone}/imrad',        [VisitorCapstoneController::class, 'serveImrad']);
+            // No download route for visitors
         });
     });
 });
