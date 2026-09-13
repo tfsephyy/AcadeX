@@ -268,26 +268,26 @@ export default function StudentUploadedCapstones() {
 
             {/* ── Title ── */}
             <div className="px-4 lg:px-8 pt-6 lg:pt-8 pb-4">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                    <div>
-                        <h1 className="text-3xl font-bold text-gray-900">Uploaded Capstones</h1>
+                <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Uploaded Capstones</h1>
                         <p className="text-sm text-gray-500 mt-2">Browse approved capstone projects.</p>
                     </div>
-                    <div className="flex items-center gap-3 flex-wrap">
+                    <div className="flex items-center gap-2 flex-shrink-0">
                         {/* Card / Table toggle */}
                         <div className="flex items-center bg-gray-100 rounded-lg p-1 border border-gray-200">
                             <button onClick={() => setDisplayMode('card')} title="Card View"
-                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all duration-200 ${displayMode === 'card' ? 'bg-white text-[#1B5E20] shadow-sm border border-gray-200' : 'text-gray-500 hover:text-gray-700'}`}>
+                                className={`flex items-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-md text-sm font-medium transition-all duration-200 ${displayMode === 'card' ? 'bg-white text-[#1B5E20] shadow-sm border border-gray-200' : 'text-gray-500 hover:text-gray-700'}`}>
                                 <HiOutlineViewGrid className="w-4 h-4" /><span className="hidden sm:inline">Cards</span>
                             </button>
                             <button onClick={() => setDisplayMode('table')} title="Table View"
-                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all duration-200 ${displayMode === 'table' ? 'bg-white text-[#1B5E20] shadow-sm border border-gray-200' : 'text-gray-500 hover:text-gray-700'}`}>
+                                className={`flex items-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-md text-sm font-medium transition-all duration-200 ${displayMode === 'table' ? 'bg-white text-[#1B5E20] shadow-sm border border-gray-200' : 'text-gray-500 hover:text-gray-700'}`}>
                                 <HiOutlineViewList className="w-4 h-4" /><span className="hidden sm:inline">Table</span>
                             </button>
                         </div>
                         <button onClick={openSavedPanel}
-                            className="inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded-lg hover:bg-amber-100 transition-colors">
-                            <HiOutlineBookmark className="w-4 h-4" />Saved Folder
+                            className="inline-flex items-center gap-1.5 px-2 sm:px-4 py-2.5 text-sm font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded-lg hover:bg-amber-100 transition-colors">
+                            <HiOutlineBookmark className="w-4 h-4" /><span className="hidden sm:inline">Saved Folder</span>
                         </button>
                     </div>
                 </div>
@@ -295,14 +295,14 @@ export default function StudentUploadedCapstones() {
 
             {/* ── Search & Filter Bar (sticky) ── */}
             <div className="sticky top-0 z-20 bg-white border-b border-gray-200 shadow-sm px-4 lg:px-8 py-3">
-                <div className="flex flex-col sm:flex-row gap-3 items-end flex-wrap">
-                    <div className="relative flex-1 min-w-[250px]">
+                <div className="flex flex-row gap-2 items-center">
+                    <div className="relative flex-1 min-w-0">
                         <HiOutlineSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                         <input type="text" value={search} onChange={handleSearch} placeholder="Search by title, author, keyword..."
                             className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg text-sm text-gray-900 placeholder-gray-400 bg-white focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none" />
                     </div>
                     <button onClick={() => setShowFilters(!showFilters)}
-                        className={`relative inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg border transition-colors ${showFilters ? 'bg-green-50 text-green-700 border-green-200' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}`}>
+                        className={`relative flex-shrink-0 inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg border transition-colors ${showFilters ? 'bg-green-50 text-green-700 border-green-200' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}`}>
                         <HiOutlineFilter className="w-4 h-4" />
                         Filters
                         {activeFilterCount > 0 && (
@@ -367,7 +367,15 @@ export default function StudentUploadedCapstones() {
                                 </div>
                             )}
                         </div>
-                        {/* Category — handled by side tabs */}
+                        {/* Category — mobile dropdown (desktop uses sidebar) */}
+                        <div className="lg:hidden">
+                            <label className="text-xs text-gray-600 font-semibold uppercase block mb-1">Category</label>
+                            <select value={filters.category} onChange={(e) => { handleFilterChange('category', e.target.value); setSelectedCategory(e.target.value); }}
+                                className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 bg-white focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none">
+                                <option value="">All Categories</option>
+                                {categories.map((cat) => <option key={cat.name} value={cat.name}>{cat.name}{cat.count ? ` (${cat.count})` : ''}</option>)}
+                            </select>
+                        </div>
                         <div className="flex items-end">
                             <button onClick={clearFilters} className="px-3 py-2 text-sm text-gray-500 hover:text-gray-700 underline">Clear All</button>
                         </div>

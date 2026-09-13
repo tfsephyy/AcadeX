@@ -304,35 +304,35 @@ export default function VisitorCapstones() {
 
             {/* Title */}
             <div className="px-4 lg:px-8 pt-6 lg:pt-8 pb-4">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                    <div>
-                        <h1 className="text-3xl font-bold" style={{ color: 'var(--color-text)' }}>Uploaded Capstones</h1>
+                <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                        <h1 className="text-2xl sm:text-3xl font-bold" style={{ color: 'var(--color-text)' }}>Uploaded Capstones</h1>
                         <p className="text-sm mt-1" style={{ color: 'var(--color-text-muted)' }}>Browse published and available capstone projects</p>
                     </div>
-                    <div className="flex items-center gap-2">
-                        {/* Saved button */}
-                        <button onClick={() => setSavedOpen(true)}
-                            className="relative inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg border transition-colors"
-                            style={{ background: 'var(--color-bg-secondary)', borderColor: 'var(--color-border)', color: 'var(--color-text)' }}>
-                            <HiOutlineBookmark className="w-4 h-4" />
-                            Saved
-                            {savedIds.size > 0 && (
-                                <span className="absolute -top-1.5 -right-1.5 flex items-center justify-center w-4 h-4 text-[10px] font-bold text-white bg-amber-500 rounded-full">{savedIds.size}</span>
-                            )}
-                        </button>
+                    <div className="flex items-center gap-2 flex-shrink-0">
                         {/* Card/Table toggle */}
                         <div className="flex items-center rounded-lg p-1 border" style={{ background: 'var(--color-bg-tertiary)', borderColor: 'var(--color-border)' }}>
                             <button onClick={() => setDisplayMode('card')} title="Card View"
-                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all ${displayMode === 'card' ? 'bg-[#1B5E20] text-white shadow-sm' : ''}`}
+                                className={`flex items-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-md text-sm font-medium transition-all ${displayMode === 'card' ? 'bg-[#1B5E20] text-white shadow-sm' : ''}`}
                                 style={displayMode !== 'card' ? { color: 'var(--color-text-muted)' } : {}}>
                                 <HiOutlineViewGrid className="w-4 h-4" /><span className="hidden sm:inline">Cards</span>
                             </button>
                             <button onClick={() => setDisplayMode('table')} title="Table View"
-                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all ${displayMode === 'table' ? 'bg-[#1B5E20] text-white shadow-sm' : ''}`}
+                                className={`flex items-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-md text-sm font-medium transition-all ${displayMode === 'table' ? 'bg-[#1B5E20] text-white shadow-sm' : ''}`}
                                 style={displayMode !== 'table' ? { color: 'var(--color-text-muted)' } : {}}>
                                 <HiOutlineViewList className="w-4 h-4" /><span className="hidden sm:inline">Table</span>
                             </button>
                         </div>
+                        {/* Saved button */}
+                        <button onClick={() => setSavedOpen(true)}
+                            className="relative inline-flex items-center gap-1.5 px-2 sm:px-4 py-2 text-sm font-medium rounded-lg border transition-colors"
+                            style={{ background: 'var(--color-bg-secondary)', borderColor: 'var(--color-border)', color: 'var(--color-text)' }}>
+                            <HiOutlineBookmark className="w-4 h-4" />
+                            <span className="hidden sm:inline">Saved</span>
+                            {savedIds.size > 0 && (
+                                <span className="absolute -top-1.5 -right-1.5 flex items-center justify-center w-4 h-4 text-[10px] font-bold text-white bg-amber-500 rounded-full">{savedIds.size}</span>
+                            )}
+                        </button>
                     </div>
                 </div>
             </div>
@@ -340,16 +340,16 @@ export default function VisitorCapstones() {
             {/* Search & Filter Bar */}
             <div className="sticky top-0 z-20 border-b shadow-sm px-4 lg:px-8 py-3"
                 style={{ background: 'var(--color-bg-secondary)', borderColor: 'var(--color-border)' }}>
-                <div className="flex flex-col sm:flex-row gap-3 items-end flex-wrap">
+                <div className="flex flex-row gap-2 items-center">
                     <SearchWithSuggestions
                         id="visitor-capstone-search"
                         value={search}
                         onChange={handleSearch}
                         placeholder="Search by title, author, keyword…"
-                        className="flex-1 min-w-[250px]"
+                        className="flex-1 min-w-0"
                     />
                     <button onClick={() => setShowFilters(!showFilters)}
-                        className={`relative inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg border transition-colors ${showFilters ? 'bg-green-50 text-green-700 border-green-200' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}`}>
+                        className={`relative flex-shrink-0 inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg border transition-colors ${showFilters ? 'bg-green-50 text-green-700 border-green-200' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}`}>
                         <HiOutlineFilter className="w-4 h-4" />
                         Filters
                         {activeFilterCount > 0 && (
@@ -376,6 +376,16 @@ export default function VisitorCapstones() {
                                 </select>
                             </div>
                         ))}
+                        {/* Category — mobile dropdown (desktop uses sidebar) */}
+                        <div className="lg:hidden">
+                            <label className="text-xs font-semibold uppercase block mb-1" style={{ color: 'var(--color-text-muted)' }}>Category</label>
+                            <select value={filters.category} onChange={(e) => { handleFilterChange('category', e.target.value); setSelectedCategory(e.target.value); }}
+                                className="px-3 py-2 border rounded-lg text-sm outline-none focus:ring-2 focus:ring-green-500"
+                                style={{ background: 'var(--color-bg-secondary)', borderColor: 'var(--color-border)', color: 'var(--color-text)' }}>
+                                <option value="">All Categories</option>
+                                {categories.map((cat) => <option key={cat.name} value={cat.name}>{cat.name}{cat.count ? ` (${cat.count})` : ''}</option>)}
+                            </select>
+                        </div>
                         <div className="flex items-end">
                             <button onClick={clearFilters} className="px-3 py-2 text-sm underline" style={{ color: 'var(--color-text-muted)' }}>Clear All</button>
                         </div>

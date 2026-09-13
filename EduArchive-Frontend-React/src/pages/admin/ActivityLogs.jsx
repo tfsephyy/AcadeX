@@ -114,7 +114,7 @@ export default function ActivityLogs() {
         updateTab(tab, { loading: true });
         const s = tabState[tab];
         try {
-            const params = { page: s.page, per_page: 20 };
+            const params = { page: s.page, per_page: 15 };
             if (s.search)   params.search    = s.search;
             if (s.role)     params.role      = s.role;
             if (s.dateFrom) params.date_from = s.dateFrom;
@@ -130,13 +130,13 @@ export default function ActivityLogs() {
             let data  = res.data.data;
             let items = data.data || [];
 
-            if (tab === 'activity' && !s.category) {
-                items = items.filter(l => l.source === 'audit');
-            } else if (tab === 'session') {
+            // Apply filtering based on tab type
+            if (tab === 'session') {
                 items = items.filter(l => l.activity_type === 'login_success');
             } else if (tab === 'attempt') {
                 items = items.filter(l => l.activity_type === 'login_failed' || l.activity_type === 'login_locked');
             }
+            // For 'activity' tab: show ALL logs (no filtering by source)
 
             updateTab(tab, {
                 logs: items,
@@ -215,7 +215,7 @@ export default function ActivityLogs() {
     const fetchDrillLogs = useCallback(async (filterKey, filterId, filterParams) => {
         updateDrill({ loading: true });
         try {
-            const params = { page: filterParams.page || 1, per_page: 20 };
+            const params = { page: filterParams.page || 1, per_page: 15 };
             if (filterKey === 'user_id')     params.user_id     = filterId;
             if (filterKey === 'capstone_id') params.capstone_id = filterId;
             if (filterParams.search)   params.search    = filterParams.search;
@@ -362,17 +362,17 @@ export default function ActivityLogs() {
     const Pagination = ({ paginationData, page, onPageChange }) => {
         if (!paginationData || paginationData.total === 0) return null;
         return (
-            <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 border-t border-gray-200 bg-gray-50/50">
-                <p className="text-xs text-gray-500">
-                    Showing <span className="font-medium text-gray-700">{paginationData.from || 1}</span> to{' '}
-                    <span className="font-medium text-gray-700">{paginationData.to || Math.min(20, paginationData.total)}</span> of{' '}
-                    <span className="font-medium text-gray-700">{paginationData.total}</span> entries
+            <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 border-t border-gray-200 bg-gray-100">
+                <p className="text-xs text-gray-700">
+                    Showing <span className="font-medium text-gray-900">{paginationData.from || 1}</span> to{' '}
+                    <span className="font-medium text-gray-900">{paginationData.to || Math.min(15, paginationData.total)}</span> of{' '}
+                    <span className="font-medium text-gray-900">{paginationData.total}</span> entries
                 </p>
                 <div className="flex items-center gap-1">
                     <button
                         onClick={() => onPageChange(Math.max(1, page - 1))}
                         disabled={page <= 1}
-                        className="p-2 text-gray-500 hover:bg-gray-100 rounded-lg disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                        className="p-2 text-gray-700 hover:bg-gray-200 rounded-lg disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                     >
                         <HiOutlineChevronLeft className="w-4 h-4" />
                     </button>
@@ -389,7 +389,7 @@ export default function ActivityLogs() {
                                 className={`w-8 h-8 text-xs font-medium rounded-lg transition-colors ${
                                     pageNum === page
                                         ? 'bg-green-600 text-white shadow-sm'
-                                        : 'text-gray-600 hover:bg-gray-100'
+                                        : 'text-gray-800 hover:bg-gray-200'
                                 }`}
                             >
                                 {pageNum}
@@ -399,7 +399,7 @@ export default function ActivityLogs() {
                     <button
                         onClick={() => onPageChange(Math.min(paginationData.last_page, page + 1))}
                         disabled={page >= paginationData.last_page}
-                        className="p-2 text-gray-500 hover:bg-gray-100 rounded-lg disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                        className="p-2 text-gray-700 hover:bg-gray-200 rounded-lg disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                     >
                         <HiOutlineChevronRight className="w-4 h-4" />
                     </button>
@@ -408,13 +408,13 @@ export default function ActivityLogs() {
         );
     };
 
-    const FilterBar = ({ tab, showCategory = false }) => {
+    const FilterBar = ({ tab, showCategory = false, showViewBy = false, viewBySection }) => {
         const s = tabState[tab];
         const hasActive = s.role || s.category || s.dateFrom || s.dateTo;
         return (
             <div className="bg-white rounded-xl border border-gray-200 shadow-sm mb-4">
-                <div className="p-4 flex flex-wrap items-center gap-3">
-                    <form onSubmit={(e) => { e.preventDefault(); updateTab(tab, { page: 1 }); }} className="flex-1 min-w-[240px]">
+                <div className="p-4 flex items-center gap-3">
+                    <form onSubmit={(e) => { e.preventDefault(); updateTab(tab, { page: 1 }); }} className="flex-1">
                         <div className="relative">
                             <HiOutlineSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                             <input
@@ -428,16 +428,17 @@ export default function ActivityLogs() {
                     </form>
                     <button
                         onClick={() => updateTab(tab, { showFilters: !s.showFilters })}
-                        className={`inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg border transition-colors ${
+                        className={`inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg border transition-colors flex-shrink-0 ${
                             s.showFilters || hasActive
                                 ? 'bg-green-50 text-green-700 border-green-300'
                                 : 'text-gray-700 bg-white border-gray-300 hover:bg-gray-50'
                         }`}
                     >
                         <HiOutlineFilter className="w-4 h-4" />
-                        Filters
+                        <span className="hidden sm:inline">Filters</span>
                         {hasActive && <span className="w-2 h-2 bg-green-500 rounded-full" />}
                     </button>
+                    {showViewBy && viewBySection}
                 </div>
                 {s.showFilters && (
                     <div className="px-4 pb-4 border-t border-gray-100 pt-3">
@@ -502,8 +503,8 @@ export default function ActivityLogs() {
         const hasActive = drillState.category || drillState.dateFrom || drillState.dateTo;
         return (
             <div className="bg-white rounded-xl border border-gray-200 shadow-sm mb-4">
-                <div className="p-4 flex flex-wrap items-center gap-3">
-                    <form onSubmit={(e) => { e.preventDefault(); updateDrill({ page: 1 }); }} className="flex-1 min-w-[240px]">
+                <div className="p-4 flex items-center gap-3">
+                    <form onSubmit={(e) => { e.preventDefault(); updateDrill({ page: 1 }); }} className="flex-1">
                         <div className="relative">
                             <HiOutlineSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                             <input
@@ -517,14 +518,14 @@ export default function ActivityLogs() {
                     </form>
                     <button
                         onClick={() => updateDrill({ showFilters: !drillState.showFilters })}
-                        className={`inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg border transition-colors ${
+                        className={`inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg border transition-colors flex-shrink-0 ${
                             drillState.showFilters || hasActive
                                 ? 'bg-green-50 text-green-700 border-green-300'
                                 : 'text-gray-700 bg-white border-gray-300 hover:bg-gray-50'
                         }`}
                     >
                         <HiOutlineFilter className="w-4 h-4" />
-                        Filters
+                        <span className="hidden sm:inline">Filters</span>
                         {hasActive && <span className="w-2 h-2 bg-green-500 rounded-full" />}
                     </button>
                 </div>
@@ -661,66 +662,91 @@ export default function ActivityLogs() {
     return (
         <div className="space-y-5">
             {/* Page header */}
-            <div className="flex flex-wrap items-center justify-between gap-4">
-                <div>
-                    <h1 className="text-2xl font-bold text-gray-900">Logs</h1>
-                    <p className="text-sm text-gray-500 mt-0.5">Monitor system activity, sessions, and login attempts</p>
+            <div>
+                <h1 className="text-2xl font-bold text-gray-900">Logs</h1>
+                <p className="text-sm text-gray-500 mt-0.5">Monitor system activity, sessions, and login attempts</p>
+            </div>
+
+            {/* Desktop: Tab switcher + Refresh in one row */}
+            <div className="hidden sm:flex items-center justify-between gap-4">
+                <div className="flex items-center gap-1 bg-white border border-gray-200 rounded-xl p-1 shadow-sm">
+                    {TABS.map(({ key, label, icon: Icon }) => (
+                        <button
+                            key={key}
+                            onClick={() => {
+                                setActiveTab(key);
+                                // Reset section when switching tabs
+                                if (key !== 'activity') {
+                                    setActivitySection('all');
+                                    setSelectedUser(null);
+                                    setSelectedCapstone(null);
+                                }
+                            }}
+                            className={`inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all ${
+                                activeTab === key
+                                    ? 'bg-[#1B5E20] text-white shadow-sm'
+                                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                            }`}
+                        >
+                            <Icon className="w-4 h-4" />
+                            {label}
+                        </button>
+                    ))}
                 </div>
                 <button
                     onClick={() => {
                         if (activeTab !== 'activity' || activitySection === 'all') {
                             fetchTabLogs(activeTab);
                         } else if (activitySection === 'user') {
-                            if (selectedUser) fetchDrillLogs('user_id', selectedUser.id);
+                            if (selectedUser) fetchDrillLogs('user_id', selectedUser.id, drillState);
                             else fetchUsers(usersSearch);
                         } else if (activitySection === 'capstone') {
-                            if (selectedCapstone) fetchDrillLogs('capstone_id', selectedCapstone.id);
+                            if (selectedCapstone) fetchDrillLogs('capstone_id', selectedCapstone.id, drillState);
                             else fetchCapstones(capstonesSearch);
                         }
                     }}
-                    className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                    className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors flex-shrink-0"
                 >
                     <HiOutlineRefresh className={`w-4 h-4 ${s.loading || usersLoading || capstonesLoading || drillState.loading ? 'animate-spin' : ''}`} />
                     Refresh
                 </button>
             </div>
 
-            {/* Tab switcher */}
-            <div className="flex items-center gap-1 bg-white border border-gray-200 rounded-xl p-1 shadow-sm w-fit">
-                {TABS.map(({ key, label, icon: Icon }) => (
-                    <button
-                        key={key}
-                        onClick={() => {
-                            setActiveTab(key);
-                            // Reset section when switching tabs
-                            if (key !== 'activity') {
-                                setActivitySection('all');
-                                setSelectedUser(null);
-                                setSelectedCapstone(null);
-                            }
-                        }}
-                        className={`inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all ${
-                            activeTab === key
-                                ? 'bg-[#1B5E20] text-white shadow-sm'
-                                : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                        }`}
-                    >
-                        <Icon className="w-4 h-4" />
-                        {label}
-                    </button>
-                ))}
-            </div>
-
-            {/* ── Activity Logs Tab ── */}
-            {activeTab === 'activity' && (
-                <>
-                    {/* Section Dropdown */}
-                    <div className="flex items-center gap-3">
-                        <span className="text-sm text-gray-500 font-medium">View by:</span>
-                        <div className="relative" ref={sectionDropdownRef}>
+            {/* Mobile: 3 Rows */}
+            <div className="sm:hidden space-y-3">
+                {/* Row 1: Tab switcher */}
+                <div className="flex items-center gap-1 bg-white border border-gray-200 rounded-xl p-1 shadow-sm overflow-x-auto scrollbar-hide">
+                    {TABS.map(({ key, label, icon: Icon }) => (
+                        <button
+                            key={key}
+                            onClick={() => {
+                                setActiveTab(key);
+                                if (key !== 'activity') {
+                                    setActivitySection('all');
+                                    setSelectedUser(null);
+                                    setSelectedCapstone(null);
+                                }
+                            }}
+                            className={`inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all whitespace-nowrap flex-shrink-0 ${
+                                activeTab === key
+                                    ? 'bg-[#1B5E20] text-white shadow-sm'
+                                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                            }`}
+                        >
+                            <Icon className="w-4 h-4" />
+                            {label}
+                        </button>
+                    ))}
+                </div>
+                
+                {/* Row 2: View by dropdown + Refresh (only for activity tab) */}
+                {activeTab === 'activity' && (
+                    <div className="flex items-center gap-2">
+                        <span className="text-sm text-gray-500 font-medium whitespace-nowrap">View by:</span>
+                        <div className="relative flex-1" ref={sectionDropdownRef}>
                             <button
                                 onClick={() => setSectionDropdownOpen(prev => !prev)}
-                                className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 shadow-sm transition-colors min-w-[150px] justify-between"
+                                className="w-full inline-flex items-center gap-2 px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 shadow-sm transition-colors justify-between"
                             >
                                 <span className="flex items-center gap-2">
                                     <currentSection.icon className="w-4 h-4 text-[#1B5E20]" />
@@ -729,7 +755,7 @@ export default function ActivityLogs() {
                                 <HiOutlineChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${sectionDropdownOpen ? 'rotate-180' : ''}`} />
                             </button>
                             {sectionDropdownOpen && (
-                                <div className="absolute top-full left-0 mt-1 w-48 bg-white border border-gray-200 rounded-xl shadow-lg z-20 overflow-hidden">
+                                <div className="absolute top-full left-0 mt-1 w-full bg-white border border-gray-200 rounded-xl shadow-lg z-20 overflow-hidden">
                                     {ACTIVITY_SECTIONS.map(({ key, label, icon: Icon }) => (
                                         <button
                                             key={key}
@@ -747,22 +773,126 @@ export default function ActivityLogs() {
                                 </div>
                             )}
                         </div>
-
-                        {/* Breadcrumb for drill-down */}
-                        {(selectedUser || selectedCapstone) && (
-                            <div className="flex items-center gap-2 text-sm text-gray-500">
-                                <span>›</span>
-                                <span className="font-medium text-gray-800">
-                                    {selectedUser ? selectedUser.name : selectedCapstone?.title}
-                                </span>
-                            </div>
-                        )}
+                        <button
+                            onClick={() => {
+                                if (activeTab !== 'activity' || activitySection === 'all') {
+                                    fetchTabLogs(activeTab);
+                                } else if (activitySection === 'user') {
+                                    if (selectedUser) fetchDrillLogs('user_id', selectedUser.id, drillState);
+                                    else fetchUsers(usersSearch);
+                                } else if (activitySection === 'capstone') {
+                                    if (selectedCapstone) fetchDrillLogs('capstone_id', selectedCapstone.id, drillState);
+                                    else fetchCapstones(capstonesSearch);
+                                }
+                            }}
+                            className="inline-flex items-center justify-center p-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors flex-shrink-0"
+                        >
+                            <HiOutlineRefresh className={`w-4 h-4 ${s.loading || usersLoading || capstonesLoading || drillState.loading ? 'animate-spin' : ''}`} />
+                        </button>
                     </div>
+                )}
+                
+                {/* For non-activity tabs, just show refresh button */}
+                {activeTab !== 'activity' && (
+                    <div className="flex justify-end">
+                        <button
+                            onClick={() => fetchTabLogs(activeTab)}
+                            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                        >
+                            <HiOutlineRefresh className={`w-4 h-4 ${s.loading ? 'animate-spin' : ''}`} />
+                            Refresh
+                        </button>
+                    </div>
+                )}
+            </div>
+
+            {/* ── Activity Logs Tab ── */}
+            {activeTab === 'activity' && (
+                <>
+                    {/* Reusable View By Section for FilterBar */}
+                    {(() => {
+                        const ViewBySection = (
+                            <div className="hidden sm:flex items-center gap-2">
+                                <span className="text-sm text-gray-500 font-medium whitespace-nowrap">View by:</span>
+                                <div className="relative" ref={sectionDropdownRef}>
+                                    <button
+                                        onClick={() => setSectionDropdownOpen(prev => !prev)}
+                                        className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 shadow-sm transition-colors min-w-[150px] justify-between"
+                                    >
+                                        <span className="flex items-center gap-2">
+                                            <currentSection.icon className="w-4 h-4 text-[#1B5E20]" />
+                                            {currentSection.label}
+                                        </span>
+                                        <HiOutlineChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${sectionDropdownOpen ? 'rotate-180' : ''}`} />
+                                    </button>
+                                    {sectionDropdownOpen && (
+                                        <div className="absolute top-full left-0 mt-1 w-48 bg-white border border-gray-200 rounded-xl shadow-lg z-20 overflow-hidden">
+                                            {ACTIVITY_SECTIONS.map(({ key, label, icon: Icon }) => (
+                                                <button
+                                                    key={key}
+                                                    onClick={() => handleSectionChange(key)}
+                                                    className={`w-full flex items-center gap-2.5 px-4 py-2.5 text-sm transition-colors text-left ${
+                                                        activitySection === key
+                                                            ? 'bg-green-50 text-[#1B5E20] font-medium'
+                                                            : 'text-gray-700 hover:bg-gray-50'
+                                                    }`}
+                                                >
+                                                    <Icon className="w-4 h-4" />
+                                                    {label}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        );
+
+                        return null; // This is just to define ViewBySection
+                    })()}
 
                     {/* ── All Section ── */}
                     {activitySection === 'all' && (
                         <>
-                            <FilterBar tab="activity" showCategory />
+                            <FilterBar 
+                                tab="activity" 
+                                showCategory 
+                                showViewBy={true}
+                                viewBySection={
+                                    <div className="hidden sm:flex items-center gap-2">
+                                        <span className="text-sm text-gray-500 font-medium whitespace-nowrap">View by:</span>
+                                        <div className="relative" ref={sectionDropdownRef}>
+                                            <button
+                                                onClick={() => setSectionDropdownOpen(prev => !prev)}
+                                                className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 shadow-sm transition-colors min-w-[150px] justify-between"
+                                            >
+                                                <span className="flex items-center gap-2">
+                                                    <currentSection.icon className="w-4 h-4 text-[#1B5E20]" />
+                                                    {currentSection.label}
+                                                </span>
+                                                <HiOutlineChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${sectionDropdownOpen ? 'rotate-180' : ''}`} />
+                                            </button>
+                                            {sectionDropdownOpen && (
+                                                <div className="absolute top-full left-0 mt-1 w-48 bg-white border border-gray-200 rounded-xl shadow-lg z-20 overflow-hidden">
+                                                    {ACTIVITY_SECTIONS.map(({ key, label, icon: Icon }) => (
+                                                        <button
+                                                            key={key}
+                                                            onClick={() => handleSectionChange(key)}
+                                                            className={`w-full flex items-center gap-2.5 px-4 py-2.5 text-sm transition-colors text-left ${
+                                                                activitySection === key
+                                                                    ? 'bg-green-50 text-[#1B5E20] font-medium'
+                                                                    : 'text-gray-700 hover:bg-gray-50'
+                                                            }`}
+                                                        >
+                                                            <Icon className="w-4 h-4" />
+                                                            {label}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                }
+                            />
                             <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
                                 <LogsTable
                                     logs={s.logs}
@@ -775,13 +905,13 @@ export default function ActivityLogs() {
                         </>
                     )}
 
-                    {/* ── User Section ── */}
+                    {/* ── User Section (list) ── */}
                     {activitySection === 'user' && !selectedUser && (
                         <>
-                            {/* User list search */}
+                            {/* Search with View By */}
                             <div className="bg-white rounded-xl border border-gray-200 shadow-sm mb-4">
-                                <div className="p-4">
-                                    <div className="relative">
+                                <div className="p-4 flex items-center gap-3">
+                                    <div className="relative flex-1">
                                         <HiOutlineSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                                         <input
                                             type="text"
@@ -790,6 +920,40 @@ export default function ActivityLogs() {
                                             placeholder="Search users by name or email..."
                                             className="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none"
                                         />
+                                    </div>
+                                    {/* View By dropdown on desktop */}
+                                    <div className="hidden sm:flex items-center gap-2">
+                                        <span className="text-sm text-gray-500 font-medium whitespace-nowrap">View by:</span>
+                                        <div className="relative" ref={sectionDropdownRef}>
+                                            <button
+                                                onClick={() => setSectionDropdownOpen(prev => !prev)}
+                                                className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 shadow-sm transition-colors min-w-[150px] justify-between"
+                                            >
+                                                <span className="flex items-center gap-2">
+                                                    <currentSection.icon className="w-4 h-4 text-[#1B5E20]" />
+                                                    {currentSection.label}
+                                                </span>
+                                                <HiOutlineChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${sectionDropdownOpen ? 'rotate-180' : ''}`} />
+                                            </button>
+                                            {sectionDropdownOpen && (
+                                                <div className="absolute top-full left-0 mt-1 w-48 bg-white border border-gray-200 rounded-xl shadow-lg z-20 overflow-hidden">
+                                                    {ACTIVITY_SECTIONS.map(({ key, label, icon: Icon }) => (
+                                                        <button
+                                                            key={key}
+                                                            onClick={() => handleSectionChange(key)}
+                                                            className={`w-full flex items-center gap-2.5 px-4 py-2.5 text-sm transition-colors text-left ${
+                                                                activitySection === key
+                                                                    ? 'bg-green-50 text-[#1B5E20] font-medium'
+                                                                    : 'text-gray-700 hover:bg-gray-50'
+                                                            }`}
+                                                        >
+                                                            <Icon className="w-4 h-4" />
+                                                            {label}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -887,10 +1051,10 @@ export default function ActivityLogs() {
                     {/* ── Capstone Section (list) ── */}
                     {activitySection === 'capstone' && !selectedCapstone && (
                         <>
-                            {/* Capstone search */}
+                            {/* Capstone search with View By */}
                             <div className="bg-white rounded-xl border border-gray-200 shadow-sm mb-4">
-                                <div className="p-4">
-                                    <div className="relative">
+                                <div className="p-4 flex items-center gap-3">
+                                    <div className="relative flex-1">
                                         <HiOutlineSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                                         <input
                                             type="text"
@@ -899,6 +1063,40 @@ export default function ActivityLogs() {
                                             placeholder="Search capstones by title, author, or program..."
                                             className="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none"
                                         />
+                                    </div>
+                                    {/* View By dropdown on desktop */}
+                                    <div className="hidden sm:flex items-center gap-2">
+                                        <span className="text-sm text-gray-500 font-medium whitespace-nowrap">View by:</span>
+                                        <div className="relative" ref={sectionDropdownRef}>
+                                            <button
+                                                onClick={() => setSectionDropdownOpen(prev => !prev)}
+                                                className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 shadow-sm transition-colors min-w-[150px] justify-between"
+                                            >
+                                                <span className="flex items-center gap-2">
+                                                    <currentSection.icon className="w-4 h-4 text-[#1B5E20]" />
+                                                    {currentSection.label}
+                                                </span>
+                                                <HiOutlineChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${sectionDropdownOpen ? 'rotate-180' : ''}`} />
+                                            </button>
+                                            {sectionDropdownOpen && (
+                                                <div className="absolute top-full left-0 mt-1 w-48 bg-white border border-gray-200 rounded-xl shadow-lg z-20 overflow-hidden">
+                                                    {ACTIVITY_SECTIONS.map(({ key, label, icon: Icon }) => (
+                                                        <button
+                                                            key={key}
+                                                            onClick={() => handleSectionChange(key)}
+                                                            className={`w-full flex items-center gap-2.5 px-4 py-2.5 text-sm transition-colors text-left ${
+                                                                activitySection === key
+                                                                    ? 'bg-green-50 text-[#1B5E20] font-medium'
+                                                                    : 'text-gray-700 hover:bg-gray-50'
+                                                            }`}
+                                                        >
+                                                            <Icon className="w-4 h-4" />
+                                                            {label}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
                             </div>
