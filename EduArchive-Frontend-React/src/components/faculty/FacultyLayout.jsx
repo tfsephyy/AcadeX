@@ -10,13 +10,15 @@ import {
     HiOutlineLogout,
     HiOutlineUser,
     HiChevronDown,
+    HiOutlineClipboardCheck,
 } from 'react-icons/hi';
 import ConfirmDialog from '../ConfirmDialog';
 import Chatbot from '../Chatbot';
 
 const navItems = [
     { to: '/faculty/capstone-library', label: 'Capstone Library',    icon: HiOutlineLibrary },
-    { to: '/faculty/uploads',           label: 'Uploaded Capstones', icon: HiOutlineBookOpen },
+    { to: '/faculty/uploads',          label: 'Uploaded Capstones',  icon: HiOutlineBookOpen },
+    { to: '/faculty/approvals',        label: 'Pending Approvals',   icon: HiOutlineClipboardCheck },
 ];
 
 export default function FacultyLayout({ children }) {
@@ -78,7 +80,7 @@ export default function FacultyLayout({ children }) {
                     <div>
                         <h1 className="font-bold text-lg leading-tight"
                             style={{ color: 'var(--panel-profile-text)' }}>
-                            Edu<span style={{ color: 'var(--color-primary)' }}>Archive</span>
+                            Aca<span style={{ color: 'var(--color-primary)' }}>dex</span>
                         </h1>
                         <span className="text-[10px] uppercase tracking-widest"
                               style={{ color: 'var(--panel-profile-muted)' }}>Faculty</span>

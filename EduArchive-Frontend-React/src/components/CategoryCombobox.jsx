@@ -29,8 +29,11 @@ export default function CategoryCombobox({ value, onChange, className = '', labe
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
-    const filtered = categories.filter(cat =>
-        cat.toLowerCase().includes((filter || value || '').toLowerCase())
+    // API returns either plain strings or objects { name, count } — normalise to strings
+    const categoryNames = categories.map(cat => (cat && typeof cat === 'object' ? cat.name : cat)).filter(Boolean);
+
+    const filtered = categoryNames.filter(name =>
+        name.toLowerCase().includes((filter || value || '').toLowerCase())
     );
 
     const handleInputChange = (e) => {

@@ -7,6 +7,7 @@ import ConfirmDialog from '../../components/ConfirmDialog';
 import Loading, { TableSkeleton } from '../../components/Loading';
 import EmptyState from '../../components/EmptyState';
 import Modal from '../../components/Modal';
+import Pagination from '../../components/Pagination';
 
 export default function UserManagement() {
     const notify = useNotification();
@@ -27,6 +28,22 @@ export default function UserManagement() {
     const [viewUser, setViewUser] = useState(null);
     const [confirm, setConfirm] = useState({ open: false, title: '', message: '', action: null, variant: 'danger' });
 
+    // Pagination state for each tab
+    const [newPage, setNewPage] = useState(1);
+    const [studentsPage, setStudentsPage] = useState(1);
+    const [facultyPage, setFacultyPage] = useState(1);
+    const [visitorsPage, setVisitorsPage] = useState(1);
+    const [archivedPage, setArchivedPage] = useState(1);
+    const [onlinePage, setOnlinePage] = useState(1);
+
+    // Pagination metadata for each tab
+    const [newPagination, setNewPagination] = useState({ current_page: 1, last_page: 1, total: 0, from: 0, to: 0 });
+    const [studentsPagination, setStudentsPagination] = useState({ current_page: 1, last_page: 1, total: 0, from: 0, to: 0 });
+    const [facultyPagination, setFacultyPagination] = useState({ current_page: 1, last_page: 1, total: 0, from: 0, to: 0 });
+    const [visitorsPagination, setVisitorsPagination] = useState({ current_page: 1, last_page: 1, total: 0, from: 0, to: 0 });
+    const [archivedPagination, setArchivedPagination] = useState({ current_page: 1, last_page: 1, total: 0, from: 0, to: 0 });
+    const [onlinePagination, setOnlinePagination] = useState({ current_page: 1, last_page: 1, total: 0, from: 0, to: 0 });
+
     // Search & filter
     const [search, setSearch] = useState('');
     const [roleFilter, setRoleFilter] = useState('');
@@ -36,7 +53,16 @@ export default function UserManagement() {
 
     useEffect(() => {
         clearTimeout(searchTimer.current);
-        searchTimer.current = setTimeout(() => setDebouncedSearch(search), 350);
+        searchTimer.current = setTimeout(() => {
+            setDebouncedSearch(search);
+            // Reset all pages to 1 when search changes
+            setNewPage(1);
+            setStudentsPage(1);
+            setFacultyPage(1);
+            setVisitorsPage(1);
+            setArchivedPage(1);
+            setOnlinePage(1);
+        }, 350);
         return () => clearTimeout(searchTimer.current);
     }, [search]);
 
@@ -46,7 +72,7 @@ export default function UserManagement() {
 
     useEffect(() => {
         fetchTabData();
-    }, [activeTab, debouncedSearch, roleFilter, programFilter]);
+    }, [activeTab, debouncedSearch, roleFilter, programFilter, newPage, studentsPage, facultyPage, visitorsPage, archivedPage, onlinePage]);
 
     const fetchTotals = async () => {
         try {
@@ -68,46 +94,94 @@ export default function UserManagement() {
     const fetchTabData = useCallback(async () => {
         try {
             setLoading(true);
-            const params = { per_page: 100 };
+            const params = { per_page: 15 };
             if (debouncedSearch) params.search = debouncedSearch;
 
             if (activeTab === 'new') {
+                params.page = newPage;
                 if (roleFilter) params.role = roleFilter;
                 const res = await getNewUsers(params);
                 const data = res.data.data;
                 setNewUsers(data?.data || data || []);
+                setNewPagination({
+                    current_page: data?.current_page || 1,
+                    last_page: data?.last_page || 1,
+                    total: data?.total || 0,
+                    from: data?.from || 0,
+                    to: data?.to || 0,
+                });
             } else if (activeTab === 'students') {
+                params.page = studentsPage;
                 if (programFilter) params.program = programFilter;
                 const res = await getStudents(params);
                 const data = res.data.data;
                 setStudents(data?.data || data || []);
+                setStudentsPagination({
+                    current_page: data?.current_page || 1,
+                    last_page: data?.last_page || 1,
+                    total: data?.total || 0,
+                    from: data?.from || 0,
+                    to: data?.to || 0,
+                });
             } else if (activeTab === 'faculty') {
+                params.page = facultyPage;
                 const res = await getFaculty(params);
                 const data = res.data.data;
                 let list = data?.data || data || [];
                 if (programFilter) list = list.filter(u => u.faculty_program === programFilter);
                 setFaculty(list);
+                setFacultyPagination({
+                    current_page: data?.current_page || 1,
+                    last_page: data?.last_page || 1,
+                    total: data?.total || 0,
+                    from: data?.from || 0,
+                    to: data?.to || 0,
+                });
             } else if (activeTab === 'visitors') {
+                params.page = visitorsPage;
                 const res = await getVisitors(params);
                 const data = res.data.data;
                 setVisitors(data?.data || data || []);
+                setVisitorsPagination({
+                    current_page: data?.current_page || 1,
+                    last_page: data?.last_page || 1,
+                    total: data?.total || 0,
+                    from: data?.from || 0,
+                    to: data?.to || 0,
+                });
             } else if (activeTab === 'archived') {
+                params.page = archivedPage;
                 const res = await getArchivedUsers(params);
                 const data = res.data.data;
                 setArchivedList(data?.data || data || []);
+                setArchivedPagination({
+                    current_page: data?.current_page || 1,
+                    last_page: data?.last_page || 1,
+                    total: data?.total || 0,
+                    from: data?.from || 0,
+                    to: data?.to || 0,
+                });
             } else if (activeTab === 'online') {
+                params.page = onlinePage;
                 const res = await getOnlineUsers(params);
                 const data = res.data.data;
-                const list = Array.isArray(data) ? data : [];
+                const list = Array.isArray(data) ? data : (data?.data || []);
                 setOnlineUsers(list);
-                setOnlineTotal(list.length);
+                setOnlineTotal(data?.total || list.length);
+                setOnlinePagination({
+                    current_page: data?.current_page || 1,
+                    last_page: data?.last_page || 1,
+                    total: data?.total || list.length,
+                    from: data?.from || 0,
+                    to: data?.to || 0,
+                });
             }
         } catch (err) {
             notify.error('Failed to fetch users.');
         } finally {
             setLoading(false);
         }
-    }, [activeTab, debouncedSearch, roleFilter, programFilter]);
+    }, [activeTab, debouncedSearch, roleFilter, programFilter, newPage, studentsPage, facultyPage, visitorsPage, archivedPage, onlinePage]);
 
     const refreshAll = () => { fetchTotals(); fetchTabData(); };
 
@@ -236,7 +310,19 @@ export default function UserManagement() {
                     {tabs.map((tab) => (
                         <button
                             key={tab.id}
-                            onClick={() => { setActiveTab(tab.id); setSearch(''); setRoleFilter(''); setProgramFilter(''); }}
+                            onClick={() => { 
+                                setActiveTab(tab.id); 
+                                setSearch(''); 
+                                setRoleFilter(''); 
+                                setProgramFilter(''); 
+                                // Reset page to 1 when switching tabs
+                                if (tab.id === 'new') setNewPage(1);
+                                else if (tab.id === 'students') setStudentsPage(1);
+                                else if (tab.id === 'faculty') setFacultyPage(1);
+                                else if (tab.id === 'visitors') setVisitorsPage(1);
+                                else if (tab.id === 'archived') setArchivedPage(1);
+                                else if (tab.id === 'online') setOnlinePage(1);
+                            }}
                             className={`inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px whitespace-nowrap flex-shrink-0
                                 ${activeTab === tab.id
                                     ? 'border-green-600 text-green-700'
@@ -275,7 +361,10 @@ export default function UserManagement() {
                     {activeTab === 'new' && (
                         <select
                             value={roleFilter}
-                            onChange={(e) => setRoleFilter(e.target.value)}
+                            onChange={(e) => { 
+                                setRoleFilter(e.target.value);
+                                setNewPage(1);
+                            }}
                             className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 bg-white focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none flex-shrink-0"
                         >
                             <option value="">All Roles</option>
@@ -287,7 +376,11 @@ export default function UserManagement() {
                     {(activeTab === 'students' || activeTab === 'faculty') && (
                         <select
                             value={programFilter}
-                            onChange={(e) => setProgramFilter(e.target.value)}
+                            onChange={(e) => { 
+                                setProgramFilter(e.target.value);
+                                if (activeTab === 'students') setStudentsPage(1);
+                                else if (activeTab === 'faculty') setFacultyPage(1);
+                            }}
                             className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 bg-white focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none flex-shrink-0"
                         >
                             <option value="">All Programs</option>
@@ -494,6 +587,56 @@ export default function UserManagement() {
                             </tbody>
                         </table>
                     </div>
+                    
+                    {/* Pagination */}
+                    {activeTab === 'new' && (
+                        <Pagination 
+                            paginationData={newPagination}
+                            page={newPage}
+                            onPageChange={setNewPage}
+                            perPage={15}
+                        />
+                    )}
+                    {activeTab === 'students' && (
+                        <Pagination 
+                            paginationData={studentsPagination}
+                            page={studentsPage}
+                            onPageChange={setStudentsPage}
+                            perPage={15}
+                        />
+                    )}
+                    {activeTab === 'faculty' && (
+                        <Pagination 
+                            paginationData={facultyPagination}
+                            page={facultyPage}
+                            onPageChange={setFacultyPage}
+                            perPage={15}
+                        />
+                    )}
+                    {activeTab === 'visitors' && (
+                        <Pagination 
+                            paginationData={visitorsPagination}
+                            page={visitorsPage}
+                            onPageChange={setVisitorsPage}
+                            perPage={15}
+                        />
+                    )}
+                    {activeTab === 'archived' && (
+                        <Pagination 
+                            paginationData={archivedPagination}
+                            page={archivedPage}
+                            onPageChange={setArchivedPage}
+                            perPage={15}
+                        />
+                    )}
+                    {activeTab === 'online' && (
+                        <Pagination 
+                            paginationData={onlinePagination}
+                            page={onlinePage}
+                            onPageChange={setOnlinePage}
+                            perPage={15}
+                        />
+                    )}
                 </div>
             )}
             </div>

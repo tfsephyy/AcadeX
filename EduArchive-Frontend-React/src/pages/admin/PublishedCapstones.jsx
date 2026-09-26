@@ -15,6 +15,7 @@ import EmptyState from '../../components/EmptyState';
 import ConfirmDialog from '../../components/ConfirmDialog';
 import CapstoneModal from '../../components/admin/CapstoneModal';
 import SearchWithSuggestions from '../../components/SearchWithSuggestions';
+import Pagination from '../../components/Pagination';
 
 export default function UploadedCapstones() {
     const navigate = useNavigate();
@@ -51,6 +52,7 @@ export default function UploadedCapstones() {
     // ── Pagination ────────────────────────────────────────────────────────────────
     const [page, setPage] = useState(1);
     const [lastPage, setLastPage] = useState(1);
+    const [pagination, setPagination] = useState({ current_page: 1, last_page: 1, total: 0, from: 0, to: 0 });
 
     // ── Modal / confirm state ─────────────────────────────────────────────────────
     const [confirm, setConfirm] = useState({ open: false, title: '', message: '', action: null, variant: 'danger' });
@@ -97,7 +99,7 @@ export default function UploadedCapstones() {
     const fetchCapstones = useCallback(async () => {
         try {
             setLoading(true);
-            const params = { page, per_page: 12 };
+            const params = { page, per_page: 15 };
             if (search) params.search = search;
             if (filters.year) params.year = filters.year;
             if (filters.program) params.program = filters.program;
@@ -107,6 +109,13 @@ export default function UploadedCapstones() {
             const data = res.data.data;
             setCapstones(data?.data || data || []);
             setLastPage(data?.last_page || 1);
+            setPagination({
+                current_page: data?.current_page || 1,
+                last_page: data?.last_page || 1,
+                total: data?.total || 0,
+                from: data?.from || 0,
+                to: data?.to || 0,
+            });
         } catch (err) {
             notify.error('Failed to load capstones.');
         } finally {
@@ -174,20 +183,15 @@ export default function UploadedCapstones() {
         });
     };
 
-    // ── Pagination helpers ────────────────────────────────────────────────────────
-    const Pagination = () => lastPage > 1 ? (
-        <div className="flex items-center justify-center gap-2 pt-8">
-            <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
-                className="px-4 py-2 text-sm font-medium rounded-lg transition-colors bg-[#1B5E20] text-white hover:bg-green-800 disabled:bg-gray-300 disabled:text-gray-500 disabled:cursor-not-allowed">
-                Previous
-            </button>
-            <span className="text-sm font-medium text-gray-600">Page {page} of {lastPage}</span>
-            <button onClick={() => setPage(p => Math.min(lastPage, p + 1))} disabled={page === lastPage}
-                className="px-4 py-2 text-sm font-medium rounded-lg transition-colors bg-[#1B5E20] text-white hover:bg-green-800 disabled:bg-gray-300 disabled:text-gray-500 disabled:cursor-not-allowed">
-                Next
-            </button>
-        </div>
-    ) : null;
+    // ── Pagination component usage ───────────────────────────────────────────────
+    const PaginationComponent = () => (
+        <Pagination 
+            paginationData={pagination}
+            page={page}
+            onPageChange={setPage}
+            perPage={15}
+        />
+    );
 
     // ── Card View ─────────────────────────────────────────────────────────────────
     const CardView = () => (
@@ -222,7 +226,7 @@ export default function UploadedCapstones() {
                     </div>
                 ))}
             </div>
-            <Pagination />
+            <PaginationComponent />
         </>
     );
 
@@ -265,7 +269,7 @@ export default function UploadedCapstones() {
                     </table>
                 </div>
             </div>
-            <Pagination />
+            <PaginationComponent />
         </>
     );
 

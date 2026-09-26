@@ -664,7 +664,27 @@ export default function ActivityLogs() {
             {/* Page header */}
             <div>
                 <h1 className="text-2xl font-bold text-gray-900">Logs</h1>
-                <p className="text-sm text-gray-500 mt-0.5">Monitor system activity, sessions, and login attempts</p>
+                <div className="flex items-center justify-between gap-3 mt-0.5">
+                    <p className="text-sm text-gray-500">Monitor system activity, sessions, and login attempts</p>
+                    {/* Refresh button - visible on mobile, hidden on desktop (desktop has its own) */}
+                    <button
+                        onClick={() => {
+                            if (activeTab !== 'activity' || activitySection === 'all') {
+                                fetchTabLogs(activeTab);
+                            } else if (activitySection === 'user') {
+                                if (selectedUser) fetchDrillLogs('user_id', selectedUser.id, drillState);
+                                else fetchUsers(usersSearch);
+                            } else if (activitySection === 'capstone') {
+                                if (selectedCapstone) fetchDrillLogs('capstone_id', selectedCapstone.id, drillState);
+                                else fetchCapstones(capstonesSearch);
+                            }
+                        }}
+                        className="sm:hidden inline-flex items-center justify-center p-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors flex-shrink-0"
+                        title="Refresh"
+                    >
+                        <HiOutlineRefresh className={`w-5 h-5 ${s.loading || usersLoading || capstonesLoading || drillState.loading ? 'animate-spin' : ''}`} />
+                    </button>
+                </div>
             </div>
 
             {/* Desktop: Tab switcher + Refresh in one row */}
@@ -773,37 +793,10 @@ export default function ActivityLogs() {
                                 </div>
                             )}
                         </div>
-                        <button
-                            onClick={() => {
-                                if (activeTab !== 'activity' || activitySection === 'all') {
-                                    fetchTabLogs(activeTab);
-                                } else if (activitySection === 'user') {
-                                    if (selectedUser) fetchDrillLogs('user_id', selectedUser.id, drillState);
-                                    else fetchUsers(usersSearch);
-                                } else if (activitySection === 'capstone') {
-                                    if (selectedCapstone) fetchDrillLogs('capstone_id', selectedCapstone.id, drillState);
-                                    else fetchCapstones(capstonesSearch);
-                                }
-                            }}
-                            className="inline-flex items-center justify-center p-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors flex-shrink-0"
-                        >
-                            <HiOutlineRefresh className={`w-4 h-4 ${s.loading || usersLoading || capstonesLoading || drillState.loading ? 'animate-spin' : ''}`} />
-                        </button>
                     </div>
                 )}
                 
-                {/* For non-activity tabs, just show refresh button */}
-                {activeTab !== 'activity' && (
-                    <div className="flex justify-end">
-                        <button
-                            onClick={() => fetchTabLogs(activeTab)}
-                            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-                        >
-                            <HiOutlineRefresh className={`w-4 h-4 ${s.loading ? 'animate-spin' : ''}`} />
-                            Refresh
-                        </button>
-                    </div>
-                )}
+                {/* For non-activity tabs - removed refresh button, using top one only */}
             </div>
 
             {/* ── Activity Logs Tab ── */}

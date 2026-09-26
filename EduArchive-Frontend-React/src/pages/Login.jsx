@@ -187,10 +187,10 @@ export default function Login() {
   const location = useLocation()
 
   const [form, setForm] = useState(() => {
-    const savedEmail = localStorage.getItem('eduarchive_remember_email') || ''
+    const savedEmail = localStorage.getItem('acadex_remember_email') || ''
     return { email: savedEmail, password: '' }
   })
-  const [rememberMe, setRememberMe] = useState(() => !!localStorage.getItem('eduarchive_remember_email'))
+  const [rememberMe, setRememberMe] = useState(() => !!localStorage.getItem('acadex_remember_email'))
   const [showPwd, setShowPwd] = useState(false)
   const [errors, setErrors] = useState({})
   const [globalError, setGlobalError] = useState('')
@@ -226,9 +226,9 @@ export default function Login() {
     setGlobalError('')
 
     if (rememberMe) {
-      localStorage.setItem('eduarchive_remember_email', form.email)
+      localStorage.setItem('acadex_remember_email', form.email)
     } else {
-      localStorage.removeItem('eduarchive_remember_email')
+      localStorage.removeItem('acadex_remember_email')
     }
 
     try {

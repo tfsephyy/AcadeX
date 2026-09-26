@@ -34,6 +34,8 @@ class Capstone extends Model
         'uploaded_by',
         'approved_by',
         'approved_at',
+        'approval_status',
+        'rejection_reason',
         'view_count',
         'download_count',
         'bookmark_count',

@@ -179,8 +179,11 @@ class NlpSearchService
 
         $expanded = $baseTerms;
 
-        // 1. Abbreviation expansion (single tokens)
+        // 1. Abbreviation expansion (single tokens and preserve original)
         foreach ($baseTerms as $term) {
+            // Keep original term
+            $expanded[] = $term;
+            
             if (isset(self::ABBREVIATIONS[$term])) {
                 foreach (self::ABBREVIATIONS[$term] as $expansion) {
                     $expanded[] = $expansion;
@@ -204,9 +207,14 @@ class NlpSearchService
             }
         }
 
-        // 3. Deduplicate and filter short/empty
+        // 3. Deduplicate and filter short/empty (but allow 2-letter tech terms like "ai", "ml", "iot")
         return array_values(array_unique(
-            array_filter($expanded, fn($t) => strlen(trim($t)) > 1)
+            array_filter($expanded, function($t) {
+                $t = trim($t);
+                // Allow common tech abbreviations even if short
+                $shortTechTerms = ['ai', 'ml', 'dl', 'cv', 'ar', 'vr', 'mr', 'xr', 'ui', 'ux', 'db', 'os', 'it', 'cs', 'se', 'ce'];
+                return strlen($t) > 1 || in_array(strtolower($t), $shortTechTerms);
+            })
         ));
     }
 
@@ -254,8 +262,15 @@ class NlpSearchService
         $clean = preg_replace('/[^a-z0-9\s]/', ' ', strtolower($text));
         $words = preg_split('/\s+/', trim($clean), -1, PREG_SPLIT_NO_EMPTY);
 
+        // Common tech abbreviations that should be preserved even if short
+        $shortTechTerms = ['ai', 'ml', 'dl', 'cv', 'ar', 'vr', 'mr', 'xr', 'ui', 'ux', 'db', 'os', 'it', 'cs', 'se', 'ce', 'nn', 'io'];
+
         return array_values(array_unique(
-            array_filter($words, fn($w) => strlen($w) > 1 && !in_array($w, self::STOP_WORDS))
+            array_filter($words, function($w) use ($shortTechTerms) {
+                // Keep if: (length > 1 OR is a known tech term) AND not a stop word
+                return (strlen($w) > 1 || in_array($w, $shortTechTerms)) 
+                       && !in_array($w, self::STOP_WORDS);
+            })
         ));
     }
 

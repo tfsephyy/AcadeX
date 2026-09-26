@@ -75,13 +75,53 @@ function formatTime(date) {
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
 
-// ─── Quick-action suggestion chips ───────────────────────────────────────────
-const DEFAULT_CHIPS = [
-    'What capstones are about machine learning?',
-    'Find IoT-related capstones',
-    'Show me recent BSIT capstones',
-    'What is this capstone about?',
-];
+// ─── Role-aware suggestion chips ─────────────────────────────────────────────
+const CHIPS_BY_ROLE = {
+    admin: [
+        'Show me upload trends for the last 6 years',
+        'How many capstones were uploaded this year?',
+        'Which capstone has the most views?',
+        'How many students are registered?',
+        'Recommend healthcare capstones',
+        'Show recent system activity',
+    ],
+    faculty: [
+        'Recommend capstones about machine learning',
+        'Find web-based healthcare capstones from 2024',
+        'Show BSIT capstones from 2023 to 2026',
+        'Find capstones related to IoT',
+        'What capstones are about inventory management?',
+        'What is this capstone about?',
+    ],
+    student: [
+        'I need a capstone idea related to healthcare',
+        'Find machine learning capstones',
+        'Recommend tourism or agriculture projects',
+        'Show me BSIT capstones from 2025',
+        'Find capstones using Laravel or React',
+        'What is this capstone about?',
+    ],
+    visitor: [
+        'Show available capstones about healthcare',
+        'Find web development capstones',
+        'Recommend capstones from 2025',
+        'Show me capstones about agriculture',
+    ],
+};
+
+const ROLE_SUBTITLE = {
+    admin:   'System Assistant & Capstone Finder',
+    faculty: 'Capstone Research Assistant',
+    student: 'Capstone Research Assistant',
+    visitor: 'Browse Available Capstones',
+};
+
+const ROLE_EMPTY_DESC = {
+    admin:   'Ask me about system stats, upload trends, activity logs, or search and recommend capstone projects from the archive.',
+    faculty: 'Ask me to find or recommend capstone projects by category, keyword, year, author, or technology.',
+    student: 'Ask me to find capstones that match your research interests — by topic, category, keyword, or year.',
+    visitor: 'Ask me to find publicly available capstone projects by topic, category, or year.',
+};
 
 // ─── Chatbot Component ────────────────────────────────────────────────────────
 export default function Chatbot() {
@@ -95,9 +135,15 @@ export default function Chatbot() {
     const [input, setInput] = useState('');
     const [loading, setLoading] = useState(false);
     const [unread, setUnread] = useState(0);
+    const [hidden, setHidden] = useState(false); // Hide/show FAB
+    const [position, setPosition] = useState({ x: 0, y: 0 }); // FAB position (offset from default)
+    const [isDragging, setIsDragging] = useState(false);
+    const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+    const [hasMoved, setHasMoved] = useState(false); // Track if user actually dragged
 
     const messagesEndRef = useRef(null);
     const textareaRef = useRef(null);
+    const fabRef = useRef(null);
 
     // Scroll to bottom whenever messages change
     useEffect(() => {
@@ -109,6 +155,96 @@ export default function Chatbot() {
         if (open) setUnread(0);
     }, [open]);
 
+    // Load saved position and hidden state from localStorage
+    useEffect(() => {
+        const savedPosition = localStorage.getItem('chatbot_position');
+        const savedHidden = localStorage.getItem('chatbot_hidden');
+        
+        if (savedPosition) {
+            try {
+                const pos = JSON.parse(savedPosition);
+                setPosition(pos);
+            } catch (e) {
+                // Ignore parse errors
+            }
+        }
+        
+        if (savedHidden === 'true') {
+            setHidden(true);
+        }
+    }, []);
+
+    // Handle mouse/touch drag for FAB
+    useEffect(() => {
+        const handleMove = (e) => {
+            if (!isDragging) return;
+            
+            const clientX = e.type === 'touchmove' ? e.touches[0].clientX : e.clientX;
+            const clientY = e.type === 'touchmove' ? e.touches[0].clientY : e.clientY;
+            
+            const deltaX = clientX - dragStart.x;
+            const deltaY = clientY - dragStart.y;
+            
+            // Check if user has moved more than 5px (to distinguish from click)
+            if (Math.abs(deltaX) > 5 || Math.abs(deltaY) > 5) {
+                setHasMoved(true);
+            }
+            
+            setPosition({ x: deltaX, y: deltaY });
+        };
+        
+        const handleEnd = () => {
+            if (isDragging) {
+                setIsDragging(false);
+                // Save position to localStorage
+                localStorage.setItem('chatbot_position', JSON.stringify(position));
+            }
+        };
+        
+        if (isDragging) {
+            document.addEventListener('mousemove', handleMove);
+            document.addEventListener('mouseup', handleEnd);
+            document.addEventListener('touchmove', handleMove);
+            document.addEventListener('touchend', handleEnd);
+            
+            return () => {
+                document.removeEventListener('mousemove', handleMove);
+                document.removeEventListener('mouseup', handleEnd);
+                document.removeEventListener('touchmove', handleMove);
+                document.removeEventListener('touchend', handleEnd);
+            };
+        }
+    }, [isDragging, dragStart, position]);
+
+    const handleDragStart = (e) => {
+        const clientX = e.type === 'touchstart' ? e.touches[0].clientX : e.clientX;
+        const clientY = e.type === 'touchstart' ? e.touches[0].clientY : e.clientY;
+        
+        setIsDragging(true);
+        setHasMoved(false); // Reset movement flag
+        setDragStart({
+            x: clientX - position.x,
+            y: clientY - position.y
+        });
+    };
+
+    const handleFabClick = (e) => {
+        // Only toggle open/close if user didn't drag
+        if (!hasMoved) {
+            setOpen((o) => !o);
+        }
+        setHasMoved(false); // Reset for next interaction
+    };
+
+    const toggleHidden = () => {
+        const newHidden = !hidden;
+        setHidden(newHidden);
+        localStorage.setItem('chatbot_hidden', newHidden.toString());
+        if (newHidden) {
+            setOpen(false); // Close panel when hiding
+        }
+    };
+
     // Auto-resize textarea
     const handleInputChange = (e) => {
         setInput(e.target.value);
@@ -119,11 +255,22 @@ export default function Chatbot() {
         }
     };
 
+    // Determine role from URL path (same logic used elsewhere in the app)
+    const getRoleFromPath = () => {
+        const path = location.pathname;
+        if (path.startsWith('/admin'))   return 'admin';
+        if (path.startsWith('/faculty')) return 'faculty';
+        if (path.startsWith('/visitor')) return 'visitor';
+        if (path.startsWith('/student')) return 'student';
+        return 'student'; // safe default for authenticated users
+    };
+    const currentRole = getRoleFromPath();
+
     // Determine role-based capstone path prefix
     const getCapstoneRoute = (id) => {
-        const path = location.pathname;
-        if (path.startsWith('/admin')) return `/admin/capstones/${id}`;
-        if (path.startsWith('/faculty')) return `/faculty/capstones/${id}`;
+        if (currentRole === 'admin')   return `/admin/capstones/${id}`;
+        if (currentRole === 'faculty') return `/faculty/capstones/${id}`;
+        if (currentRole === 'visitor') return `/visitor/capstones/${id}`;
         return `/student/capstones/${id}`;
     };
 
@@ -203,35 +350,62 @@ export default function Chatbot() {
 
     if (!user) return null;
 
+    // FAB style with dynamic position
+    const fabStyle = {
+        transform: `translate(${position.x}px, ${position.y}px)`,
+        cursor: isDragging ? 'grabbing' : 'grab',
+        transition: isDragging ? 'none' : 'transform 0.2s ease',
+    };
+
     return (
         <>
-            {/* ── Floating Action Button ──────────────────────────────── */}
-            <button
-                id="chatbot-fab"
-                className="chatbot-fab"
-                onClick={() => setOpen((o) => !o)}
-                title="EduBot — AI Capstone Assistant"
-            >
-                {open ? (
-                    // X icon
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
-                         stroke="white" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"
-                         style={{ width: '1.25rem', height: '1.25rem' }}>
-                        <line x1="18" y1="6" x2="6" y2="18" />
-                        <line x1="6" y1="6" x2="18" y2="18" />
-                    </svg>
-                ) : (
-                    // Chat icon
+            {/* ── Show/Hide Toggle (Mini button when hidden) ──────────── */}
+            {hidden && (
+                <button
+                    className="chatbot-show-btn"
+                    onClick={toggleHidden}
+                    title="Show EduBot"
+                >
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="white"
-                         style={{ width: '1.35rem', height: '1.35rem' }}>
+                         style={{ width: '1rem', height: '1rem' }}>
                         <path d="M20 2H4C2.9 2 2 2.9 2 4v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-2 12H6v-2h12v2zm0-3H6V9h12v2zm0-3H6V6h12v2z"/>
                     </svg>
-                )}
-                {/* Unread badge */}
-                {!open && unread > 0 && (
-                    <span className="chatbot-fab-badge">{unread}</span>
-                )}
-            </button>
+                </button>
+            )}
+
+            {/* ── Floating Action Button (Draggable) ──────────────────── */}
+            {!hidden && (
+                <button
+                    ref={fabRef}
+                    id="chatbot-fab"
+                    className="chatbot-fab"
+                    style={fabStyle}
+                    onClick={handleFabClick}
+                    onMouseDown={handleDragStart}
+                    onTouchStart={handleDragStart}
+                    title="EduBot — AI Capstone Assistant (Drag to move)"
+                >
+                    {open ? (
+                        // X icon
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+                             stroke="white" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"
+                             style={{ width: '1.25rem', height: '1.25rem', pointerEvents: 'none' }}>
+                            <line x1="18" y1="6" x2="6" y2="18" />
+                            <line x1="6" y1="6" x2="18" y2="18" />
+                        </svg>
+                    ) : (
+                        // Chat icon
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="white"
+                             style={{ width: '1.35rem', height: '1.35rem', pointerEvents: 'none' }}>
+                            <path d="M20 2H4C2.9 2 2 2.9 2 4v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-2 12H6v-2h12v2zm0-3H6V9h12v2zm0-3H6V6h12v2z"/>
+                        </svg>
+                    )}
+                    {/* Unread badge */}
+                    {!open && unread > 0 && (
+                        <span className="chatbot-fab-badge">{unread}</span>
+                    )}
+                </button>
+            )}
 
             {/* ── Chat Panel ──────────────────────────────────────────── */}
             {open && (
@@ -249,9 +423,22 @@ export default function Chatbot() {
                             <div className="chatbot-header-name">EduBot</div>
                             <div className="chatbot-header-status">
                                 <span className="chatbot-status-dot" />
-                                AI Capstone Assistant
+                                {ROLE_SUBTITLE[currentRole] ?? 'AI Capstone Assistant'}
                             </div>
                         </div>
+                        {/* Hide button */}
+                        <button
+                            onClick={toggleHidden}
+                            className="chatbot-header-close"
+                            title="Hide EduBot (can restore later)"
+                            style={{ marginRight: '0.2rem' }}
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+                                 stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"
+                                 style={{ width: '1rem', height: '1rem' }}>
+                                <path d="M19 12H5M12 19l-7-7 7-7"/>
+                            </svg>
+                        </button>
                         {/* Clear button */}
                         {messages.length > 0 && (
                             <button
@@ -309,12 +496,12 @@ export default function Chatbot() {
                                 </div>
                                 <div className="chatbot-empty-title">Hi, I'm EduBot! 👋</div>
                                 <div className="chatbot-empty-desc">
-                                    Ask me anything about capstone projects — find ones that match your needs, explore topics, or learn about a specific capstone.
+                                    {ROLE_EMPTY_DESC[currentRole] ?? 'Ask me anything about capstone projects.'}
                                 </div>
                                 <div className="chatbot-chips">
                                     {(capstoneContext?.title
                                         ? ['What is this capstone about?', 'Who are the authors?', 'What are the keywords?', 'Find related capstones']
-                                        : DEFAULT_CHIPS
+                                        : (CHIPS_BY_ROLE[currentRole] ?? CHIPS_BY_ROLE.student)
                                     ).map((chip) => (
                                         <button
                                             key={chip}

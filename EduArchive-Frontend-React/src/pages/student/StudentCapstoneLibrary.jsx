@@ -4,6 +4,7 @@ import {
     HiOutlineFilter, HiOutlineDocumentText, HiOutlineEye, HiOutlineTrash,
     HiOutlineSearch, HiArrowLeft, HiOutlineViewGrid, HiOutlineViewList,
     HiOutlineUser, HiOutlineTag, HiOutlineCalendar, HiOutlineAcademicCap,
+    HiOutlineUpload,
 } from 'react-icons/hi';
 import {
     getStudentCapstones, deleteStudentCapstone, getArchivedStudentCapstones,
@@ -13,6 +14,7 @@ import { useNotification } from '../../components/Notification';
 import Loading from '../../components/Loading';
 import EmptyState from '../../components/EmptyState';
 import ConfirmDialog from '../../components/ConfirmDialog';
+import StudentUploadCapstoneModal from '../../components/student/StudentUploadCapstoneModal';
 import { HiOutlineArchiveBoxArrowDown } from 'react-icons/hi2';
 
 const STATUS_MAP = {
@@ -40,6 +42,7 @@ export default function StudentCapstoneLibrary() {
     const notify = useNotification();
     const [capstones, setCapstones] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [uploadOpen, setUploadOpen] = useState(false);
     const [viewing, setViewing] = useState('active');
     const [displayMode, setDisplayMode] = useState('card'); // 'card' | 'table'
     const [search, setSearch] = useState('');
@@ -244,11 +247,16 @@ export default function StudentCapstoneLibrary() {
                                     <HiOutlineViewList className="w-4 h-4" /><span>Table</span>
                                 </button>
                             </div>
-                            {viewing === 'active' ? (
-                                <button onClick={() => { setViewing('archived'); setPage(1); }} className="inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-lg hover:bg-gray-200 transition-colors">
-                                    <HiOutlineArchiveBoxArrowDown className="w-4 h-4" />View Archived
-                                </button>
-                            ) : null}
+                            {viewing === 'active' && (
+                                <>
+                                    <button onClick={() => { setViewing('archived'); setPage(1); }} className="inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-lg hover:bg-gray-200 transition-colors">
+                                        <HiOutlineArchiveBoxArrowDown className="w-4 h-4" />Archive
+                                    </button>
+                                    <button onClick={() => setUploadOpen(true)} className="inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium text-white bg-green-600 border border-green-600 rounded-lg hover:bg-green-700 transition-colors shadow-sm">
+                                        <HiOutlineUpload className="w-4 h-4" />Upload Capstone
+                                    </button>
+                                </>
+                            )}
                         </div>
                     </div>
 
@@ -267,7 +275,7 @@ export default function StudentCapstoneLibrary() {
                             </div>
                         </div>
 
-                        {/* Row 1: Card/Table, Archive - Aligned Right */}
+                        {/* Row 1: Card/Table, Archive, Upload - Aligned Right */}
                         <div className="flex items-center justify-end gap-2">
                             {/* Card / Table toggle */}
                             <div className="flex items-center bg-gray-100 rounded-lg p-1 border border-gray-200">
@@ -281,9 +289,14 @@ export default function StudentCapstoneLibrary() {
                                 </button>
                             </div>
                             {viewing === 'active' && (
-                                <button onClick={() => { setViewing('archived'); setPage(1); }} className="inline-flex items-center justify-center p-2.5 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-lg hover:bg-gray-200 transition-colors" title="View Archived">
-                                    <HiOutlineArchiveBoxArrowDown className="w-4 h-4" />
-                                </button>
+                                <>
+                                    <button onClick={() => { setViewing('archived'); setPage(1); }} className="inline-flex items-center justify-center p-2.5 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-lg hover:bg-gray-200 transition-colors" title="Archive">
+                                        <HiOutlineArchiveBoxArrowDown className="w-4 h-4" />
+                                    </button>
+                                    <button onClick={() => setUploadOpen(true)} className="inline-flex items-center justify-center p-2.5 text-sm font-medium text-white bg-green-600 border border-green-600 rounded-lg hover:bg-green-700 transition-colors shadow-sm" title="Upload Capstone">
+                                        <HiOutlineUpload className="w-4 h-4" />
+                                    </button>
+                                </>
                             )}
                         </div>
 
@@ -380,6 +393,12 @@ export default function StudentCapstoneLibrary() {
             <ConfirmDialog open={confirm.open} title={confirm.title} message={confirm.message}
                 variant={confirm.variant} onConfirm={confirm.action}
                 onCancel={() => setConfirm(p => ({ ...p, open: false }))} />
+
+            {/* Upload Modal */}
+            <StudentUploadCapstoneModal
+                open={uploadOpen}
+                onClose={() => { setUploadOpen(false); fetchCapstones(); }}
+            />
         </div>
     );
 }

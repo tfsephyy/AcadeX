@@ -91,6 +91,7 @@ Route::prefix('v1')->group(function () {
 
             // Capstone Management
             Route::get('/capstones/filter-options',        [CapstoneController::class, 'filterOptions']);
+            Route::get('/capstones/pending',               [CapstoneController::class, 'getPendingCapstones']);
             Route::get('/capstones',                       [CapstoneController::class, 'index']);
             Route::post('/capstones',                      [CapstoneController::class, 'store']);
             Route::post('/capstones/upload',               [CapstoneController::class, 'upload']);
@@ -136,11 +137,14 @@ Route::prefix('v1')->group(function () {
         Route::middleware('role:admin,faculty')->prefix('faculty')->group(function () {
             // Faculty Capstone Management (scoped to own uploads)
             Route::get('/capstones/filter-options',          [CapstoneController::class, 'filterOptions']);
+            Route::get('/capstones/pending',                 [CapstoneController::class, 'getPendingCapstones']);
             Route::get('/capstones',                         [CapstoneController::class, 'index']);
             Route::post('/capstones',                        [CapstoneController::class, 'store']);
             Route::post('/capstones/upload',                 [CapstoneController::class, 'upload']);
             Route::post('/capstones/upload-resource',        [CapstoneController::class, 'uploadResource']);
             Route::get('/capstones/archived',                [CapstoneController::class, 'archived']);
+            Route::post('/capstones/{capstone}/approve',     [CapstoneController::class, 'approve']);
+            Route::post('/capstones/{capstone}/reject',      [CapstoneController::class, 'reject']);
             Route::post('/capstones/{capstone}/archive',     [CapstoneController::class, 'archive']);
             Route::post('/capstones/{capstone}/unarchive',   [CapstoneController::class, 'unarchive']);
             Route::put('/capstones/{capstone}',              [CapstoneController::class, 'update']);
@@ -151,8 +155,10 @@ Route::prefix('v1')->group(function () {
         Route::middleware('role:student')->prefix('student')->group(function () {
             // Students can only see/manage their own uploaded capstones
             Route::get('/capstones',                         [CapstoneController::class, 'index']);
+            Route::post('/capstones',                        [CapstoneController::class, 'store']);
             Route::post('/capstones/upload',                 [CapstoneController::class, 'upload']);
             Route::post('/capstones/upload-resource',        [CapstoneController::class, 'uploadResource']);
+            Route::post('/capstones/upload-imrad',           [CapstoneController::class, 'uploadImrad']);
             Route::get('/capstones/archived',                [CapstoneController::class, 'archived']);
             Route::delete('/capstones/{capstone}',           [CapstoneController::class, 'destroy']);
         });

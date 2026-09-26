@@ -14,17 +14,19 @@ import {
     HiChevronDown,
     HiOutlineBell,
     HiOutlineClipboardList,
+    HiOutlineClipboardCheck,
 } from 'react-icons/hi';
 import ConfirmDialog from '../ConfirmDialog';
 import { getAdminNotifications, getUnreadNotificationCount, markNotificationRead, markAllNotificationsRead } from '../../api/admin';
 import Chatbot from '../Chatbot';
 
 const navItems = [
-    { to: '/admin/dashboard',      label: 'Dashboard',         icon: HiOutlineViewGrid },
-    { to: '/admin/users',          label: 'User Management',   icon: HiOutlineUsers },
-    { to: '/admin/capstone-library',label: 'Capstone Library', icon: HiOutlineLibrary },
-    { to: '/admin/published',      label: 'Uploaded Capstones',icon: HiOutlineBookOpen },
-    { to: '/admin/activity-logs',  label: 'Logs',              icon: HiOutlineClipboardList },
+    { to: '/admin/dashboard',      label: 'Dashboard',          icon: HiOutlineViewGrid },
+    { to: '/admin/users',          label: 'User Management',    icon: HiOutlineUsers },
+    { to: '/admin/capstone-library',label: 'Capstone Library',  icon: HiOutlineLibrary },
+    { to: '/admin/published',      label: 'Uploaded Capstones', icon: HiOutlineBookOpen },
+    { to: '/admin/approvals',      label: 'Pending Approvals',  icon: HiOutlineClipboardCheck },
+    { to: '/admin/activity-logs',  label: 'Logs',               icon: HiOutlineClipboardList },
 ];
 
 export default function AdminLayout({ children }) {
@@ -36,6 +38,7 @@ export default function AdminLayout({ children }) {
     const [notifications, setNotifications]       = useState([]);
     const [unreadCount, setUnreadCount]           = useState(0);
     const [loadingNotif, setLoadingNotif]         = useState(false);
+    const [expandedNotifId, setExpandedNotifId]   = useState(null); // Track which notification is expanded
     const { user, logout } = useAuth();
     const { theme, toggleTheme } = useTheme();
     const navigate = useNavigate();
@@ -132,7 +135,7 @@ export default function AdminLayout({ children }) {
                     <div>
                         <h1 className="font-bold text-lg leading-tight"
                             style={{ color: 'var(--panel-profile-text)' }}>
-                            Edu<span style={{ color: 'var(--color-primary)' }}>Archive</span>
+                            Aca<span style={{ color: 'var(--color-primary)' }}>dex</span>
                         </h1>
                         <span className="text-[10px] uppercase tracking-widest"
                               style={{ color: 'var(--panel-profile-muted)' }}>Admin</span>
@@ -327,13 +330,13 @@ export default function AdminLayout({ children }) {
                                 </span>
                             )}
                         </div>
-                        {unreadCount > 0 && (
+                        {notifications.length > 0 && (
                             <button
                                 onClick={handleMarkAllAsRead}
-                                className="text-xs font-medium transition-colors"
+                                className="text-xs font-medium transition-colors hover:opacity-80"
                                 style={{ color: 'var(--color-primary)' }}
                             >
-                                Mark all as read
+                                Mark all read
                             </button>
                         )}
                     </div>
@@ -353,34 +356,72 @@ export default function AdminLayout({ children }) {
                         </div>
                     ) : (
                         <div className="panel-notif-divide">
-                            {notifications.map((notif) => (
-                                <div
-                                    key={notif.id}
-                                    onClick={() => !notif.is_read && handleMarkAsRead(notif.id)}
-                                    className={`px-4 py-3 cursor-pointer transition-colors ${
-                                        notif.is_read ? 'panel-notif-read' : 'panel-notif-unread'
-                                    }`}
-                                >
-                                    <div className="flex items-start justify-between gap-2">
-                                        <div className="flex-1">
-                                            <p className={`text-sm ${notif.is_read ? '' : 'font-semibold'}`}
-                                               style={{ color: notif.is_read
-                                                   ? 'var(--panel-profile-muted)'
-                                                   : 'var(--panel-dropdown-text)' }}>
-                                                {notif.title}
-                                            </p>
-                                            <p className="text-xs mt-1 line-clamp-2"
-                                               style={{ color: 'var(--panel-profile-muted)' }}>
-                                                {notif.message}
-                                            </p>
+                            {notifications.map((notif) => {
+                                const isExpanded = expandedNotifId === notif.id;
+                                return (
+                                    <div
+                                        key={notif.id}
+                                        className={`transition-colors ${
+                                            notif.is_read ? 'panel-notif-read' : 'panel-notif-unread'
+                                        }`}
+                                    >
+                                        <div
+                                            onClick={() => {
+                                                setExpandedNotifId(isExpanded ? null : notif.id);
+                                                if (!notif.is_read) handleMarkAsRead(notif.id);
+                                            }}
+                                            className="px-4 py-3 cursor-pointer hover:opacity-80 transition-opacity"
+                                        >
+                                            <div className="flex items-start justify-between gap-2">
+                                                <div className="flex-1 min-w-0">
+                                                    <p className={`text-sm ${notif.is_read ? '' : 'font-semibold'}`}
+                                                       style={{ color: notif.is_read
+                                                           ? 'var(--panel-profile-muted)'
+                                                           : 'var(--panel-dropdown-text)' }}>
+                                                        {notif.title}
+                                                    </p>
+                                                    <p className={`text-xs mt-1 ${isExpanded ? '' : 'line-clamp-2'}`}
+                                                       style={{ color: 'var(--panel-profile-muted)' }}>
+                                                        {notif.message}
+                                                    </p>
+                                                    {notif.created_at && (
+                                                        <p className="text-[10px] mt-1.5"
+                                                           style={{ color: 'var(--panel-profile-muted)' }}>
+                                                            {new Date(notif.created_at).toLocaleString()}
+                                                        </p>
+                                                    )}
+                                                </div>
+                                                <div className="flex items-center gap-1 shrink-0">
+                                                    {!notif.is_read && (
+                                                        <span className="w-2 h-2 rounded-full"
+                                                              style={{ background: 'var(--color-primary)' }} />
+                                                    )}
+                                                    <HiChevronDown 
+                                                        className={`w-4 h-4 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+                                                        style={{ color: 'var(--panel-profile-muted)' }}
+                                                    />
+                                                </div>
+                                            </div>
                                         </div>
-                                        {!notif.is_read && (
-                                            <span className="w-2 h-2 rounded-full mt-1.5 shrink-0"
-                                                  style={{ background: 'var(--color-primary)' }} />
+                                        {isExpanded && notif.data && (
+                                            <div className="px-4 pb-3 pt-1 text-xs border-t"
+                                                 style={{ 
+                                                     color: 'var(--panel-profile-muted)',
+                                                     borderColor: 'var(--panel-dropdown-border)'
+                                                 }}>
+                                                <div className="space-y-1">
+                                                    {Object.entries(notif.data).map(([key, value]) => (
+                                                        <div key={key} className="flex gap-2">
+                                                            <span className="font-semibold capitalize">{key.replace(/_/g, ' ')}:</span>
+                                                            <span>{typeof value === 'object' ? JSON.stringify(value) : value}</span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
                                         )}
                                     </div>
-                                </div>
-                            ))}
+                                );
+                            })}
                         </div>
                     )}
                 </div>

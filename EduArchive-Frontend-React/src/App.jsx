@@ -19,12 +19,14 @@ import UserManagement from './pages/admin/UserManagement'
 import PublishedCapstones from './pages/admin/PublishedCapstones'
 import AdminProfile from './pages/admin/AdminProfile'
 import ActivityLogs from './pages/admin/ActivityLogs'
+import CapstoneApproval from './pages/admin/CapstoneApproval'
 
 // Faculty pages
 import FacultyLayout from './components/faculty/FacultyLayout'
 import FacultyCapstoneLibrary from './pages/faculty/FacultyCapstoneLibrary'
 import FacultyUploadedCapstones from './pages/faculty/FacultyUploadedCapstones'
 import FacultyProfile from './pages/faculty/FacultyProfile'
+import FacultyCapstoneApproval from './pages/faculty/FacultyCapstoneApproval'
 
 // Student pages
 import StudentLayout from './components/student/StudentLayout'
@@ -32,6 +34,7 @@ import StudentUploadedCapstones from './pages/student/StudentUploadedCapstones'
 import StudentCapstoneMainPage from './pages/student/StudentCapstoneMainPage'
 import StudentCapstoneLibrary from './pages/student/StudentCapstoneLibrary'
 import StudentProfile from './pages/student/StudentProfile'
+import StudentCapstoneAdditionalInfoPage from './pages/student/StudentCapstoneAdditionalInfoPage'
 
 // Faculty extra pages
 import CapstoneAdditionalInfoPage from './pages/faculty/CapstoneAdditionalInfoPage'
@@ -90,6 +93,15 @@ function StudentRoute({ children }) {
   )
 }
 
+// Full-page student flows without the sidebar
+function StudentBareRoute({ children }) {
+  return (
+    <ProtectedRoute roles={['student']}>
+      {children}
+    </ProtectedRoute>
+  )
+}
+
 function VisitorRoute({ children }) {
   return (
     <ProtectedRoute roles={['visitor']}>
@@ -124,6 +136,7 @@ function App() {
                 <Route path="/admin/capstone-library/upload-details" element={<AdminBareRoute><AdminCapstoneAdditionalInfoPage /></AdminBareRoute>} />
                 <Route path="/admin/users" element={<AdminRoute><UserManagement /></AdminRoute>} />
                 <Route path="/admin/published" element={<AdminRoute><PublishedCapstones /></AdminRoute>} />
+                <Route path="/admin/approvals" element={<AdminRoute><CapstoneApproval /></AdminRoute>} />
                 <Route path="/admin/activity-logs" element={<AdminRoute><ActivityLogs /></AdminRoute>} />
                 <Route path="/admin/profile" element={<AdminRoute><AdminProfile /></AdminRoute>} />
                 <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
@@ -133,6 +146,7 @@ function App() {
                 <Route path="/faculty/capstone-library/review-data" element={<FacultyBareRoute><ReviewExtractedDataPage nextPath="/faculty/capstone-library/upload-details" backPath="/faculty/capstone-library" /></FacultyBareRoute>} />
                 <Route path="/faculty/capstone-library/upload-details" element={<FacultyBareRoute><CapstoneAdditionalInfoPage /></FacultyBareRoute>} />
                 <Route path="/faculty/uploads" element={<FacultyRoute><FacultyUploadedCapstones /></FacultyRoute>} />
+                <Route path="/faculty/approvals" element={<FacultyRoute><FacultyCapstoneApproval /></FacultyRoute>} />
                 <Route path="/faculty/capstones/:id" element={<FacultyRoute><CapstoneMainPage /></FacultyRoute>} />
                 <Route path="/faculty/profile" element={<FacultyRoute><FacultyProfile /></FacultyRoute>} />
                 <Route path="/faculty" element={<Navigate to="/faculty/uploads" replace />} />
@@ -141,6 +155,8 @@ function App() {
                 {/* Student routes */}
                 <Route path="/student/uploads" element={<StudentRoute><StudentUploadedCapstones /></StudentRoute>} />
                 <Route path="/student/capstone-library" element={<StudentRoute><StudentCapstoneLibrary /></StudentRoute>} />
+                <Route path="/student/capstone-library/review-data" element={<StudentBareRoute><ReviewExtractedDataPage nextPath="/student/capstone-library/upload-details" backPath="/student/capstone-library" /></StudentBareRoute>} />
+                <Route path="/student/capstone-library/upload-details" element={<StudentBareRoute><StudentCapstoneAdditionalInfoPage /></StudentBareRoute>} />
                 <Route path="/student/capstones/:id" element={<StudentRoute><StudentCapstoneMainPage /></StudentRoute>} />
                 <Route path="/student/profile" element={<StudentRoute><StudentProfile /></StudentRoute>} />
                 <Route path="/student" element={<Navigate to="/student/uploads" replace />} />

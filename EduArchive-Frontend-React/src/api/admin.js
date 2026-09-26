@@ -15,6 +15,7 @@ export const getPlatformActivity = () => axios.get('/admin/dashboard/platform-ac
 
 // ── Capstone Management ────────────────────────────
 export const getCapstones = (params = {}) => axios.get('/admin/capstones', { params });
+export const getPendingCapstones = (params = {}) => axios.get('/admin/capstones/pending', { params });
 export const getCapstoneFilterOptions = () => axios.get('/admin/capstones/filter-options');
 export const uploadCapstone = (formData) => axios.post('/admin/capstones/upload', formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
@@ -30,8 +31,8 @@ export const uploadFacultyImrad = (formData) => axios.post('/faculty/capstones/u
     headers: { 'Content-Type': 'multipart/form-data' },
 });
 export const updateCapstone = (id, data) => axios.put(`/admin/capstones/${id}`, data);
-export const approveCapstone = (id) => axios.post(`/admin/capstones/${id}/approve`);
-export const rejectCapstone = (id) => axios.post(`/admin/capstones/${id}/reject`);
+export const approveCapstone = (id, data = {}) => axios.post(`/admin/capstones/${id}/approve`, data);
+export const rejectCapstone = (id, data = {}) => axios.post(`/admin/capstones/${id}/reject`, data);
 export const deleteCapstone = (id) => axios.delete(`/admin/capstones/${id}`);
 
 // ── Archive ────────────────────────────────────────
@@ -109,6 +110,9 @@ export const uploadStudentCapstone = (formData) => axios.post('/student/capstone
     headers: { 'Content-Type': 'multipart/form-data' },
 });
 export const uploadStudentResource = (formData) => axios.post('/student/capstones/upload-resource', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+});
+export const uploadStudentImrad = (formData) => axios.post('/student/capstones/upload-imrad', formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
 });
 export const deleteStudentCapstone = (id) => axios.delete(`/student/capstones/${id}`);

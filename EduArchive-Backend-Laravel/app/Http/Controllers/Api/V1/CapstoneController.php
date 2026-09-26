@@ -263,6 +263,29 @@ class CapstoneController extends Controller
     }
 
     /**
+     * Upload an IMRAD file (encrypted at rest).
+     */
+    public function uploadImrad(Request $request): JsonResponse
+    {
+        $validator = Validator::make($request->all(), [
+            'file' => 'required|file|mimes:pdf|max:51200',
+        ]);
+
+        if ($validator->fails()) {
+            return $this->errorResponse('Validation failed.', 422, $validator->errors());
+        }
+
+        $file      = $request->file('file');
+        $encryptor = new PdfEncryptorService();
+        $path      = $encryptor->encryptAndStore('capstone_imrad', $file);
+
+        return $this->successResponse([
+            'file_path'          => $path,
+            'file_original_name' => $file->getClientOriginalName(),
+        ], 'IMRAD file uploaded.');
+    }
+
+    /**
      * Store capstone with extracted/edited data and additional info.
      */
     public function store(Request $request): JsonResponse
@@ -300,9 +323,16 @@ class CapstoneController extends Controller
         }
 
         $publicationStatus = $request->input('publication_status', 'published');
-        // When an admin/faculty uploads a capstone it always gets status=approved,
-        // so is_published must always be true so students can find it.
-        $isPublished = true;
+        
+        // Determine approval status based on user role:
+        // - Admin/Faculty: Auto-approved (status='approved', is_published=true)
+        // - Student: Requires approval (status='pending', approval_status='pending', is_published=false)
+        $user = $request->user();
+        $isStudent = $user->hasRole('student');
+        
+        $status = $isStudent ? 'pending' : 'approved';
+        $approvalStatus = $isStudent ? 'pending' : 'approved';
+        $isPublished = !$isStudent; // Only published if NOT a student
 
         $capstone = Capstone::create([
             'title'              => $request->title,
@@ -314,8 +344,9 @@ class CapstoneController extends Controller
             'abstract'           => $request->abstract,
             'pdf_path'           => $request->pdf_path,
             'pdf_original_name'  => $request->pdf_original_name,
-            'uploaded_by'        => $request->user()->id,
-            'status'             => 'approved',
+            'uploaded_by'        => $user->id,
+            'status'             => $status,
+            'approval_status'    => $approvalStatus,
             'is_published'       => $isPublished,
             'publication_status' => $publicationStatus,
             'copyright_status'   => $request->copyright_status,
@@ -364,23 +395,58 @@ class CapstoneController extends Controller
             \Log::warning('PDF text extraction failed for capstone ' . $capstone->id . ': ' . $e->getMessage());
         }
 
-        AuditLog::log('upload_capstone', $request->user()->id, Capstone::class, $capstone->id);
+        AuditLog::log('upload_capstone', $user->id, Capstone::class, $capstone->id);
 
-        // Create notifications for all admins about new capstone upload
-        $admins = User::whereHas('role', function ($query) {
-            $query->where('name', 'admin');
-        })->get();
+        // Create notifications based on user role:
+        // - Student upload: Notify admin AND adviser (if assigned)
+        // - Admin/Faculty upload: Notify all admins
+        if ($isStudent) {
+            // Notify all admins about student upload requiring approval
+            $admins = User::whereHas('role', function ($query) {
+                $query->where('name', 'admin');
+            })->get();
 
-        foreach ($admins as $admin) {
-            Notification::create([
-                'admin_id'            => $admin->id,
-                'type'                => 'capstone_uploaded',
-                'title'               => 'New Capstone Uploaded',
-                'message'             => "Capstone '{$capstone->title}' uploaded by {$request->user()->name}",
-                'related_user_id'     => $request->user()->id,
-                'related_capstone_id' => $capstone->id,
-                'is_read'             => false,
-            ]);
+            foreach ($admins as $admin) {
+                Notification::create([
+                    'admin_id'            => $admin->id,
+                    'type'                => 'capstone_pending_approval',
+                    'title'               => 'New Capstone Awaiting Approval',
+                    'message'             => "Student {$user->name} uploaded capstone '{$capstone->title}' for approval",
+                    'related_user_id'     => $user->id,
+                    'related_capstone_id' => $capstone->id,
+                    'is_read'             => false,
+                ]);
+            }
+
+            // If adviser is assigned, notify them too
+            if ($capstone->adviser_id) {
+                Notification::create([
+                    'admin_id'            => $capstone->adviser_id,
+                    'type'                => 'capstone_pending_approval',
+                    'title'               => 'New Capstone Awaiting Your Approval',
+                    'message'             => "Student {$user->name} uploaded capstone '{$capstone->title}' where you are the adviser",
+                    'related_user_id'     => $user->id,
+                    'related_capstone_id' => $capstone->id,
+                    'is_read'             => false,
+                ]);
+            }
+        } else {
+            // Admin/Faculty upload - notify all admins
+            $admins = User::whereHas('role', function ($query) {
+                $query->where('name', 'admin');
+            })->get();
+
+            foreach ($admins as $admin) {
+                Notification::create([
+                    'admin_id'            => $admin->id,
+                    'type'                => 'capstone_uploaded',
+                    'title'               => 'New Capstone Uploaded',
+                    'message'             => "Capstone '{$capstone->title}' uploaded by {$user->name}",
+                    'related_user_id'     => $user->id,
+                    'related_capstone_id' => $capstone->id,
+                    'is_read'             => false,
+                ]);
+            }
         }
 
         $capstone->load(['keywords', 'resources', 'referencedCapstones', 'adviser:id,name']);
@@ -411,20 +477,108 @@ class CapstoneController extends Controller
     /**
      * Approve a capstone.
      */
+    /**
+     * Get pending capstones for approval (Admin sees all, Faculty sees only where they are adviser)
+     */
+    public function getPendingCapstones(Request $request): JsonResponse
+    {
+        $query = Capstone::with([
+            'keywords', 
+            'uploader:id,name,email,role_id', 
+            'uploader.studentProfile:user_id,program,year_level',
+            'adviser:id,name'
+        ])->where('approval_status', 'pending');
+
+        // Faculty can only see capstones where they are the adviser
+        if ($request->user()->hasRole('faculty')) {
+            $query->where('adviser_id', $request->user()->id);
+        }
+        // Admin sees all pending capstones
+
+        // Search
+        if ($request->has('search') && $request->search) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('title', 'like', "%{$search}%")
+                  ->orWhere('author', 'like', "%{$search}%")
+                  ->orWhere('year', 'like', "%{$search}%")
+                  ->orWhereHas('uploader', function ($uq) use ($search) {
+                      $uq->where('name', 'like', "%{$search}%");
+                  });
+            });
+        }
+
+        // Filter by year
+        if ($request->has('year') && $request->year) {
+            $query->where('year', $request->year);
+        }
+
+        // Filter by program
+        if ($request->has('program') && $request->program) {
+            $query->whereHas('uploader.studentProfile', function ($q) use ($request) {
+                $q->where('program', $request->program);
+            });
+        }
+
+        // Filter by adviser (admin only)
+        if ($request->user()->hasRole('admin') && $request->has('adviser_id') && $request->adviser_id) {
+            $query->where('adviser_id', $request->adviser_id);
+        }
+
+        $query->orderByDesc('created_at');
+        $capstones = $query->paginate($request->get('per_page', 15));
+
+        // Format response to match frontend expectations
+        $capstones->getCollection()->transform(function ($capstone) {
+            $uploader = $capstone->uploader;
+            $isStudent = $uploader && $uploader->hasRole('student');
+            
+            return [
+                'id' => $capstone->id,
+                'title' => $capstone->title,
+                'year' => $capstone->year,
+                'author' => $capstone->author,
+                'abstract' => $capstone->abstract,
+                'approval_status' => $capstone->approval_status,
+                'created_at' => $capstone->created_at,
+                'pdf_path' => $capstone->pdf_path,
+                'student' => [
+                    'id' => $uploader->id ?? null,
+                    'name' => $uploader->name ?? 'Unknown',
+                    'email' => $uploader->email ?? null,
+                    'program' => $isStudent && $uploader->studentProfile ? $uploader->studentProfile->program : 'N/A',
+                    'year' => $isStudent && $uploader->studentProfile ? $uploader->studentProfile->year_level : 'N/A',
+                ],
+                'adviser' => [
+                    'id' => $capstone->adviser->id ?? null,
+                    'name' => $capstone->adviser->name ?? 'Not Assigned',
+                ],
+            ];
+        });
+
+        return $this->successResponse($capstones, 'Pending capstones retrieved.');
+    }
+
     public function approve(Request $request, Capstone $capstone): JsonResponse
     {
-        if ($capstone->status === 'approved') {
+        if ($capstone->status === 'approved' || $capstone->approval_status === 'approved') {
             return $this->errorResponse('Capstone is already approved.', 400);
+        }
+
+        // Faculty can only approve capstones where they are the adviser
+        if ($request->user()->hasRole('faculty') && $capstone->adviser_id !== $request->user()->id) {
+            return $this->errorResponse('You can only approve capstones where you are the adviser.', 403);
         }
 
         $oldStatus = $capstone->status;
 
         $capstone->update([
-            'status'       => 'approved',
-            'is_published' => true,
-            'is_archived'  => false,
-            'approved_by'  => $request->user()->id,
-            'approved_at'  => now(),
+            'status'          => 'approved',
+            'approval_status' => 'approved',
+            'is_published'    => true,
+            'is_archived'     => false,
+            'approved_by'     => $request->user()->id,
+            'approved_at'     => now(),
         ]);
 
         AuditLog::log(
@@ -436,6 +590,14 @@ class CapstoneController extends Controller
             ['status' => 'approved']
         );
 
+        // TODO: Send notification to student
+        // Notification::create([
+        //     'user_id' => $capstone->uploaded_by,
+        //     'title' => 'Capstone Approved',
+        //     'message' => "Your capstone '{$capstone->title}' has been approved by {$request->user()->name}",
+        //     'type' => 'approval',
+        // ]);
+
         return $this->successResponse($capstone, 'Capstone approved and published.');
     }
 
@@ -444,16 +606,29 @@ class CapstoneController extends Controller
      */
     public function reject(Request $request, Capstone $capstone): JsonResponse
     {
-        if ($capstone->status === 'rejected') {
+        if ($capstone->status === 'rejected' || $capstone->approval_status === 'rejected') {
             return $this->errorResponse('Capstone is already rejected.', 400);
+        }
+
+        // Faculty can only reject capstones where they are the adviser
+        if ($request->user()->hasRole('faculty') && $capstone->adviser_id !== $request->user()->id) {
+            return $this->errorResponse('You can only reject capstones where you are the adviser.', 403);
         }
 
         $oldStatus = $capstone->status;
 
+        $request->validate([
+            'reason' => 'nullable|string|max:1000',
+        ]);
+
         $capstone->update([
-            'status'       => 'rejected',
-            'is_published' => false,
-            'is_archived'  => true,
+            'status'           => 'rejected',
+            'approval_status'  => 'rejected',
+            'is_published'     => false,
+            'is_archived'      => false, // Keep visible to student so they can see the rejection
+            'rejection_reason' => $request->input('reason'),
+            'approved_by'      => $request->user()->id,
+            'approved_at'      => now(),
         ]);
 
         AuditLog::log(
@@ -462,10 +637,18 @@ class CapstoneController extends Controller
             Capstone::class,
             $capstone->id,
             ['status' => $oldStatus],
-            ['status' => 'rejected']
+            ['status' => 'rejected', 'reason' => $request->input('reason')]
         );
 
-        return $this->successResponse($capstone, 'Capstone rejected and archived.');
+        // TODO: Send notification to student
+        // Notification::create([
+        //     'user_id' => $capstone->uploaded_by,
+        //     'title' => 'Capstone Rejected',
+        //     'message' => "Your capstone '{$capstone->title}' has been rejected. Reason: " . ($request->input('reason') ?: 'No reason provided'),
+        //     'type' => 'rejection',
+        // ]);
+
+        return $this->successResponse($capstone, 'Capstone rejected.');
     }
 
     /**

@@ -19,6 +19,7 @@ import ConfirmDialog from '../../components/ConfirmDialog';
 import CapstoneModal from '../../components/admin/CapstoneModal';
 import UploadCapstoneModal from '../../components/admin/UploadCapstoneModal';
 import EditCapstoneModal from '../../components/admin/EditCapstoneModal';
+import Pagination from '../../components/Pagination';
 
 export default function CapstoneLibrary() {
     const navigate = useNavigate();
@@ -55,6 +56,7 @@ export default function CapstoneLibrary() {
     // ── Pagination ────────────────────────────────────────────────────────────────
     const [page, setPage] = useState(1);
     const [lastPage, setLastPage] = useState(1);
+    const [pagination, setPagination] = useState({ current_page: 1, last_page: 1, total: 0, from: 0, to: 0 });
 
     // ── Modal / confirm state ─────────────────────────────────────────────────────
     const [confirm, setConfirm] = useState({ open: false, title: '', message: '', action: null, variant: 'danger' });
@@ -120,7 +122,7 @@ export default function CapstoneLibrary() {
     const fetchCapstones = useCallback(async () => {
         try {
             setLoading(true);
-            const params = { page, per_page: 20 };
+            const params = { page, per_page: 15 };
             if (debouncedSearch) params.search = debouncedSearch;
             if (filters.year) params.year = filters.year;
             if (filters.program) params.program = filters.program;
@@ -131,6 +133,13 @@ export default function CapstoneLibrary() {
             const data = res.data.data;
             setCapstones(data?.data || data || []);
             setLastPage(data?.last_page || 1);
+            setPagination({
+                current_page: data?.current_page || 1,
+                last_page: data?.last_page || 1,
+                total: data?.total || 0,
+                from: data?.from || 0,
+                to: data?.to || 0,
+            });
         } catch (err) {
             notify.error('Failed to load capstones.');
         } finally {
@@ -247,13 +256,12 @@ export default function CapstoneLibrary() {
                     </div>
                 ))}
             </div>
-            {lastPage > 1 && (
-                <div className="flex items-center justify-center gap-2 p-4 border-t border-gray-100">
-                    <button onClick={() => setPage(Math.max(1, page - 1))} disabled={page === 1} className="px-4 py-2 text-sm font-medium rounded-lg transition-colors bg-[#1B5E20] text-white hover:bg-green-800 disabled:bg-gray-300 disabled:text-gray-500 disabled:cursor-not-allowed">Previous</button>
-                    <span className="text-sm font-medium text-gray-600">Page {page} of {lastPage}</span>
-                    <button onClick={() => setPage(Math.min(lastPage, page + 1))} disabled={page === lastPage} className="px-4 py-2 text-sm font-medium rounded-lg transition-colors bg-[#1B5E20] text-white hover:bg-green-800 disabled:bg-gray-300 disabled:text-gray-500 disabled:cursor-not-allowed">Next</button>
-                </div>
-            )}
+            <Pagination 
+                paginationData={pagination}
+                page={page}
+                onPageChange={setPage}
+                perPage={15}
+            />
         </div>
     );
 
@@ -298,13 +306,12 @@ export default function CapstoneLibrary() {
                     </tbody>
                 </table>
             </div>
-            {lastPage > 1 && (
-                <div className="flex items-center justify-center gap-2 p-4 border-t border-gray-100">
-                    <button onClick={() => setPage(Math.max(1, page - 1))} disabled={page === 1} className="px-4 py-2 text-sm font-medium rounded-lg transition-colors bg-[#1B5E20] text-white hover:bg-green-800 disabled:bg-gray-300 disabled:text-gray-500 disabled:cursor-not-allowed">Previous</button>
-                    <span className="text-sm font-medium text-gray-600">Page {page} of {lastPage}</span>
-                    <button onClick={() => setPage(Math.min(lastPage, page + 1))} disabled={page === lastPage} className="px-4 py-2 text-sm font-medium rounded-lg transition-colors bg-[#1B5E20] text-white hover:bg-green-800 disabled:bg-gray-300 disabled:text-gray-500 disabled:cursor-not-allowed">Next</button>
-                </div>
-            )}
+            <Pagination 
+                paginationData={pagination}
+                page={page}
+                onPageChange={setPage}
+                perPage={15}
+            />
         </div>
     );
 

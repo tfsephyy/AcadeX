@@ -192,15 +192,15 @@ class UserManagementController extends Controller
         try {
             Mail::raw(
                 "Hello {$user->name},\n\n" .
-                "Your account has been approved! You can now log in to EduArchive.\n\n" .
+                "Your account has been approved! You can now log in to Acadex.\n\n" .
                 "Email: {$user->email}\n" .
                 "Role: {$user->role->name}\n\n" .
-                "Welcome to EduArchive!\n\n" .
+                "Welcome to Acadex!\n\n" .
                 "Best regards,\n" .
-                "EduArchive Admin Team",
+                "Acadex Admin Team",
                 function ($message) use ($user) {
                     $message->to($user->email)
-                            ->subject('Account Approved - Welcome to EduArchive');
+                            ->subject('Account Approved - Welcome to Acadex');
                 }
             );
         } catch (\Exception $e) {

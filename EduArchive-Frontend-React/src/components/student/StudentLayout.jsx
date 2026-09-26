@@ -78,7 +78,7 @@ export default function StudentLayout({ children }) {
                     <div>
                         <h1 className="font-bold text-lg leading-tight"
                             style={{ color: 'var(--panel-profile-text)' }}>
-                            Edu<span style={{ color: 'var(--color-primary)' }}>Archive</span>
+                            Aca<span style={{ color: 'var(--color-primary)' }}>dex</span>
                         </h1>
                         <span className="text-[10px] uppercase tracking-widest"
                             style={{ color: 'var(--panel-profile-muted)' }}>Student</span>

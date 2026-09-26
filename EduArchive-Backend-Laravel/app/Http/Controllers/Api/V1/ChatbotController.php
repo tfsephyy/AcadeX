@@ -4,299 +4,342 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Models\Capstone;
-use App\Services\NlpSearchService;
+use App\Services\Chatbot\ChatbotAnalyticsService;
+use App\Services\Chatbot\ChatbotIntentService;
+use App\Services\Chatbot\ChatbotPermissionService;
+use App\Services\Chatbot\ChatbotQueryService;
+use App\Services\Chatbot\ChatbotResponseService;
 use App\Traits\ApiResponses;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 
+/**
+ * ChatbotController
+ *
+ * Architecture: DATABASE FIRST → PERMISSION FIRST → RESPONSE SECOND
+ *
+ * ┌─────────────────────────────────────────────────┐
+ * │  NO EXTERNAL AI CALLS. NO GROQ. NO OPENAI.      │
+ * │                                                  │
+ * │  Flow:                                           │
+ * │  1. Authenticate user → get role (server-side)  │
+ * │  2. PHP pattern-matching intent detection        │
+ * │  3. Permission gate (deny before any DB query)   │
+ * │  4. Role-scoped DB query                        │
+ * │  5. PHP response formatter (ChatbotResponseSvc)  │
+ * │  6. Return JSON — no external latency, ever.     │
+ * └─────────────────────────────────────────────────┘
+ */
 class ChatbotController extends Controller
 {
     use ApiResponses;
 
-    private const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
-    private const GROQ_MODEL   = 'llama-3.3-70b-versatile';
+    private ChatbotIntentService    $intentSvc;
+    private ChatbotPermissionService $permSvc;
+    private ChatbotQueryService     $querySvc;
+    private ChatbotAnalyticsService $analyticsSvc;
+    private ChatbotResponseService  $responseSvc;
+
+    public function __construct()
+    {
+        $this->intentSvc    = new ChatbotIntentService();
+        $this->permSvc      = new ChatbotPermissionService();
+        $this->querySvc     = new ChatbotQueryService();
+        $this->analyticsSvc = new ChatbotAnalyticsService();
+        $this->responseSvc  = new ChatbotResponseService();
+    }
+
+    // ── Entry point ────────────────────────────────────────────────────────────
 
     public function message(Request $request): JsonResponse
     {
+        // ── 1. Validate ─────────────────────────────────────────────────────────
         $validated = $request->validate([
-            'message'                        => 'required|string|max:2000',
-            'capstone_id'                    => 'nullable|integer|exists:capstones,id',
-            'conversation_history'           => 'nullable|array|max:20',
-            'conversation_history.*.role'    => 'required|string|in:user,assistant',
-            'conversation_history.*.content' => 'required|string|max:4000',
+            'message'    => 'required|string|max:2000',
+            'capstone_id' => 'nullable|integer|exists:capstones,id',
         ]);
 
-        $apiKey = config('services.groq.key');
-        if (empty($apiKey) || $apiKey === 'your_groq_api_key_here') {
-            return $this->errorResponse('Chatbot is not configured. Please contact the administrator.', 503);
+        // ── 2. Role from authenticated server-side session (never from message) ──
+        $user = $request->user();
+        $role = $this->resolveRole($user);
+        $msg  = trim($validated['message']);
+
+        // ── 3. Intent detection (pure PHP, no AI) ───────────────────────────────
+        $intent  = $this->intentSvc->detect($msg);
+        $filters = $this->intentSvc->extractFilters($msg);
+
+        // ── 4. Permission gate — executed before any DB query ───────────────────
+        if (!$this->permSvc->isIntentAllowed($intent, $role)) {
+            return $this->buildResponse(
+                $this->responseSvc->accessDenied(
+                    $this->permSvc->getDeniedMessage($intent, $role)
+                ),
+                $intent
+            );
         }
 
-        $userMessage   = $validated['message'];
-        $hasOpenCapstone = !empty($validated['capstone_id']);
-        $contextParts  = [];
-
-        // ══════════════════════════════════════════════════════════════════
-        // BLOCK 1 — Currently open capstone (always from DB)
-        // This is available regardless of search results.
-        // If the user is asking about the open capstone (authors, content,
-        // abstract, methodology etc.) the AI answers from this block.
-        // ══════════════════════════════════════════════════════════════════
+        // ── 5. Currently open capstone context (if user has one open) ────────────
         $openCapstone = null;
-        if ($hasOpenCapstone) {
-            $openCapstone = Capstone::with(['keywords', 'referencedCapstones:id,title,author,year,program'])
-                ->where('is_published', true)
-                ->find($validated['capstone_id']);
+        if (!empty($validated['capstone_id'])) {
+            $openCapstone = $this->querySvc->findById($role, (int) $validated['capstone_id']);
         }
 
-        if ($openCapstone) {
-            $keywords = $openCapstone->keywords->pluck('name')->join(', ');
-            $refs     = $openCapstone->referencedCapstones->isNotEmpty()
-                ? $openCapstone->referencedCapstones
-                    ->map(fn($r) => "  • [ID:{$r->id}] {$r->title} ({$r->year}) by {$r->author}")
-                    ->join("\n")
-                : '  None listed.';
-
-            $docText = !empty(trim($openCapstone->pdf_text ?? ''))
-                ? trim($openCapstone->pdf_text)
-                : '(Full document text not yet indexed. Please re-upload the PDF to enable full-text answers.)';
-
-            $contextParts[] = <<<CAPSTONE
-════════════════════════════════════════════════
- CURRENTLY OPEN CAPSTONE (from database)
-════════════════════════════════════════════════
-ID       : {$openCapstone->id}
-Title    : {$openCapstone->title}
-Author(s): {$openCapstone->author}
-Year     : {$openCapstone->year}
-Program  : {$openCapstone->program}
-Category : {$openCapstone->category}
-Keywords : {$keywords}
-
-Abstract:
-{$openCapstone->abstract}
-
-Referenced Capstones:
-{$refs}
-
-Full Document Text (stored in database from uploaded PDF):
-────────────────────────────────────────────────
-{$docText}
-════════════════════════════════════════════════
-CAPSTONE;
-        }
-
-        // ══════════════════════════════════════════════════════════════════
-        // BLOCK 2 — PHP-driven database search for archive queries
-        // PHP does the searching — AI only receives the real results.
-        // If searching for capstones related to the open one, we use its
-        // keywords and category as search terms automatically.
-        // ══════════════════════════════════════════════════════════════════
-        $searchResults = $this->searchDatabase($userMessage, $openCapstone);
-
-        if ($searchResults->isNotEmpty()) {
-            $count      = $searchResults->count();
-            $resultText = $searchResults->map(function ($c) {
-                $kw       = $c->keywords->pluck('name')->join(', ');
-                $abstract = mb_substr($c->abstract ?? '', 0, 450);
-                return implode("\n", [
-                    "  ---",
-                    "  ID      : {$c->id}",
-                    "  Title   : {$c->title}",
-                    "  Author  : {$c->author}",
-                    "  Year    : {$c->year}",
-                    "  Program : {$c->program}",
-                    "  Category: {$c->category}",
-                    "  Keywords: {$kw}",
-                    "  Abstract: {$abstract}",
-                ]);
-            })->join("\n");
-
-            $contextParts[] = <<<LIB
-════════════════════════════════════════════════
- ARCHIVE SEARCH RESULTS — {$count} real record(s) from database
- (PHP searched the database using keywords from your question)
-════════════════════════════════════════════════
-{$resultText}
-════════════════════════════════════════════════
-LIB;
-        } else {
-            // Fallback: give the AI the most recent capstones so it always
-            // has real data when the user asks general questions.
-            $recent = Capstone::with('keywords')
-                ->where('is_published', true)
-                ->where('is_archived', false)
-                ->when($openCapstone, fn($q) => $q->where('id', '!=', $openCapstone->id))
-                ->orderByDesc('year')
-                ->limit(20)
-                ->get(['id', 'title', 'author', 'year', 'program', 'category', 'abstract']);
-
-            $recentText = $recent->map(function ($c) {
-                $kw = $c->keywords->pluck('name')->join(', ');
-                $ab = mb_substr($c->abstract ?? '', 0, 300);
-                return "  [ID:{$c->id}] \"{$c->title}\" | {$c->author} | {$c->year} | {$c->program} | Keywords: {$kw} | Abstract: {$ab}";
-            })->join("\n");
-
-            $contextParts[] = <<<LIB
-════════════════════════════════════════════════
- ARCHIVE — RECENT CAPSTONES (no specific keyword match found; showing latest)
-════════════════════════════════════════════════
-{$recentText}
-════════════════════════════════════════════════
-LIB;
-            // Use these for ID verification later
-            $searchResults = $recent;
-        }
-
-        // ══════════════════════════════════════════════════════════════════
-        // BLOCK 3 — System prompt + Groq API call
-        // ══════════════════════════════════════════════════════════════════
-        $dbData = implode("\n\n", $contextParts);
-
-        $hasOpenCapstoneContext = $openCapstone !== null;
-        $openCapstoneNote = $hasOpenCapstoneContext
-            ? "The user currently has a capstone open — answer questions about it using the CURRENTLY OPEN CAPSTONE data (authors, abstract, methodology, findings, conclusions, keywords, references, full document text — all from the database)."
-            : "No capstone is currently open. Help the user find capstones from the archive using the search results.";
-
-        $systemPrompt = <<<SYSTEM
-You are EduBot, an AI assistant for EduArchive — Mindanao State University's capstone research archive.
-
-YOUR JOB:
-{$openCapstoneNote}
-
-RULES YOU MUST FOLLOW:
-1. ALL capstone data you use comes EXCLUSIVELY from the database records provided below.
-2. Only reference capstones whose exact ID and title appear in the data below.
-3. When citing a capstone, always include its ID like [ID:5].
-4. NEVER invent capstone titles, authors, findings, or any details not present below.
-5. If the user asks about the CURRENTLY OPEN CAPSTONE (authors, content, methodology, results, etc.) — answer directly from its data. Do NOT say "no capstones found."
-6. If asked to find related or similar capstones, use only the archive search results below.
-7. Use markdown formatting (bold, bullets) for clarity.
-8. Be concise, accurate, and student-friendly.
-
---- DATABASE RECORDS ---
-
-{$dbData}
-
---- END OF DATABASE RECORDS ---
-SYSTEM;
-
-        $messages = [['role' => 'system', 'content' => $systemPrompt]];
-        foreach (($validated['conversation_history'] ?? []) as $turn) {
-            $messages[] = ['role' => $turn['role'], 'content' => $turn['content']];
-        }
-        $messages[] = ['role' => 'user', 'content' => $userMessage];
-
-        $response = Http::withToken($apiKey)
-            ->timeout(40)
-            ->post(self::GROQ_API_URL, [
-                'model'       => self::GROQ_MODEL,
-                'messages'    => $messages,
-                'temperature' => 0.15,
-                'max_tokens'  => 1400,
-                'top_p'       => 0.85,
+        // ── 6. Handle intent → query DB → format response ───────────────────────
+        try {
+            $result = $this->handleIntent($intent, $msg, $role, $filters, $openCapstone);
+        } catch (\Throwable $e) {
+            Log::error('Chatbot DB error', [
+                'role'   => $role,
+                'intent' => $intent,
+                'error'  => $e->getMessage(),
+                'trace'  => $e->getTraceAsString(),
             ]);
-
-        if ($response->failed()) {
-            \Log::error('Groq API error', ['status' => $response->status(), 'body' => $response->body()]);
-            return $this->errorResponse('AI service is temporarily unavailable. Please try again later.', 503);
+            return $this->buildResponse($this->responseSvc->dbError(), $intent);
         }
 
-        $data  = $response->json();
-        $reply = $data['choices'][0]['message']['content'] ?? null;
+        return $this->buildResponse($result, $intent);
+    }
 
-        if (empty($reply)) {
-            return $this->errorResponse('No response from AI. Please try rephrasing your question.', 500);
+    // ── Intent dispatcher ──────────────────────────────────────────────────────
+
+    private function handleIntent(
+        string $intent,
+        string $msg,
+        string $role,
+        array  $filters,
+        ?Capstone $openCapstone
+    ): array {
+        // If a capstone is open and the user is asking about it specifically
+        if ($openCapstone && $this->isAskingAboutOpenCapstone($intent, $msg)) {
+            return $this->responseSvc->formatCapstoneDetails($openCapstone);
         }
 
-        // ── Build suggestion cards — only from verified DB IDs ─────────────
-        preg_match_all('/\[ID:(\d+)\]/', $reply, $matches);
-        $mentionedIds = array_unique(array_map('intval', $matches[1] ?? []));
+        return match ($intent) {
+            ChatbotIntentService::INTENT_ADMIN_STATS    => $this->handleAdminStats($msg),
+            ChatbotIntentService::INTENT_ADMIN_TRENDS   => $this->handleAdminTrends(),
+            ChatbotIntentService::INTENT_ADMIN_LOGS     => $this->handleAdminLogs($msg),
+            ChatbotIntentService::INTENT_POPULAR        => $this->handlePopular($role, $filters),
+            ChatbotIntentService::INTENT_CATEGORY_INFO  => $this->handleCategories($role),
+            ChatbotIntentService::INTENT_CAPSTONE_DETAILS => $openCapstone
+                ? $this->responseSvc->formatCapstoneDetails($openCapstone)
+                : $this->handleSearch($role, $msg, $filters),
+            ChatbotIntentService::INTENT_UNKNOWN        => $this->handleUnknown($role),
+            default => $this->handleSearch($role, $msg, $filters),
+        };
+    }
 
-        $allowedIds = $searchResults->pluck('id')->toArray();
-        if ($openCapstone) {
-            $allowedIds[] = $openCapstone->id;
-            foreach ($openCapstone->referencedCapstones as $ref) {
-                $allowedIds[] = $ref->id;
-            }
+    // ── Intent handlers ────────────────────────────────────────────────────────
+
+    /** General search / recommendation — used for SEARCH, RECOMMEND, UNKNOWN */
+    private function handleSearch(string $role, string $msg, array $filters): array
+    {
+        $results = $this->querySvc->search($role, $msg, $filters);
+
+        if ($results->isNotEmpty()) {
+            // Extract a clean search query for the header (strip stop words for readability)
+            $displayQuery = $this->extractDisplayQuery($msg);
+            return $this->responseSvc->formatCapstoneResults($results, $displayQuery);
         }
-        $verifiedIds = array_intersect($mentionedIds, $allowedIds);
 
-        $suggestedCapstones = [];
-        if (!empty($verifiedIds)) {
-            $suggestedCapstones = Capstone::whereIn('id', $verifiedIds)
-                ->where('is_published', true)
-                ->get(['id', 'title', 'author', 'year', 'program'])
-                ->toArray();
+        // No exact match — show recent capstones as a suggestion
+        $recent = $this->querySvc->recent($role, 5);
+        if ($recent->isNotEmpty()) {
+            $reply  = "I couldn't find an exact match for your request, but here are some recent capstones:\n\n";
+            $result = $this->responseSvc->formatCapstoneResults($recent);
+            $result['reply'] = $reply . $result['reply'];
+            return $result;
         }
 
-        return $this->successResponse([
-            'reply'               => $reply,
-            'suggested_capstones' => $suggestedCapstones,
-        ], 'Chatbot response generated.');
+        return ['reply' => $this->responseSvc->noResults($msg), 'suggested_capstones' => []];
+    }
+
+    /** Popular capstones by view/download/bookmark count */
+    private function handlePopular(string $role, array $filters): array
+    {
+        $metric  = $filters['metric'] ?? 'view_count';
+        $results = $this->querySvc->popular($role, $metric);
+        return $this->responseSvc->formatPopular($results, $metric);
+    }
+
+    /** Category list with counts */
+    private function handleCategories(string $role): array
+    {
+        $cats = $this->querySvc->categories($role);
+        return $this->responseSvc->formatCategories($cats);
+    }
+
+    /** Unknown/general question - provide helpful guidance */
+    private function handleUnknown(string $role): array
+    {
+        return $this->responseSvc->unknownRequest($role);
+    }
+
+    /** Admin repository statistics */
+    private function handleAdminStats(string $msg): array
+    {
+        $sub   = $this->intentSvc->detectAdminSubContext($msg);
+        $stats = $this->analyticsSvc->repositoryStats();
+
+        $userStats      = null;
+        $categories     = null;
+        $downloadStats  = null;
+        $copyrightStats = null;
+
+        if ($sub['wants_users']) {
+            try { $userStats = $this->analyticsSvc->userStats(); } catch (\Throwable $e) {}
+        }
+        if ($sub['wants_categories']) {
+            $categories = $this->analyticsSvc->categoryDistribution();
+        }
+        if ($sub['wants_downloads']) {
+            try { $downloadStats = $this->analyticsSvc->downloadStats(); } catch (\Throwable $e) {}
+        }
+        if ($sub['wants_copyright']) {
+            $copyrightStats = $this->analyticsSvc->copyrightDistribution();
+        }
+
+        // If no specific sub-context detected, show the full overview
+        if (!array_filter($sub)) {
+            try { $userStats = $this->analyticsSvc->userStats(); } catch (\Throwable $e) {}
+            $categories = $this->analyticsSvc->categoryDistribution();
+        }
+
+        return $this->responseSvc->formatAdminStats($stats, $userStats, $categories, $downloadStats, $copyrightStats);
+    }
+
+    /** Admin upload trend by year */
+    private function handleAdminTrends(): array
+    {
+        $trend = $this->analyticsSvc->uploadTrend(6);
+        return $this->responseSvc->formatTrend($trend);
+    }
+
+    /** Admin activity / audit logs */
+    private function handleAdminLogs(string $msg): array
+    {
+        $wantsLogin    = (bool) preg_match('/\b(login|logged\s*in)\b/i', $msg);
+        $wantsDownload = (bool) preg_match('/\bdownload\b/i', $msg);
+        $wantsMost     = (bool) preg_match('/\bmost\b/i', $msg);
+
+        $data = [];
+
+        if ($wantsDownload || ($wantsMost && !$wantsLogin)) {
+            $top = $this->analyticsSvc->mostDownloaded(10);
+            $data['top_downloads'] = $top->map(fn($c) => [
+                'id'             => $c->id,
+                'title'          => $c->title,
+                'author'         => $c->author,
+                'year'           => $c->year,
+                'download_count' => $c->download_count,
+            ])->toArray();
+        }
+
+        if ($wantsLogin) {
+            try {
+                $logins = $this->analyticsSvc->recentLogins(10);
+                $data['logins'] = $logins->map(fn($l) => [
+                    'email'        => $l->email,
+                    'status'       => $l->status,
+                    'ip_address'   => $l->ip_address,
+                    'attempted_at' => (string) $l->attempted_at,
+                ])->toArray();
+            } catch (\Throwable $e) {}
+        }
+
+        if (!$wantsLogin && !$wantsDownload) {
+            // Default: recent general activity
+            try {
+                $activity = $this->analyticsSvc->recentActivity(10);
+                $data['activity'] = $activity->map(fn($a) => [
+                    'user'        => $a->user?->name ?? 'System',
+                    'action'      => $a->action ?? '',
+                    'description' => $a->description ?? '',
+                    'created_at'  => (string) $a->created_at,
+                ])->toArray();
+            } catch (\Throwable $e) {}
+
+            // Also show top downloads for context
+            $top = $this->analyticsSvc->mostDownloaded(5);
+            $data['top_downloads'] = $top->map(fn($c) => [
+                'id'             => $c->id,
+                'title'          => $c->title,
+                'author'         => $c->author,
+                'year'           => $c->year,
+                'download_count' => $c->download_count,
+            ])->toArray();
+        }
+
+        return $this->responseSvc->formatLogs($data);
+    }
+
+    // ── Helpers ────────────────────────────────────────────────────────────────
+
+    /**
+     * Resolve the user's role from the Sanctum-authenticated User model.
+     * NEVER trusts anything from the request body — role is always server-side.
+     */
+    private function resolveRole($user): string
+    {
+        if (!$user) return ChatbotPermissionService::ROLE_VISITOR;
+
+        if (isset($user->role) && is_object($user->role) && isset($user->role->name)) {
+            return strtolower($user->role->name);
+        }
+        if (isset($user->role) && is_string($user->role)) {
+            return strtolower($user->role);
+        }
+
+        return ChatbotPermissionService::ROLE_VISITOR;
     }
 
     /**
-     * Search the database for relevant capstones using NLP-expanded terms from the user message.
-     * Also uses the open capstone's keywords/category for "related" queries.
-     * PHP does the searching — AI only receives real records.
+     * Check whether the user appears to be asking about the currently open capstone.
      */
-    private function searchDatabase(string $message, ?Capstone $openCapstone = null): \Illuminate\Database\Eloquent\Collection
+    private function isAskingAboutOpenCapstone(string $intent, string $msg): bool
     {
-        $nlp   = new NlpSearchService();
-        $terms = $nlp->expandTerms($message);
+        if ($intent === ChatbotIntentService::INTENT_CAPSTONE_DETAILS) return true;
 
-        // If user asks about "related" or "similar" to the open capstone,
-        // add that capstone's keywords as search terms automatically
-        $isRelatedQuery = preg_match('/relat|similar|like this|same topic|same category/i', $message);
-        if ($isRelatedQuery && $openCapstone) {
-            $kwTerms = $openCapstone->keywords->pluck('name')
-                ->map(fn($k) => strtolower(trim($k)))
-                ->filter(fn($k) => strlen($k) > 2)
-                ->toArray();
-            // Expand the open capstone's keywords through NLP as well
-            $expandedKw = [];
-            foreach ($kwTerms as $kw) {
-                $expandedKw = array_merge($expandedKw, $nlp->expandTerms($kw));
-            }
-            $terms = array_unique(array_merge($terms, $kwTerms, $expandedKw));
-
-            if (!empty($openCapstone->category)) {
-                $terms[] = strtolower($openCapstone->category);
-            }
+        $patterns = [
+            '/\b(this|current|open|the\s+current)\s+(capstone|project|thesis|paper)\b/i',
+            '/\bwhat\s+is\s+(it|this)\b/i',
+            '/\bwho\s+(are|wrote|made|authored)\s+(it|this)\b/i',
+            '/\b(about|more\s+about|regarding)\s+(it|this)\b/i',
+            '/\bsummariz(e|ing)\s+(it|this)\b/i',
+        ];
+        foreach ($patterns as $p) {
+            if (preg_match($p, $msg)) return true;
         }
 
-        $query = Capstone::with('keywords')
-            ->where('is_published', true)
-            ->where('is_archived', false);
+        return false;
+    }
 
-        if ($openCapstone) {
-            $query->where('id', '!=', $openCapstone->id);
-        }
+    /**
+     * Extract a short display query string from a natural language message.
+     * Used for the "I found X results matching '...'" header.
+     */
+    private function extractDisplayQuery(string $msg): string
+    {
+        // Remove common filler phrases
+        $clean = preg_replace(
+            '/\b(recommend|suggest|find|show|give\s+me|i\s+need|looking\s+for|help\s+me\s+find|any|capstone[s]?|project[s]?|related\s+to|about|using|with)\b/i',
+            '',
+            $msg
+        );
+        $clean = preg_replace('/\s+/', ' ', trim($clean));
 
-        if (!empty($terms)) {
-            $query->where(function ($q) use ($terms) {
-                foreach ($terms as $term) {
-                    $like = "%{$term}%";
-                    $q->orWhere('title',    'LIKE', $like)
-                      ->orWhere('abstract', 'LIKE', $like)
-                      ->orWhere('author',   'LIKE', $like)
-                      ->orWhere('program',  'LIKE', $like)
-                      ->orWhere('category', 'LIKE', $like);
-                }
-                $q->orWhereHas('keywords', function ($kq) use ($terms) {
-                    $kq->where(function ($inner) use ($terms) {
-                        foreach ($terms as $term) {
-                            $inner->orWhere('name', 'LIKE', "%{$term}%");
-                        }
-                    });
-                });
-            });
+        return mb_strlen($clean) >= 3 ? $clean : $msg;
+    }
 
-            return $query->orderByDesc('year')->limit(15)->get(['id','title','author','year','program','category','abstract']);
-        }
-
-        // No meaningful terms → return empty so fallback kicks in
-        return collect();
+    /**
+     * Build the final JSON response in the standard AcadeX API format.
+     */
+    private function buildResponse(array $data, string $intent): JsonResponse
+    {
+        return $this->successResponse([
+            'reply'               => $data['reply']               ?? '',
+            'suggested_capstones' => $data['suggested_capstones'] ?? [],
+            'intent'              => $intent,
+        ], 'Chatbot response generated.');
     }
 }

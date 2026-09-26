@@ -1103,7 +1103,7 @@ input[type="password"]::-ms-clear {
   border-radius: 50%;
   background: linear-gradient(135deg, #3d9e45, #5BBE63);
   border: none;
-  cursor: pointer;
+  cursor: grab;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1112,6 +1112,9 @@ input[type="password"]::-ms-clear {
               box-shadow 0.2s ease;
   animation: chatbot-fab-pulse 3s ease-in-out infinite;
   outline: none;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
 }
 
 .chatbot-fab:hover {
@@ -1121,6 +1124,7 @@ input[type="password"]::-ms-clear {
 }
 
 .chatbot-fab:active {
+  cursor: grabbing;
   transform: scale(0.95);
 }
 
@@ -1139,6 +1143,40 @@ input[type="password"]::-ms-clear {
   font-weight: 700;
   color: white;
   animation: chatbot-badge-pop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  pointer-events: none;
+}
+
+/* ── Show Button (when hidden) ──────────────────────────────── */
+.chatbot-show-btn {
+  position: fixed;
+  bottom: 1.75rem;
+  right: 1.75rem;
+  z-index: 9999;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #3d9e45, #5BBE63);
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--chat-fab-shadow);
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1),
+              box-shadow 0.2s ease,
+              opacity 0.3s ease;
+  outline: none;
+  opacity: 0.7;
+}
+
+.chatbot-show-btn:hover {
+  transform: scale(1.15);
+  box-shadow: var(--chat-fab-hover-shadow);
+  opacity: 1;
+}
+
+.chatbot-show-btn:active {
+  transform: scale(0.95);
 }
 
 /* ── Chat Panel ──────────────────────────────────────────────── */

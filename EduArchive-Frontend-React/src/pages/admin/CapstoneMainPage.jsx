@@ -112,7 +112,7 @@ export default function CapstoneMainPage() {
             setBookmarked(data.is_bookmarked ?? false);
 
             // Record view — only once per session per capstone
-            const viewKey = `eduarchive_viewed_${id}`;
+            const viewKey = `acadex_viewed_${id}`;
             if (!viewRecorded.current && !sessionStorage.getItem(viewKey)) {
                 viewRecorded.current = true;
                 try {
