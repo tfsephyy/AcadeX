@@ -327,6 +327,231 @@ class ChatbotResponseService
         return ['reply' => implode("\n", $lines), 'suggested_capstones' => []];
     }
 
+    // ── Definition / Glossary ─────────────────────────────────────────────────
+
+    /**
+     * Answer a definition/concept question from static knowledge.
+     * No DB needed — these are fixed explanations.
+     * 
+     * @param string $msg User message
+     */
+    public function formatDefinition(string $msg): array
+    {
+        $msg = strtolower($msg);
+
+        // Each entry has an array of trigger substrings — first match wins
+        $glossary = [
+            [
+                'triggers' => ['imrad'],
+                'answer'   => "📄 **IMRAD** stands for **Introduction, Methodology, Results, and Discussion**.\n\n" .
+                    "It is the standard structure for scientific and research papers:\n" .
+                    "- **Introduction** — background and objectives\n" .
+                    "- **Methodology** — how the study was conducted\n" .
+                    "- **Results** — findings/data collected\n" .
+                    "- **Discussion** — interpretation of results and conclusions\n\n" .
+                    "In EduArchive, capstones that have an uploaded IMRAD document are marked with ✅ IMRAD Available.",
+            ],
+            [
+                'triggers' => ['abstract'],
+                'answer'   => "📝 An **abstract** is a short summary (usually 150–300 words) of a research paper.\n\n" .
+                    "It briefly covers:\n- The problem being studied\n- The methods used\n- The key findings\n- The conclusion\n\n" .
+                    "In EduArchive, each capstone's abstract is displayed on its detail page and is also used by EduBot to answer context-specific questions.",
+            ],
+            [
+                'triggers' => ['capstone vs thesis', 'difference between a capstone', 'capstone and a thesis', 'capstone and thesis', 'capstone or thesis'],
+                'answer'   => "🎓 **Capstone vs Thesis:**\n\n" .
+                    "- A **capstone project** is a practical, applied project that demonstrates skills learned throughout a program. It often results in a working system or product.\n" .
+                    "- A **thesis** is a formal academic document based on original research, typically required for graduate degrees.\n\n" .
+                    "EduArchive stores **capstone projects** produced by undergraduate students.",
+            ],
+            [
+                'triggers' => ['publication status', 'publication'],
+                'answer'   => "📰 **Publication Status** indicates whether a capstone has been formally published or submitted to an academic conference or journal.\n\n" .
+                    "Possible values include:\n- **Published** — formally submitted to a publication\n- **Unpublished** — internal archive only\n\n" .
+                    "This is separate from whether the capstone is *visible* in EduArchive (controlled by `is_published`).",
+            ],
+            [
+                'triggers' => ['copyright'],
+                'answer'   => "©️ **Copyright Status** indicates the intellectual property status of a capstone.\n\n" .
+                    "Common values:\n- **Copyrighted** — the authors have claimed copyright\n- **None / Not specified** — no formal copyright claim\n\n" .
+                    "Copyrighted capstones may be visible to visitors even if they haven't been formally published in EduArchive.",
+            ],
+            [
+                'triggers' => ['archived vs published', 'archived and published', 'difference between archived', 'archived'],
+                'answer'   => "📦 **Archived vs Published:**\n\n" .
+                    "- **Published** (`is_published = true`) — the capstone is visible in the EduArchive library for all users.\n" .
+                    "- **Archived** (`is_archived = true`) — the capstone has been hidden/removed from public view but is still in the database.\n\n" .
+                    "An archived capstone will not appear in search results.",
+            ],
+            [
+                'triggers' => ['approval status', 'approval'],
+                'answer'   => "✅ **Approval Status** tracks where a capstone is in the review pipeline:\n\n" .
+                    "- **Pending** — awaiting faculty/admin review\n- **Approved** — accepted and published\n- **Rejected** — returned with a reason for revision\n\n" .
+                    "You can see the rejection reason in your uploaded capstones list.",
+            ],
+            [
+                'triggers' => ['pending'],
+                'answer'   => "⏳ **Pending** means your capstone submission is waiting for review.\n\n" .
+                    "The approval flow is:\n1. Student/Faculty uploads capstone → status = **Pending**\n2. Faculty reviews it → Approved or Rejected\n3. Admin gives final approval → Capstone becomes Published\n\n" .
+                    "You will receive a notification when the status changes.",
+            ],
+            [
+                'triggers' => ['role of an adviser', 'adviser', 'advisor'],
+                'answer'   => "👨‍🏫 An **adviser** (also called a thesis/capstone adviser) is a faculty member who supervises a student's capstone project.\n\n" .
+                    "The adviser:\n- Guides the research direction\n- Reviews and approves the methodology\n- Signs off on the final submission\n\n" .
+                    "In EduArchive, each capstone has an `adviser` field linking to the supervising faculty member.",
+            ],
+            [
+                'triggers' => ['keyword', 'what are keywords', 'why do they matter', 'why do keywords matter'],
+                'answer'   => "🏷️ **Keywords** are specific terms that describe the main topics of a capstone.\n\n" .
+                    "They matter because:\n- EduBot uses keywords to **find and recommend** relevant capstones\n- They make capstones **easier to discover** through search\n- They help identify **research trends** and popular topics in the archive\n\n" .
+                    "When uploading a capstone, always add accurate keywords to improve its discoverability.",
+            ],
+            [
+                'triggers' => ['format', 'accepted'],
+                'answer'   => "📁 EduArchive accepts the following file formats:\n\n" .
+                    "- **PDF** — required for the main capstone document\n- **PDF** — also accepted for the IMRAD document (optional)\n\n" .
+                    "Make sure your PDF is not password-protected before uploading.",
+            ],
+        ];
+
+        // Match against the first trigger substring found in the message
+        foreach ($glossary as $entry) {
+            foreach ($entry['triggers'] as $trigger) {
+                if (str_contains($msg, $trigger)) {
+                    return ['reply' => $entry['answer'], 'suggested_capstones' => []];
+                }
+            }
+        }
+
+        // Fallback for unrecognised definition request
+        return ['reply' =>
+            "I can explain any of the following terms:\n\n" .
+            "• IMRAD • Abstract • Capstone vs Thesis\n" .
+            "• Publication Status • Copyright Status\n" .
+            "• Archived vs Published • Pending\n" .
+            "• Adviser • Keywords • Approval Status • Accepted formats\n\n" .
+            "Just ask: *\"What is [term]?\"*",
+            'suggested_capstones' => []
+        ];
+    }
+
+    // ── Program / Archive Stats ────────────────────────────────────────────────
+
+    /**
+     * Format program-level and archive analytics results.
+     */
+    public function formatProgramStats(array $data, string $msg): array
+    {
+        if (empty($data)) {
+            return ['reply' => "I couldn't identify a specific statistic for that question. Try rephrasing, for example: *\"Which program has the most capstone submissions?\"*", 'suggested_capstones' => []];
+        }
+
+        $lines = ["📊 **EduArchive Archive Analytics**\n*Live from the database*\n"];
+
+        if (!empty($data['year_counts'])) {
+            $lines[] = "**📅 Top Years by Capstone Submissions:**";
+            foreach ($data['year_counts'] as $i => $row) {
+                $lines[] = ($i + 1) . ". **{$row['year']}** — {$row['total']} capstone(s)";
+            }
+            $lines[] = '';
+        }
+
+        if (!empty($data['program_counts'])) {
+            $lines[] = "**🎓 Programs by Capstone Count:**";
+            foreach ($data['program_counts'] as $i => $row) {
+                $lines[] = ($i + 1) . ". **{$row['program']}** — {$row['total']} capstone(s)";
+            }
+            $lines[] = '';
+        }
+
+        if (!empty($data['top_keywords'])) {
+            $lines[] = "**🔑 Most Frequently Used Keywords:**";
+            foreach ($data['top_keywords'] as $i => $row) {
+                $lines[] = ($i + 1) . ". **{$row['name']}** — used {$row['total']} time(s)";
+            }
+            $lines[] = '';
+        }
+
+        if (!empty($data['top_authors'])) {
+            $lines[] = "**✍️ Most Prolific Authors:**";
+            foreach ($data['top_authors'] as $i => $row) {
+                $lines[] = ($i + 1) . ". **{$row['author']}** — {$row['total']} capstone(s)";
+            }
+            $lines[] = '';
+        }
+
+        if (!empty($data['top_uploaders'])) {
+            $lines[] = "**📤 Top Uploaders:**";
+            foreach ($data['top_uploaders'] as $i => $row) {
+                $lines[] = ($i + 1) . ". **{$row['name']}** — {$row['total']} capstone(s) uploaded";
+            }
+            $lines[] = '';
+        }
+
+        if (isset($data['unviewed_count'])) {
+            $lines[] = "**👻 Capstones Never Viewed Since Publishing:**";
+            $lines[] = "• Total: **{$data['unviewed_count']}** capstone(s) with 0 views";
+            if (!empty($data['unviewed_examples'])) {
+                foreach ($data['unviewed_examples'] as $c) {
+                    $lines[] = "  – {$c['title']} ({$c['year']}, {$c['program']})";
+                }
+            }
+            $lines[] = '';
+        }
+
+        if (isset($data['no_pdf_count'])) {
+            $lines[] = "**📭 Capstones with No PDF Attached:** **{$data['no_pdf_count']}**";
+        }
+
+        if (isset($data['no_keywords_count'])) {
+            $lines[] = "**🏷️ Published Capstones with No Keywords Tagged:** **{$data['no_keywords_count']}**";
+        }
+
+        if (isset($data['never_logged_in'])) {
+            $lines[] = "**🔐 Users Who Have Never Logged In:** **{$data['never_logged_in']}**";
+        }
+
+        if (!empty($data['active_users'])) {
+            $lines[] = "**🔥 Most Active Users This Month:**";
+            foreach ($data['active_users'] as $i => $u) {
+                $lines[] = ($i + 1) . ". **{$u['name']}** — last active: {$u['last_active_at']}";
+            }
+            $lines[] = '';
+        }
+
+        if (isset($data['archived_count'])) {
+            $lines[] = "**📊 Archived vs Published:**";
+            $lines[] = "• Published (visible): **{$data['published_count']}**";
+            $lines[] = "• Archived (hidden): **{$data['archived_count']}**";
+            $lines[] = '';
+        }
+
+        if (!empty($data['duplicate_titles'])) {
+            $lines[] = "**🔁 Capstone Titles Appearing More Than Once:**";
+            foreach ($data['duplicate_titles'] as $i => $row) {
+                $lines[] = ($i + 1) . ". \"{$row['title']}\" — appears **{$row['total']}** times";
+            }
+            $lines[] = '';
+        }
+
+        if (!empty($data['overdone_keywords'])) {
+            $lines[] = "**⚠️ Overused Keywords (possible overdone topics):**";
+            foreach ($data['overdone_keywords'] as $i => $row) {
+                $lines[] = ($i + 1) . ". **{$row['name']}** — used {$row['total']} time(s)";
+            }
+            $lines[] = '';
+        }
+
+        if (isset($data['total_capstones'])) {
+            $lines[] = "**📚 Archive Size:**";
+            $lines[] = "• Total capstones in archive: **{$data['total_capstones']}**";
+            $lines[] = "• Published and visible: **{$data['published_capstones']}**";
+        }
+
+        return ['reply' => implode("\n", $lines), 'suggested_capstones' => []];
+    }
+
     // ── Standard / fallback messages ──────────────────────────────────────────
 
     public function noResults(string $query = ''): string
@@ -352,24 +577,34 @@ class ChatbotResponseService
         ];
     }
 
-    public function unknownRequest(string $role = 'visitor'): array
+    public function unknownRequest(string $role = 'visitor', array $hints = []): array
     {
+        // Use real DB values so every example query is guaranteed to return results
+        $cat1     = $hints['categories'][0] ?? 'Web-Based System';
+        $cat2     = $hints['categories'][1] ?? 'Mobile Application';
+        $kw1      = $hints['keywords'][0]   ?? 'machine learning';
+        $kw2      = $hints['keywords'][1]   ?? 'healthcare';
+        $kw3      = $hints['keywords'][2]   ?? 'IoT';
+        $year     = $hints['recent_year']   ?? now()->year;
+        $prevYear = $year - 1;
+        $program  = $hints['top_program']   ?? 'BSIT';
+
         if ($role === 'admin') {
             return [
                 'reply' =>
                     "I can help you with various tasks as an administrator:\n\n" .
                     "**📊 Statistics & Analytics:**\n" .
-                    "• *\"How many students are registered?\"*\n" .
+                    "• *\"How many users are registered by role?\"*\n" .
                     "• *\"Show capstone statistics\"*\n" .
-                    "• *\"Uploads this year\"*\n\n" .
+                    "• *\"How many capstones were uploaded this year?\"*\n\n" .
                     "**📈 Trends & Logs:**\n" .
-                    "• *\"Show upload trends for the last 6 years\"*\n" .
-                    "• *\"Recent login activity\"*\n" .
-                    "• *\"Who downloaded the most capstones?\"*\n\n" .
+                    "• *\"Show the upload trend over the last 5 years\"*\n" .
+                    "• *\"Show recent login activity\"*\n" .
+                    "• *\"Who has uploaded the most capstones overall?\"*\n\n" .
                     "**📚 Capstone Search:**\n" .
-                    "• *\"Recommend healthcare capstones\"*\n" .
-                    "• *\"Find Laravel projects from 2024\"*\n" .
-                    "• *\"Most viewed capstones\"*",
+                    "• *\"Find capstones about {$kw1}\"*\n" .
+                    "• *\"Show {$program} capstones from {$year}\"*\n" .
+                    "• *\"What are the top 3 most viewed capstones?\"*",
                 'suggested_capstones' => [],
             ];
         }
@@ -377,14 +612,14 @@ class ChatbotResponseService
         if (in_array($role, ['faculty', 'student'])) {
             return [
                 'reply' =>
-                    "I can help you search and explore capstone projects in the AcadeX repository.\n\n" .
+                    "I can help you search and explore capstone projects in EduArchive.\n\n" .
                     "**Try asking:**\n" .
-                    "• *\"Recommend healthcare capstones\"*\n" .
-                    "• *\"Find projects about agriculture\"*\n" .
-                    "• *\"Show BSIT capstones from 2025\"*\n" .
-                    "• *\"Find IoT projects\"*\n" .
-                    "• *\"What categories are available?\"*\n" .
-                    "• *\"Most downloaded capstones\"*",
+                    "• *\"Find capstones about {$kw1}\"*\n" .
+                    "• *\"Show {$program} capstones from {$year}\"*\n" .
+                    "• *\"Find capstones in the {$cat1} category\"*\n" .
+                    "• *\"What capstones are about {$kw2}?\"*\n" .
+                    "• *\"What are the most frequently used keywords?\"*\n" .
+                    "• *\"What are the top 5 most downloaded capstones?\"*",
                 'suggested_capstones' => [],
             ];
         }
@@ -394,10 +629,10 @@ class ChatbotResponseService
             'reply' =>
                 "I can help you explore publicly available capstone projects.\n\n" .
                 "**Try asking:**\n" .
-                "• *\"Recommend healthcare capstones\"*\n" .
-                "• *\"Find agriculture projects\"*\n" .
-                "• *\"Show tourism capstones\"*\n" .
-                "• *\"What categories are available?\"*",
+                "• *\"Find capstones about {$kw1}\"*\n" .
+                "• *\"Show capstones in the {$cat1} category\"*\n" .
+                "• *\"Find {$kw2} capstones from {$prevYear}\"*\n" .
+                "• *\"What are the top 3 most viewed capstones?\"*",
             'suggested_capstones' => [],
         ];
     }

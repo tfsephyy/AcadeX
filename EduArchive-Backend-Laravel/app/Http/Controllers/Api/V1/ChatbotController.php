@@ -121,6 +121,8 @@ class ChatbotController extends Controller
             ChatbotIntentService::INTENT_ADMIN_LOGS     => $this->handleAdminLogs($msg),
             ChatbotIntentService::INTENT_POPULAR        => $this->handlePopular($role, $filters),
             ChatbotIntentService::INTENT_CATEGORY_INFO  => $this->handleCategories($role),
+            ChatbotIntentService::INTENT_DEFINITION     => $this->handleDefinition($msg, $role),
+            ChatbotIntentService::INTENT_PROGRAM_STATS  => $this->handleProgramStats($msg, $role),
             ChatbotIntentService::INTENT_CAPSTONE_DETAILS => $openCapstone
                 ? $this->responseSvc->formatCapstoneDetails($openCapstone)
                 : $this->handleSearch($role, $msg, $filters),
@@ -154,6 +156,19 @@ class ChatbotController extends Controller
         return ['reply' => $this->responseSvc->noResults($msg), 'suggested_capstones' => []];
     }
 
+    /** Glossary / definition questions — no DB needed */
+    private function handleDefinition(string $msg, string $role): array
+    {
+        return $this->responseSvc->formatDefinition($msg, $role);
+    }
+
+    /** Program and archive-level analytics — available to all authenticated roles */
+    private function handleProgramStats(string $msg, string $role): array
+    {
+        $data = $this->analyticsSvc->programStats($msg, $role);
+        return $this->responseSvc->formatProgramStats($data, $msg);
+    }
+
     /** Popular capstones by view/download/bookmark count */
     private function handlePopular(string $role, array $filters): array
     {
@@ -169,10 +184,31 @@ class ChatbotController extends Controller
         return $this->responseSvc->formatCategories($cats);
     }
 
-    /** Unknown/general question - provide helpful guidance */
+    /** Unknown/general question — build hints from real DB data so examples always work */
     private function handleUnknown(string $role): array
     {
-        return $this->responseSvc->unknownRequest($role);
+        // Pull a few real categories and keywords from the DB so examples are always valid
+        $hints = [];
+        try {
+            $hints['categories'] = $this->querySvc->categories($role)->keys()->take(3)->values()->toArray();
+        } catch (\Throwable $e) { $hints['categories'] = []; }
+        try {
+            $hints['keywords'] = \Illuminate\Support\Facades\DB::table('keywords')
+                ->join('capstone_keyword', 'keywords.id', '=', 'capstone_keyword.keyword_id')
+                ->selectRaw('keywords.name, COUNT(*) as total')
+                ->groupBy('keywords.name')->orderByDesc('total')
+                ->limit(3)->pluck('name')->toArray();
+        } catch (\Throwable $e) { $hints['keywords'] = []; }
+        try {
+            $hints['recent_year'] = \App\Models\Capstone::max('year') ?? now()->year;
+        } catch (\Throwable $e) { $hints['recent_year'] = now()->year; }
+        try {
+            $hints['top_program'] = \App\Models\Capstone::selectRaw('program, COUNT(*) as total')
+                ->whereNotNull('program')->groupBy('program')->orderByDesc('total')
+                ->value('program') ?? 'BSIT';
+        } catch (\Throwable $e) { $hints['top_program'] = 'BSIT'; }
+
+        return $this->responseSvc->unknownRequest($role, $hints);
     }
 
     /** Admin repository statistics */

@@ -2,15 +2,16 @@
 
 namespace App\Console\Commands;
 
+use App\Jobs\ExtractPdfTextJob;
 use App\Models\Capstone;
-use App\Services\PdfTextService;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Storage;
 
 class BackfillPdfText extends Command
 {
     protected $signature   = 'capstones:backfill-pdf-text
-                                {--force : Re-extract even if pdf_text already exists}';
+                                {--force : Re-extract even if pdf_text already exists}
+                                {--sync : Run synchronously instead of queuing}';
 
     protected $description = 'Extract PDF text from all uploaded capstones and store it in the database for chatbot use.';
 
@@ -30,48 +31,47 @@ class BackfillPdfText extends Command
             return self::SUCCESS;
         }
 
-        $this->info("Indexing PDF text for {$total} capstone(s)...");
-        $bar     = $this->output->createProgressBar($total);
-        $service = new PdfTextService();
-        $success = 0;
-        $failed  = 0;
+        $useQueue = !$this->option('sync');
 
-        $bar->start();
-
-        foreach ($capstones as $capstone) {
-            try {
-                if (!Storage::disk('local')->exists($capstone->pdf_path)) {
-                    $this->newLine();
-                    $this->warn("  Skipped [{$capstone->id}] {$capstone->title} — file not found on disk.");
-                    $failed++;
-                    $bar->advance();
-                    continue;
-                }
-
-                $text = $service->extractFromEncryptedPath($capstone->pdf_path);
-
-                if (empty($text)) {
-                    $this->newLine();
-                    $this->warn("  Skipped [{$capstone->id}] {$capstone->title} — no text extracted.");
-                    $failed++;
-                    $bar->advance();
-                    continue;
-                }
-
-                $capstone->update(['pdf_text' => $text]);
-                $success++;
-            } catch (\Throwable $e) {
-                $this->newLine();
-                $this->error("  Error [{$capstone->id}] {$capstone->title}: " . $e->getMessage());
-                $failed++;
-            }
-
-            $bar->advance();
+        if ($useQueue) {
+            $this->info("Queueing {$total} PDF extraction job(s)...");
+            $this->info("Run 'php artisan queue:work' to process them.");
+        } else {
+            $this->info("Processing {$total} capstone(s) synchronously...");
         }
 
-        $bar->finish();
-        $this->newLine(2);
-        $this->info("Done. ✅ Indexed: {$success}  ❌ Failed/Skipped: {$failed}");
+        $queued  = 0;
+        $skipped = 0;
+
+        foreach ($capstones as $capstone) {
+            if (!Storage::disk('local')->exists($capstone->pdf_path)) {
+                $this->warn("  Skipped [{$capstone->id}] {$capstone->title} — file not found.");
+                $skipped++;
+                continue;
+            }
+
+            if ($useQueue) {
+                ExtractPdfTextJob::dispatch($capstone->id);
+                $queued++;
+            } else {
+                // Synchronous fallback for testing
+                $this->info("  Processing [{$capstone->id}] {$capstone->title}...");
+                try {
+                    ExtractPdfTextJob::dispatchSync($capstone->id);
+                    $queued++;
+                } catch (\Throwable $e) {
+                    $this->error("  Error: " . $e->getMessage());
+                    $skipped++;
+                }
+            }
+        }
+
+        $this->newLine();
+        $this->info("Done. ✅ Queued/Processed: {$queued}  ⏭️  Skipped: {$skipped}");
+
+        if ($useQueue) {
+            $this->warn("Remember to run: php artisan queue:work");
+        }
 
         return self::SUCCESS;
     }

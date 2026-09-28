@@ -172,4 +172,117 @@ class ChatbotAnalyticsService
             'this_year'   => (int) (clone $base)->whereYear('created_at', now()->year)->count(),
         ];
     }
+
+    // ── Program / Archive Stats (all roles) ───────────────────────────────────
+
+    /**
+     * Flexible program-level and archive-level analytics.
+     * Detects sub-context from the message and returns relevant data.
+     */
+    public function programStats(string $msg, string $role): array
+    {
+        $msg = strtolower($msg);
+        $data = [];
+
+        // Which year had the most submissions?
+        if (str_contains($msg, 'which year') || str_contains($msg, 'year had the most')) {
+            $data['year_counts'] = Capstone::selectRaw('year, COUNT(*) as total')
+                ->groupBy('year')->orderByDesc('total')->limit(5)->get()->toArray();
+        }
+
+        // Which program has the most submissions?
+        if (str_contains($msg, 'which program') || str_contains($msg, 'most capstone submission')) {
+            $data['program_counts'] = Capstone::selectRaw('program, COUNT(*) as total')
+                ->whereNotNull('program')->groupBy('program')->orderByDesc('total')->limit(8)->get()->toArray();
+        }
+
+        // Fewest capstones per year by program
+        if (str_contains($msg, 'fewest')) {
+            $data['program_counts'] = Capstone::selectRaw('program, COUNT(*) as total')
+                ->whereNotNull('program')->groupBy('program')->orderBy('total')->limit(8)->get()->toArray();
+        }
+
+        // Most frequently used keywords
+        if (str_contains($msg, 'keyword')) {
+            $data['top_keywords'] = DB::table('keywords')
+                ->join('capstone_keyword', 'keywords.id', '=', 'capstone_keyword.keyword_id')
+                ->selectRaw('keywords.name, COUNT(*) as total')
+                ->groupBy('keywords.name')->orderByDesc('total')->limit(10)->get()->toArray();
+        }
+
+        // Most prolific authors
+        if (str_contains($msg, 'prolific') || str_contains($msg, 'most capstone author')) {
+            $data['top_authors'] = Capstone::selectRaw('author, COUNT(*) as total')
+                ->whereNotNull('author')->groupBy('author')->orderByDesc('total')->limit(8)->get()->toArray();
+        }
+
+        // Who uploaded the most
+        if (str_contains($msg, 'uploaded the most') || str_contains($msg, 'upload the most')) {
+            $data['top_uploaders'] = DB::table('capstones')
+                ->join('users', 'capstones.uploaded_by', '=', 'users.id')
+                ->selectRaw('users.name, COUNT(*) as total')
+                ->groupBy('users.id', 'users.name')->orderByDesc('total')->limit(8)->get()->toArray();
+        }
+
+        // Capstones with no views since publishing
+        if (str_contains($msg, 'never been viewed') || str_contains($msg, 'never viewed')) {
+            $data['unviewed_count'] = Capstone::where('is_published', true)->where('view_count', 0)->count();
+            $data['unviewed_examples'] = Capstone::where('is_published', true)->where('view_count', 0)
+                ->limit(5)->get(['id', 'title', 'author', 'year', 'program'])->toArray();
+        }
+
+        // Capstones with no PDF
+        if (str_contains($msg, 'no pdf')) {
+            $data['no_pdf_count'] = Capstone::whereNull('pdf_path')->count();
+        }
+
+        // Capstones with no keywords
+        if (str_contains($msg, 'no keyword')) {
+            $data['no_keywords_count'] = Capstone::doesntHave('keywords')->where('is_published', true)->count();
+        }
+
+        // Users who never logged in
+        if (str_contains($msg, 'never logged in')) {
+            $data['never_logged_in'] = User::whereNull('last_active_at')->count();
+        }
+
+        // Most active users this month
+        if (str_contains($msg, 'most active')) {
+            $data['active_users'] = User::whereMonth('last_active_at', now()->month)
+                ->whereYear('last_active_at', now()->year)
+                ->orderByDesc('last_active_at')->limit(8)
+                ->get(['id', 'name', 'last_active_at'])->toArray();
+        }
+
+        // Archived vs published
+        if (str_contains($msg, 'archived vs') || str_contains($msg, 'archived and published')) {
+            $data['archived_count']  = Capstone::where('is_archived', true)->count();
+            $data['published_count'] = Capstone::where('is_published', true)->where('is_archived', false)->count();
+        }
+
+        // Duplicate / repeated titles
+        if (str_contains($msg, 'appear more than once') || str_contains($msg, 'duplicate')) {
+            $data['duplicate_titles'] = DB::table('capstones')
+                ->selectRaw('title, COUNT(*) as total')
+                ->groupBy('title')->havingRaw('COUNT(*) > 1')
+                ->orderByDesc('total')->limit(10)->get()->toArray();
+        }
+
+        // Overdone topics in program
+        if (str_contains($msg, 'overdone')) {
+            $data['overdone_keywords'] = DB::table('keywords')
+                ->join('capstone_keyword', 'keywords.id', '=', 'capstone_keyword.keyword_id')
+                ->selectRaw('keywords.name, COUNT(*) as total')
+                ->groupBy('keywords.name')->havingRaw('COUNT(*) > 3')
+                ->orderByDesc('total')->limit(8)->get()->toArray();
+        }
+
+        // Total capstones in archive
+        if (str_contains($msg, 'how many capstones') || str_contains($msg, 'total') || str_contains($msg, 'in total')) {
+            $data['total_capstones'] = Capstone::count();
+            $data['published_capstones'] = Capstone::where('is_published', true)->count();
+        }
+
+        return $data;
+    }
 }

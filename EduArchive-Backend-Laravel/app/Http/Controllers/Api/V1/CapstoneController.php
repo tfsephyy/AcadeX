@@ -32,14 +32,23 @@ class CapstoneController extends Controller
     public function index(Request $request): JsonResponse
     {
         $query = Capstone::with(['keywords', 'uploader:id,name', 'approver:id,name', 'adviser:id,name']);
+        $user = $request->user();
 
         // Faculty and students only see their own uploaded capstones
-        if ($request->user() && ($request->user()->hasRole('faculty') || $request->user()->hasRole('student'))) {
-            $query->where('uploaded_by', $request->user()->id);
+        if ($user && ($user->hasRole('faculty') || $user->hasRole('student'))) {
+            $query->where('uploaded_by', $user->id);
         }
 
         // Exclude archived capstones by default
         $query->where('is_archived', false);
+
+        // Hide pending capstones from library views:
+        // - Admin sees the library (all approved/rejected non-archived), pending ones go to the Approval page only
+        // - Faculty sees their own uploads — faculty uploads are auto-approved, but exclude any pending for safety
+        // - Students see their own uploads INCLUDING pending (so they can track submission status)
+        if ($user && !$user->hasRole('student')) {
+            $query->where('approval_status', '!=', 'pending');
+        }
 
         // Filter by status (if provided, otherwise show all)
         if ($request->has('status') && $request->status) {
@@ -211,6 +220,10 @@ class CapstoneController extends Controller
 
     /**
      * Upload and extract PDF data (encrypted at rest).
+     *
+     * Accepts an optional  skip_extraction=1  flag.
+     * When set, the file is stored immediately and empty extracted fields are
+     * returned — the user fills them manually in Step 2 (ReviewExtractedDataPage).
      */
     public function upload(Request $request): JsonResponse
     {
@@ -222,11 +235,25 @@ class CapstoneController extends Controller
             return $this->errorResponse('Validation failed.', 422, $validator->errors());
         }
 
-        $file = $request->file('pdf');
+        $file           = $request->file('pdf');
+        $skipExtraction = $request->boolean('skip_extraction', false);
 
-        // Extract text BEFORE encrypting (extractor needs the real file)
-        $extractor = new PdfExtractorService();
-        $extracted = $extractor->extract($file);
+        // Only run the expensive OCR/parsing step when not skipped
+        if ($skipExtraction) {
+            $extracted = [
+                'title'          => null,
+                'year'           => null,
+                'author'         => null,
+                'author_details' => [],
+                'program'        => null,
+                'abstract'       => null,
+                'keywords'       => [],
+            ];
+        } else {
+            // Extract text BEFORE encrypting (extractor needs the real file)
+            $extractor = new PdfExtractorService();
+            $extracted = $extractor->extract($file);
+        }
 
         // Encrypt and store
         $encryptor = new PdfEncryptorService();
@@ -238,6 +265,7 @@ class CapstoneController extends Controller
             'extracted'         => $extracted,
         ], 'PDF uploaded and data extracted.');
     }
+
 
     /**
      * Upload a resource file (encrypted at rest).
@@ -483,9 +511,10 @@ class CapstoneController extends Controller
     public function getPendingCapstones(Request $request): JsonResponse
     {
         $query = Capstone::with([
-            'keywords', 
-            'uploader:id,name,email,role_id', 
-            'uploader.studentProfile:user_id,program,year_level',
+            'keywords',
+            'uploader:id,name,email,role_id',
+            'uploader.role:id,name',
+            'uploader.studentProfile:user_id,program,year',
             'adviser:id,name'
         ])->where('approval_status', 'pending');
 
@@ -547,11 +576,11 @@ class CapstoneController extends Controller
                     'name' => $uploader->name ?? 'Unknown',
                     'email' => $uploader->email ?? null,
                     'program' => $isStudent && $uploader->studentProfile ? $uploader->studentProfile->program : 'N/A',
-                    'year' => $isStudent && $uploader->studentProfile ? $uploader->studentProfile->year_level : 'N/A',
+                    'year' => $isStudent && $uploader->studentProfile ? $uploader->studentProfile->year : 'N/A',
                 ],
                 'adviser' => [
-                    'id' => $capstone->adviser->id ?? null,
-                    'name' => $capstone->adviser->name ?? 'Not Assigned',
+                    'id' => $capstone->adviser?->id,
+                    'name' => $capstone->adviser?->name ?? 'Not Assigned',
                 ],
             ];
         });
@@ -617,18 +646,13 @@ class CapstoneController extends Controller
 
         $oldStatus = $capstone->status;
 
-        $request->validate([
-            'reason' => 'nullable|string|max:1000',
-        ]);
-
         $capstone->update([
-            'status'           => 'rejected',
-            'approval_status'  => 'rejected',
-            'is_published'     => false,
-            'is_archived'      => false, // Keep visible to student so they can see the rejection
-            'rejection_reason' => $request->input('reason'),
-            'approved_by'      => $request->user()->id,
-            'approved_at'      => now(),
+            'status'          => 'rejected',
+            'approval_status' => 'rejected',
+            'is_published'    => false,
+            'is_archived'     => true,  // Auto-archive rejected capstones
+            'approved_by'     => $request->user()->id,
+            'approved_at'     => now(),
         ]);
 
         AuditLog::log(
@@ -637,18 +661,10 @@ class CapstoneController extends Controller
             Capstone::class,
             $capstone->id,
             ['status' => $oldStatus],
-            ['status' => 'rejected', 'reason' => $request->input('reason')]
+            ['status' => 'rejected']
         );
 
-        // TODO: Send notification to student
-        // Notification::create([
-        //     'user_id' => $capstone->uploaded_by,
-        //     'title' => 'Capstone Rejected',
-        //     'message' => "Your capstone '{$capstone->title}' has been rejected. Reason: " . ($request->input('reason') ?: 'No reason provided'),
-        //     'type' => 'rejection',
-        // ]);
-
-        return $this->successResponse($capstone, 'Capstone rejected.');
+        return $this->successResponse($capstone, 'Capstone rejected and archived.');
     }
 
     /**
@@ -656,6 +672,11 @@ class CapstoneController extends Controller
      */
     public function archive(Request $request, Capstone $capstone): JsonResponse
     {
+        // Students can only archive their own capstones
+        if ($request->user()->hasRole('student') && $capstone->uploaded_by !== $request->user()->id) {
+            return $this->errorResponse('You can only archive your own capstones.', 403);
+        }
+
         if ($capstone->is_archived) {
             return $this->errorResponse('Capstone is already archived.', 400);
         }
@@ -709,6 +730,11 @@ class CapstoneController extends Controller
      */
     public function unarchive(Request $request, Capstone $capstone): JsonResponse
     {
+        // Students can only restore their own capstones
+        if ($request->user()->hasRole('student') && $capstone->uploaded_by !== $request->user()->id) {
+            return $this->errorResponse('You can only restore your own capstones.', 403);
+        }
+
         if (!$capstone->is_archived) {
             return $this->errorResponse('Capstone is not archived.', 400);
         }
@@ -800,6 +826,11 @@ class CapstoneController extends Controller
      */
     public function destroy(Request $request, Capstone $capstone): JsonResponse
     {
+        // Students can only delete their own capstones
+        if ($request->user()->hasRole('student') && $capstone->uploaded_by !== $request->user()->id) {
+            return $this->errorResponse('You can only delete your own capstones.', 403);
+        }
+
         // Delete PDF file
         if ($capstone->pdf_path && Storage::disk('local')->exists($capstone->pdf_path)) {
             Storage::disk('local')->delete($capstone->pdf_path);
@@ -1060,6 +1091,11 @@ class CapstoneController extends Controller
      */
     public function update(Request $request, Capstone $capstone): JsonResponse
     {
+        // Students can only edit their own capstones
+        if ($request->user()->hasRole('student') && $capstone->uploaded_by !== $request->user()->id) {
+            return $this->errorResponse('You can only edit your own capstones.', 403);
+        }
+
         $validator = Validator::make($request->all(), [
             'title'    => 'sometimes|string|max:500',
             'year'     => 'nullable|integer|min:2000|max:2099',

@@ -73,7 +73,9 @@ class ChatbotPermissionService
             return $role === self::ROLE_ADMIN;
         }
 
-        return true; // all other intents allowed for every role
+        // Definition questions and program stats are allowed for ALL authenticated roles
+        // (INTENT_DEFINITION, INTENT_PROGRAM_STATS, INTENT_POPULAR, INTENT_SEARCH, etc.)
+        return true; // all other intents allowed for every authenticated role
     }
 
     /**

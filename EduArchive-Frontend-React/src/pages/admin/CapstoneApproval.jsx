@@ -114,13 +114,12 @@ export default function CapstoneApproval() {
         setConfirm({
             open: true,
             title: 'Reject Capstone',
-            message: `Are you sure you want to reject "${capstone.title}"? The student will be notified.`,
+            message: `Are you sure you want to reject "${capstone.title}"? It will be moved to the archive.`,
             variant: 'danger',
             action: async () => {
                 try {
-                    const reason = prompt('Rejection reason (optional):');
-                    await rejectCapstone(capstone.id, { reason });
-                    notify.success('Capstone rejected.');
+                    await rejectCapstone(capstone.id);
+                    notify.success('Capstone rejected and archived.');
                     fetchPendingCapstones();
                 } catch (err) {
                     notify.error(err.response?.data?.message || 'Failed to reject capstone.');

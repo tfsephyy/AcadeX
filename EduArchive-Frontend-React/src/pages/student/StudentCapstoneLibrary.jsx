@@ -4,10 +4,11 @@ import {
     HiOutlineFilter, HiOutlineDocumentText, HiOutlineEye, HiOutlineTrash,
     HiOutlineSearch, HiArrowLeft, HiOutlineViewGrid, HiOutlineViewList,
     HiOutlineUser, HiOutlineTag, HiOutlineCalendar, HiOutlineAcademicCap,
-    HiOutlineUpload,
+    HiOutlineUpload, HiOutlinePencil,
 } from 'react-icons/hi';
 import {
     getStudentCapstones, deleteStudentCapstone, getArchivedStudentCapstones,
+    updateStudentCapstone, archiveStudentCapstone, unarchiveStudentCapstone,
     getPublishedYears, getPublishedPrograms, getPublishedCategories,
 } from '../../api/admin';
 import { useNotification } from '../../components/Notification';
@@ -15,7 +16,8 @@ import Loading from '../../components/Loading';
 import EmptyState from '../../components/EmptyState';
 import ConfirmDialog from '../../components/ConfirmDialog';
 import StudentUploadCapstoneModal from '../../components/student/StudentUploadCapstoneModal';
-import { HiOutlineArchiveBoxArrowDown } from 'react-icons/hi2';
+import EditCapstoneModal from '../../components/admin/EditCapstoneModal';
+import { HiOutlineArchiveBoxArrowDown, HiOutlineArchiveBoxXMark } from 'react-icons/hi2';
 
 const STATUS_MAP = {
     pending:  { bg: 'bg-amber-100',  text: 'text-amber-700',  border: 'border-amber-300',  dot: 'bg-amber-500',  label: 'Pending Review' },
@@ -55,6 +57,8 @@ export default function StudentCapstoneLibrary() {
     const [page, setPage] = useState(1);
     const [lastPage, setLastPage] = useState(1);
     const [confirm, setConfirm] = useState({ open: false, title: '', message: '', action: null, variant: 'danger' });
+    const [selectedCapstone, setSelectedCapstone] = useState(null);
+    const [showEditModal, setShowEditModal] = useState(false);
     const searchTimer = useRef(null);
 
     useEffect(() => {
@@ -109,6 +113,32 @@ export default function StudentCapstoneLibrary() {
         },
     });
 
+    const handleArchive = (cap) => setConfirm({
+        open: true,
+        title: 'Archive Capstone',
+        message: `Archive "${cap.title}"? You can restore it later from the Archive tab.`,
+        variant: 'warning',
+        action: async () => {
+            try { await archiveStudentCapstone(cap.id); notify.success('Capstone archived.'); fetchCapstones(); }
+            catch { notify.error('Failed to archive capstone.'); }
+            setConfirm(p => ({ ...p, open: false }));
+        },
+    });
+
+    const handleUnarchive = (cap) => setConfirm({
+        open: true,
+        title: 'Restore Capstone',
+        message: `Restore "${cap.title}" to active capstones?`,
+        variant: 'info',
+        action: async () => {
+            try { await unarchiveStudentCapstone(cap.id); notify.success('Capstone restored.'); fetchCapstones(); }
+            catch { notify.error('Failed to restore capstone.'); }
+            setConfirm(p => ({ ...p, open: false }));
+        },
+    });
+
+    const handleEdit = (cap) => { setSelectedCapstone(cap); setShowEditModal(true); };
+
     const setFilter = (k, v) => { setFilters(p => ({ ...p, [k]: v })); setPage(1); };
 
     // ── Action Buttons Component ─────────────────────────────────────────────────
@@ -117,8 +147,18 @@ export default function StudentCapstoneLibrary() {
         return (
             <>
                 <button onClick={(e) => { e?.stopPropagation(); navigate(`/student/capstones/${cap.id}`); }} title="View" className={`${p} text-blue-600 hover:bg-blue-50 rounded-lg transition-colors`}><HiOutlineEye className="w-4 h-4" /></button>
-                {viewing === 'archived' && (
-                    <button onClick={(e) => { e?.stopPropagation(); handleDelete(cap); }} title="Delete permanently" className={`${p} text-red-600 hover:bg-red-50 rounded-lg transition-colors`}><HiOutlineTrash className="w-4 h-4" /></button>
+                {viewing === 'active' ? (
+                    <>
+                        {cap.approval_status !== 'pending' && (
+                            <button onClick={(e) => { e?.stopPropagation(); handleEdit(cap); }} title="Edit" className={`${p} text-amber-600 hover:bg-amber-50 rounded-lg transition-colors`}><HiOutlinePencil className="w-4 h-4" /></button>
+                        )}
+                        <button onClick={(e) => { e?.stopPropagation(); handleArchive(cap); }} title="Archive" className={`${p} text-orange-600 hover:bg-orange-50 rounded-lg transition-colors`}><HiOutlineArchiveBoxArrowDown className="w-4 h-4" /></button>
+                    </>
+                ) : (
+                    <>
+                        <button onClick={(e) => { e?.stopPropagation(); handleUnarchive(cap); }} title="Restore" className={`${p} text-green-600 hover:bg-green-50 rounded-lg transition-colors`}><HiOutlineArchiveBoxXMark className="w-4 h-4" /></button>
+                        <button onClick={(e) => { e?.stopPropagation(); handleDelete(cap); }} title="Delete permanently" className={`${p} text-red-600 hover:bg-red-50 rounded-lg transition-colors`}><HiOutlineTrash className="w-4 h-4" /></button>
+                    </>
                 )}
             </>
         );
@@ -393,6 +433,16 @@ export default function StudentCapstoneLibrary() {
             <ConfirmDialog open={confirm.open} title={confirm.title} message={confirm.message}
                 variant={confirm.variant} onConfirm={confirm.action}
                 onCancel={() => setConfirm(p => ({ ...p, open: false }))} />
+
+            {/* Edit Modal */}
+            {showEditModal && selectedCapstone && (
+                <EditCapstoneModal
+                    capstone={selectedCapstone}
+                    onClose={() => { setShowEditModal(false); setSelectedCapstone(null); }}
+                    onSuccess={() => { setShowEditModal(false); setSelectedCapstone(null); fetchCapstones(); }}
+                    updateFn={updateStudentCapstone}
+                />
+            )}
 
             {/* Upload Modal */}
             <StudentUploadCapstoneModal

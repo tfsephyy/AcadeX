@@ -160,7 +160,10 @@ Route::prefix('v1')->group(function () {
             Route::post('/capstones/upload-resource',        [CapstoneController::class, 'uploadResource']);
             Route::post('/capstones/upload-imrad',           [CapstoneController::class, 'uploadImrad']);
             Route::get('/capstones/archived',                [CapstoneController::class, 'archived']);
+            Route::put('/capstones/{capstone}',              [CapstoneController::class, 'update']);
             Route::delete('/capstones/{capstone}',           [CapstoneController::class, 'destroy']);
+            Route::post('/capstones/{capstone}/archive',     [CapstoneController::class, 'archive']);
+            Route::post('/capstones/{capstone}/unarchive',   [CapstoneController::class, 'unarchive']);
         });
 
         // ── Visitor routes ───────────────────────────────

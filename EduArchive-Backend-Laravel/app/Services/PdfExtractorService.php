@@ -66,6 +66,7 @@ class PdfExtractorService
         $totalChars = array_sum(array_map('mb_strlen', $rawPages));
         $pageCount  = max(1, count($rawPages));
         $avgChars   = $totalChars / $pageCount;
+        $isOcr      = false;
 
         if ($avgChars < self::OCR_THRESHOLD) {
             Log::info("PdfExtractorService: sparse text ({$avgChars} chars/page avg) — attempting OCR on [{$filePath}]");
@@ -75,14 +76,22 @@ class PdfExtractorService
                 Log::info('PdfExtractorService: OCR succeeded, using OCR text for metadata extraction.');
                 $rawPages     = $ocrPages;
                 $rawFirstPage = $ocrPages[0] ?? '';
+                $isOcr        = true;
             } else {
                 Log::warning('PdfExtractorService: OCR returned no text. Metadata will be empty.');
             }
         }
 
+        // OCR normalisation: fix broken words, spaced capitals, and common
+        // character-substitution artifacts BEFORE any regex runs.
+        if ($isOcr) {
+            $rawPages     = array_map([$this, 'normalizeOcrText'], $rawPages);
+            $rawFirstPage = $rawPages[0] ?? '';
+        }
+
         // Clean pages (header/footer trimmed) for title, author, abstract, etc.
-        $pages = array_map(function ($rawText) {
-            $cleaned = $this->trimHeaderFooterLines($rawText);
+        $pages = array_map(function ($rawText) use ($isOcr) {
+            $cleaned = $this->trimHeaderFooterLines($rawText, $isOcr);
             return $this->stripPatternNoise($cleaned);
         }, $rawPages);
 
@@ -94,11 +103,11 @@ class PdfExtractorService
             $abstract = $this->autoCorrectText($abstract);
         }
 
-        $authorField   = $this->extractAuthor($firstPageText);
+        $authorField   = $this->extractAuthor($firstPageText, $fullText);
         $authorDetails = $this->extractAuthorDetails($fullText, $authorField);
 
         return [
-            'title'          => $this->extractTitle($firstPageText),
+            'title'          => $this->extractTitle($firstPageText, $fullText),
             'year'           => $this->extractYear($rawFirstPage),
             'author'         => $authorField,
             'author_details' => $authorDetails,
@@ -107,6 +116,9 @@ class PdfExtractorService
             'keywords'       => $this->extractKeywords($fullText),
         ];
     }
+
+
+
 
     /**
      * Extract RAW text per page using smalot/pdfparser (works for text-based PDFs).
@@ -131,15 +143,120 @@ class PdfExtractorService
         }
     }
 
-    // ─── OCR Pipeline (Ghostscript → Tesseract) ──────────────────────────────
+    /**
+     * Extract text per page from a scanned PDF.
+     *
+     * Primary:  calls the PaddleOCR FastAPI service (port 8001) which uses
+     *           PP-OCRv4 with adaptive preprocessing, deskewing, and
+     *           paragraph-aware text reconstruction — far more accurate than
+     *           Tesseract on degraded or rotated scans.
+     *
+     * Fallback: if the PaddleOCR service is unreachable, falls back to the
+     *           original Ghostscript + Tesseract pipeline so nothing breaks
+     *           when the Python service is not running.
+     *
+     * @return string[]  One string per page, 0-indexed, same as extractRawPages().
+     */
+    protected function extractPagesViaOcr(string $filePath): array
+    {
+        // ── 1. Try PaddleOCR FastAPI service ──────────────────────────────────
+        $paddleResult = $this->extractPagesViaPaddleOcr($filePath);
+        if (!empty(implode('', $paddleResult))) {
+            return $paddleResult;
+        }
+
+        // ── 2. Fallback: Ghostscript + Tesseract ──────────────────────────────
+        Log::info('PdfExtractorService: PaddleOCR service unavailable — falling back to Tesseract.');
+        return $this->extractPagesViaTesseract($filePath);
+    }
 
     /**
-     * Use Ghostscript to render PDF pages to PNG, then Tesseract to read them.
-     * Returns one string per page, same structure as extractRawPages().
+     * Call the PaddleOCR FastAPI microservice with the PDF file.
+     * Returns one text string per page in the same format as extractRawPages().
      *
      * @return string[]
      */
-    protected function extractPagesViaOcr(string $filePath): array
+    protected function extractPagesViaPaddleOcr(string $filePath): array
+    {
+        $serviceUrl = rtrim(env('OCR_SERVICE_URL', 'http://localhost:8001'), '/') . '/api/ocr';
+
+        try {
+            // Prepare multipart/form-data POST with the PDF file
+            $boundary = '----EduArchiveBoundary' . bin2hex(random_bytes(8));
+            $fileName = basename($filePath);
+            $fileContent = file_get_contents($filePath);
+
+            if ($fileContent === false) {
+                Log::warning('PaddleOCR: could not read file: ' . $filePath);
+                return [''];
+            }
+
+            // Build multipart body manually (no Guzzle dependency needed)
+            $body  = "--{$boundary}\r\n";
+            $body .= "Content-Disposition: form-data; name=\"file\"; filename=\"{$fileName}\"\r\n";
+            $body .= "Content-Type: application/pdf\r\n\r\n";
+            $body .= $fileContent . "\r\n";
+            $body .= "--{$boundary}--\r\n";
+
+            $context = stream_context_create([
+                'http' => [
+                    'method'  => 'POST',
+                    'header'  =>
+                        "Content-Type: multipart/form-data; boundary={$boundary}\r\n" .
+                        "Content-Length: " . strlen($body) . "\r\n",
+                    'content' => $body,
+                    'timeout' => 120,   // up to 2 minutes for large scanned PDFs
+                    'ignore_errors' => true,
+                ],
+            ]);
+
+            $raw = @file_get_contents($serviceUrl, false, $context);
+
+            if ($raw === false) {
+                Log::info('PaddleOCR: service not reachable at ' . $serviceUrl);
+                return [''];
+            }
+
+            // Check HTTP status code
+            $statusLine = $http_response_header[0] ?? '';
+            if (!str_contains($statusLine, '200')) {
+                Log::warning('PaddleOCR: non-200 response: ' . $statusLine . ' — ' . substr($raw, 0, 200));
+                return [''];
+            }
+
+            $json = json_decode($raw, true);
+            if (!is_array($json) || ($json['type'] ?? '') !== 'pdf') {
+                Log::warning('PaddleOCR: unexpected response format.');
+                return [''];
+            }
+
+            // Map {page: N, text: "..."} → 0-indexed string array
+            $pages = [];
+            foreach ($json['pages'] ?? [] as $pageObj) {
+                $pages[] = (string) ($pageObj['text'] ?? '');
+            }
+
+            if (empty($pages)) {
+                return [''];
+            }
+
+            Log::info('PaddleOCR: extracted ' . count($pages) . ' page(s) from ' . basename($filePath));
+            return $pages;
+
+        } catch (\Throwable $e) {
+            Log::warning('PaddleOCR: exception — ' . $e->getMessage());
+            return [''];
+        }
+    }
+
+    /**
+     * Legacy OCR pipeline: Ghostscript renders PDF pages to PNG,
+     * then Tesseract reads each image.
+     * Used as a fallback when the PaddleOCR service is unavailable.
+     *
+     * @return string[]
+     */
+    protected function extractPagesViaTesseract(string $filePath): array
     {
         $gs   = $this->findBinary(self::GS_PATHS, 'Ghostscript');
         $tess = $this->findBinary(self::TESS_PATHS, 'Tesseract');
@@ -166,7 +283,7 @@ class PdfExtractorService
             }
 
             $images = glob($tmpDir . DIRECTORY_SEPARATOR . 'page_*.png') ?: [];
-            sort($images); // maintain page order
+            sort($images);
 
             if (empty($images)) {
                 Log::warning('OCR: Ghostscript produced no images.');
@@ -182,7 +299,7 @@ class PdfExtractorService
                 );
                 exec($tessCmd, $tessOut, $tessCode);
 
-                $txtFile = $outBase . '.txt';
+                $txtFile  = $outBase . '.txt';
                 $pageText = '';
                 if (file_exists($txtFile)) {
                     $pageText = trim(file_get_contents($txtFile));
@@ -197,7 +314,6 @@ class PdfExtractorService
             Log::error('OCR pipeline error: ' . $e->getMessage());
             return [''];
         } finally {
-            // Clean up all temp images
             foreach (glob($tmpDir . DIRECTORY_SEPARATOR . '*') ?: [] as $f) {
                 @unlink($f);
             }
@@ -273,18 +389,27 @@ class PdfExtractorService
      * Trim the top N and bottom N lines from page text to remove
      * header (~1.25 cm from top) and footer (~1.25 cm from bottom) zones.
      */
-    protected function trimHeaderFooterLines(string $text): string
+    protected function trimHeaderFooterLines(string $text, bool $isOcr = false): string
     {
         $lines = explode("\n", $text);
         $total = count($lines);
 
-        // Only trim if there are enough lines to keep meaningful content
         if ($total <= ($this->headerLinesToTrim + $this->footerLinesToTrim + 2)) {
             return $text;
         }
 
-        // Remove header lines from top and footer lines from bottom
         $lines = array_slice($lines, $this->headerLinesToTrim, $total - $this->headerLinesToTrim - $this->footerLinesToTrim);
+
+        // For OCR text, also strip lines that are clearly page numbers / running headers
+        if ($isOcr) {
+            $lines = array_values(array_filter($lines, function (string $line): bool {
+                $t = trim($line);
+                if (preg_match('/^\d{1,3}$/', $t))       return false; // page number
+                if (preg_match('/^-\s*\d{1,3}\s*-$/', $t)) return false; // "- 1 -"
+                if (preg_match('/^page\s+\d+$/i', $t))   return false; // "Page 1"
+                return true;
+            }));
+        }
 
         return implode("\n", $lines);
     }
@@ -300,6 +425,68 @@ class PdfExtractorService
         return $text;
     }
 
+    // ─────────────────────────────────────────────────────────────────────────
+    //  OCR TEXT NORMALISATION
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Fix the most common OCR artifacts before any regex-based extraction runs.
+     *
+     * Fixes applied:
+     *  1. Hyphenated line-break re-join  ("infor-\nmation" → "information")
+     *  2. Spaced capital headings        ("E X E C U T I V E" → "EXECUTIVE")
+     *  3. Broken single-letter prefix    ("P repared" → "Prepared")
+     *  4. Digit→letter in word context   (0→o, 1→l)
+     *  5. Collapse runs of 3+ blank lines to 2
+     *  6. Collapse multiple spaces (preserve newlines)
+     *  7. Key phrase normalisation so section anchors are always found
+     */
+    protected function normalizeOcrText(string $text): string
+    {
+        // 1. Re-join hyphenated line-breaks
+        $text = preg_replace('/([a-zA-Z])-\n([a-zA-Z])/', '$1$2', $text);
+
+        // 2. Spaced capital letters in headings ("E X E C U T I V E S U M M A R Y" → "EXECUTIVE SUMMARY")
+        $text = preg_replace_callback('/\b([A-Z])(?:\s+([A-Z])){3,}\b/', function ($m) {
+            return preg_replace('/\s+/', '', $m[0]);
+        }, $text);
+
+        // 3. Broken single-cap prefix ("P repared" → "Prepared")
+        $text = preg_replace('/\b([A-Z])\s+([a-z]{2,})\b/', '$1$2', $text);
+
+        // 4. Common digit→letter substitutions inside words
+        $text = preg_replace('/([a-zA-Z])0([a-zA-Z])/', '${1}o${2}', $text);
+        $text = preg_replace('/([a-zA-Z])1([a-zA-Z])/', '${1}l${2}', $text);
+
+        // 5. Collapse 3+ blank lines to 2
+        $text = preg_replace('/\n{3,}/', "\n\n", $text);
+
+        // 6. Collapse multiple spaces
+        $text = preg_replace('/[ \t]{2,}/', ' ', $text);
+
+        // 7. Key phrase normalisation — ensures section anchors are always found
+        $fixes = [
+            '/exec\s*utive\s*summ?\s*ary/i'          => 'EXECUTIVE SUMMARY',
+            '/table\s*of\s*cont\s*ents/i'             => 'TABLE OF CONTENTS',
+            '/prep\s*ared\s*by/i'                     => 'Prepared by',
+            '/subm\s*itted\s*by/i'                    => 'Submitted by',
+            '/key\s*words?/i'                          => 'Keywords',
+            '/acknowledg\s*[em]+ent/i'                => 'ACKNOWLEDGMENT',
+            '/\bA\s+Cap\s*stone\s+Project/i'          => 'A Capstone Project',
+            '/Presented\s+to\s+the\s+Fac\s*ulty/i'   => 'Presented to the Faculty',
+            '/In\s+Partial\s+Ful\s*fill\s*ment/i'     => 'In Partial Fulfillment',
+            '/B\s*S\s*I\s*T\b/'                       => 'BSIT',
+            '/B\s*S\s*C\s*p\s*E\b/'                   => 'BSCpE',
+            '/Bachelor\s+of\s+Sci\s*ence\s+in\s+Info\s*rmation\s+Tech/i' => 'Bachelor of Science in Information Technology',
+        ];
+        foreach ($fixes as $pattern => $replacement) {
+            $text = preg_replace($pattern, $replacement, $text);
+        }
+
+        return $text;
+    }
+
+
     // ──────────────────────────────────────────────────────────
     //  TITLE — text before "A Capstone Project Presented to…"
     // ──────────────────────────────────────────────────────────
@@ -310,30 +497,56 @@ class PdfExtractorService
      * Rule: The title is the text that appears BEFORE the phrase
      * "A Capstone Project Presented to the Faculty of..."
      */
-    protected function extractTitle(string $firstPage): string
+    protected function extractTitle(string $firstPage, string $fullText = ''): string
     {
-        // Match everything before "A Capstone Project Presented to"
-        if (preg_match('/^(.*?)(?=A\s+Capstone\s+Project\s+Presented\s+to)/is', $firstPage, $match)) {
-            $title = $this->cleanText($match[1]);
-            if (!empty($title)) {
-                return $title;
+        $skipRe = '/^(republic|mindoro|bongabong|college|department|bachelor'
+            . '|a\s+capstone|presented|submitted|in\s+partial|prepared\s+by'
+            . '|this\s+capstone|approved|\d{1,3}$)/i';
+
+        // ── Strategy 1: text before primary anchor ────────────────────────
+        if (preg_match('/^(.*?)(?=A\s+Capstone\s+Project\s+Presented\s+to)/is', $firstPage, $m)) {
+            $t = $this->cleanText($m[1]);
+            if (strlen($t) > 5) return $t;
+        }
+
+        // ── Strategy 2: alternative anchor phrases ────────────────────────
+        $anchors = [
+            '/^(.*?)(?=In\s+Partial\s+Fulfillment)/is',
+            '/^(.*?)(?=Submitted\s+to\s+the)/is',
+            '/^(.*?)(?=Presented\s+to\s+the\s+Faculty)/is',
+            '/^(.*?)(?=Prepared\s+by\s*:?\s*$)/im',
+        ];
+        foreach ($anchors as $anchor) {
+            if (preg_match($anchor, $firstPage, $m)) {
+                $t = $this->cleanText($m[1]);
+                if (strlen($t) > 5 && strlen($t) < 450) return $t;
             }
         }
 
-        // Fallback: try the first significant line
-        $lines = array_filter(
-            array_map('trim', explode("\n", $firstPage)),
-            fn($line) => strlen($line) > 5
-        );
-
-        foreach (array_values($lines) as $line) {
-            // Skip university headers and generic labels
-            if (preg_match('/^(republic|mindoro|bongabong|college|department|bachelor|a\s+capstone)/i', $line)) {
+        // ── Strategy 3: longest consecutive ALL-CAPS / Title-Case block ────
+        $lines     = array_values(array_filter(array_map('trim', explode("\n", $firstPage)), fn($l) => strlen($l) > 5));
+        $candidate = '';
+        $block     = [];
+        foreach ($lines as $line) {
+            if (preg_match($skipRe, $line)) {
+                if (strlen(implode(' ', $block)) > strlen($candidate)) $candidate = implode(' ', $block);
+                $block = [];
                 continue;
             }
-            if (strlen($line) > 10 && strlen($line) < 300) {
-                return $this->cleanText($line);
+            if (strlen($line) >= 10 && (strtoupper($line) === $line || preg_match('/^[A-Z][a-z]/', $line))) {
+                $block[] = $line;
+            } else {
+                if (strlen(implode(' ', $block)) > strlen($candidate)) $candidate = implode(' ', $block);
+                $block = [];
             }
+        }
+        if (!empty($block) && strlen(implode(' ', $block)) > strlen($candidate)) $candidate = implode(' ', $block);
+        if (strlen($candidate) > 10 && strlen($candidate) < 500) return $this->cleanText($candidate);
+
+        // ── Strategy 4: first non-boilerplate line ────────────────────────
+        foreach ($lines as $line) {
+            if (preg_match($skipRe, $line)) continue;
+            if (strlen($line) > 10 && strlen($line) < 350) return $this->cleanText($line);
         }
 
         return 'Untitled';
@@ -349,74 +562,81 @@ class PdfExtractorService
      * Rule: Extract the 3–4 lines immediately after "Prepared by:"
      * and before the date/year section.
      */
-    protected function extractAuthor(string $firstPage): string
+    protected function extractAuthor(string $firstPage, string $fullText = ''): string
     {
-        $lines = explode("\n", $firstPage);
-        $authors = [];
-        $collecting = false;
+        $stopRe = '/^(January|February|March|April|May|June|July|August'
+            . '|September|October|November|December|a\s+capstone|presented'
+            . '|submitted|adviser|panelist|approved|department|college'
+            . '|university|mindoro|bongabong|republic|in\s+partial|this\s+capstone)/i';
 
+        // Anchor labels that precede author lists
+        $anchors = [
+            '/^Prepared\s+by\s*:?\s*(.*)$/i',
+            '/^Submitted\s+by\s*:?\s*(.*)$/i',
+            '/^Researchers?\s*:?\s*(.*)$/i',
+            '/^Proponents?\s*:?\s*(.*)$/i',
+            '/^Authors?\s*:?\s*(.*)$/i',
+            '/^By\s*:?\s*(.*)$/i',
+        ];
+
+        // Search first page, then full document
+        foreach ([$firstPage, $fullText] as $src) {
+            if (empty(trim($src))) continue;
+            $lines = explode("\n", $src);
+            foreach ($lines as $idx => $line) {
+                $trimmed = trim($line);
+                $inline  = '';
+                $hit     = false;
+                foreach ($anchors as $anchor) {
+                    if (preg_match($anchor, $trimmed, $m)) {
+                        $hit    = true;
+                        $inline = trim($m[1] ?? '');
+                        break;
+                    }
+                }
+                if (!$hit) continue;
+
+                $authors = [];
+                if (!empty($inline) && !preg_match('/^\d{4}$/', $inline) && strlen($inline) > 2) {
+                    $authors[] = $inline;
+                }
+                for ($j = $idx + 1; $j < min($idx + 8, count($lines)); $j++) {
+                    $next = trim($lines[$j]);
+                    if (empty($next) || strlen($next) < 3)             continue;
+                    if (preg_match('/^\d{4}$/', $next))                 break;
+                    if (preg_match('/\b20[0-9]{2}\b/', $next) && strlen($next) < 20) break;
+                    if (preg_match($stopRe, $next))                     break;
+                    if (count($authors) >= 5)                           break;
+                    if (preg_match('/^[A-Za-z\.\,\s\-\']+$/', $next) && strlen($next) < 100) {
+                        $authors[] = $next;
+                    }
+                }
+                if (!empty($authors)) {
+                    return $this->cleanText(implode(', ', $authors));
+                }
+            }
+        }
+
+        // Name-block heuristic: two or more consecutive "Name"-looking lines
+        $nameRe = '/^[A-Z][a-z]+(?:[\s,\.][A-Za-z]+){1,5}$/';
+        $lines   = explode("\n", $firstPage);
+        $block   = [];
+        $prevName = false;
         foreach ($lines as $line) {
-            $trimmed = trim($line);
-
-            // Start collecting after "Prepared by:"
-            if (!$collecting && preg_match('/^Prepared\s+by\s*:?\s*$/i', $trimmed)) {
-                $collecting = true;
-                continue;
-            }
-
-            // Also handle "Prepared by:" on a line with content after it
-            if (!$collecting && preg_match('/^Prepared\s+by\s*:\s*(.+)$/i', $trimmed, $m)) {
-                $collecting = true;
-                $name = trim($m[1]);
-                if (!empty($name) && !preg_match('/^\d{4}$/', $name)) {
-                    $authors[] = $name;
+            $t = trim($line);
+            if (preg_match($nameRe, $t) && strlen($t) < 80) {
+                $block[] = $t;
+                $prevName = true;
+            } else {
+                if ($prevName && count($block) >= 2) {
+                    return $this->cleanText(implode(', ', array_slice($block, 0, 5)));
                 }
-                continue;
-            }
-
-            if ($collecting) {
-                // Stop when we hit a year (e.g. "2024"), a month-year, or empty content
-                if (preg_match('/^(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{4}/i', $trimmed)) {
-                    break;
-                }
-                if (preg_match('/^\d{4}$/', $trimmed)) {
-                    break;
-                }
-                // Stop after collecting 4 names
-                if (count($authors) >= 4) {
-                    break;
-                }
-
-                // Skip empty or very short lines
-                if (strlen($trimmed) < 3) {
-                    continue;
-                }
-
-                // Skip lines that look like section headers
-                if (preg_match('/^(a\s+capstone|presented|submitted|adviser|panelist|approved|department)/i', $trimmed)) {
-                    break;
-                }
-
-                $authors[] = $trimmed;
+                $block = [];
+                $prevName = false;
             }
         }
-
-        if (!empty($authors)) {
-            return $this->cleanText(implode(', ', $authors));
-        }
-
-        // Fallback: try generic patterns
-        foreach ($lines as $i => $line) {
-            $trimmed = trim($line);
-            if (preg_match('/^(submitted\s+by|researchers?|proponents?|authors?|by)\s*:?\s*/i', $trimmed, $match)) {
-                $authorLine = trim(str_ireplace($match[0], '', $trimmed));
-                if (empty($authorLine) && isset($lines[$i + 1])) {
-                    $authorLine = trim($lines[$i + 1]);
-                }
-                if (!empty($authorLine)) {
-                    return $this->cleanText($authorLine);
-                }
-            }
+        if (count($block) >= 2) {
+            return $this->cleanText(implode(', ', array_slice($block, 0, 5)));
         }
 
         return 'Unknown Author';
@@ -475,29 +695,97 @@ class PdfExtractorService
     /**
      * Extract abstract section.
      *
-     * Rule: The abstract starts after "EXECUTIVE SUMMARY" and ends
-     * before "TABLE OF CONTENTS". Extract all text between these two
-     * headings only.
+     * Rule: The abstract starts on the line AFTER the "Executive Summary"
+     * heading and ends on the last line before "Table of Contents" or
+     * "Acknowledgement / Acknowledgment". All comparisons are case-insensitive.
+     *
+     * The heading line itself may carry trailing content (e.g. a page number
+     * stamped by the PDF renderer). We skip everything on that line with
+     * `[^\n]*\n` and only capture text beginning on the next line.
      */
     protected function extractAbstract(string $text): ?string
     {
-        // Primary rule: between EXECUTIVE SUMMARY and TABLE OF CONTENTS
-        if (preg_match('/EXECUTIVE\s+SUMMARY\s*\n(.*?)(?=TABLE\s+OF\s+CONTENTS)/is', $text, $match)) {
-            $abstract = $this->cleanText($match[1]);
-            if (strlen($abstract) > 30) {
-                return substr($abstract, 0, 5000);
-            }
+        // End-section markers — covers both ACKNOWLEDGEMENT and ACKNOWLEDGMENT.
+        $endRe = 'TABLE\s+OF\s+CONTENTS'
+               . '|ACKNOWLEDGEMENTS?'
+               . '|CHAPTER\s+[I1V]'
+               . '|LIST\s+OF'
+               . '|KEYWORDS?';
+
+        // ── Strategy 1: EXECUTIVE SUMMARY … end marker ────────────────────
+        // `[^\n]*\n` skips any trailing text on the heading line so we only
+        // capture content starting on the following line.
+        if (preg_match('/EXECUTIVE\s+SUMMARY[^\n]*\n(.*?)(?=' . $endRe . ')/is', $text, $m)) {
+            $a = $this->cleanAbstractText($m[1]);
+            if (strlen($a) > 50) return substr($a, 0, 5000);
         }
 
-        // Fallback: try a plain "Abstract" section
-        if (preg_match('/\bABSTRACT\b\s*\n(.*?)(?=\n\s*(?:TABLE\s+OF\s+CONTENTS|CHAPTER|INTRODUCTION|KEYWORDS?|ACKNOWLEDGMENT))/is', $text, $match)) {
-            $abstract = $this->cleanText($match[1]);
-            if (strlen($abstract) > 30) {
-                return substr($abstract, 0, 5000);
-            }
+        // ── Strategy 2: ABSTRACT … end marker ─────────────────────────────
+        if (preg_match('/\bABSTRACT\b[^\n]*\n(.*?)(?=' . $endRe . ')/is', $text, $m)) {
+            $a = $this->cleanAbstractText($m[1]);
+            if (strlen($a) > 50) return substr($a, 0, 5000);
+        }
+
+        // ── Strategy 3: SUMMARY alone … end marker ────────────────────────
+        if (preg_match('/\bSUMMARY\b[^\n]*\n(.*?)(?=' . $endRe . ')/is', $text, $m)) {
+            $a = $this->cleanAbstractText($m[1]);
+            if (strlen($a) > 50) return substr($a, 0, 5000);
+        }
+
+        // ── Strategy 4: first long paragraph starting with a study phrase ──
+        if (preg_match('/(?:^|\n)((?:The\s+study|This\s+study|This\s+research'
+            . '|This\s+capstone|This\s+project|The\s+research|The\s+project'
+            . '|The\s+proponents?)[^\n]{80,}(?:\n[^\n]+){2,15})/i', $text, $m)) {
+            $a = $this->cleanAbstractText($m[1]);
+            if (strlen($a) > 80) return substr($a, 0, 5000);
         }
 
         return null;
+    }
+
+    /**
+     * Clean a raw abstract block: strip noise lines (headings, page numbers)
+     * and normalise whitespace, while preserving paragraph breaks.
+     *
+     * Paragraph breaks (one or more blank lines) are replaced with a sentinel
+     * before calling cleanText() (which collapses all whitespace) and then
+     * restored as "\n\n" so the final abstract retains readable paragraphs.
+     */
+    private function cleanAbstractText(string $text): string
+    {
+        // 1. Normalise all line endings
+        $text = str_replace("\r\n", "\n", $text);
+        $text = str_replace("\r",   "\n", $text);
+
+        // 2. Collapse 3+ blank lines to 2 (max one blank line between paragraphs)
+        $text = preg_replace('/\n{3,}/', "\n\n", $text);
+
+        // 3. Replace every blank-line paragraph break with a safe sentinel
+        //    so it survives the whitespace-collapsing cleanText() call.
+        $sentinel = '§§PARA§§';
+        $text = preg_replace('/\n\n+/', $sentinel, $text);
+
+        // 4. Filter individual lines — remove page numbers and all-caps headings
+        $lines    = explode("\n", $text);
+        $filtered = [];
+        foreach ($lines as $line) {
+            $t = trim($line);
+            // Drop standalone page numbers (1-3 digits only)
+            if (preg_match('/^\s*\d{1,3}\s*$/', $t)) continue;
+            // Drop all-caps section heading lines (≤4 words, no lowercase)
+            if (preg_match('/^[A-Z\s]{3,60}$/', $t) && str_word_count($t) <= 4) continue;
+            $filtered[] = $line;
+        }
+
+        // 5. Collapse within-paragraph whitespace via cleanText(), which
+        //    replaces any \s+ (including \n within a paragraph) with a
+        //    single space — the sentinel keeps paragraph splits intact.
+        $cleaned = $this->cleanText(implode("\n", $filtered));
+
+        // 6. Restore paragraph breaks
+        $cleaned = str_replace($sentinel, "\n\n", $cleaned);
+
+        return trim($cleaned);
     }
 
     // ──────────────────────────────────────────────────────────
@@ -506,108 +794,163 @@ class PdfExtractorService
 
     /**
      * Auto-correct common PDF extraction artifacts in abstract text.
-     * Fixes broken words, spacing issues, and common OCR misspellings.
+     *
+     * Pass A – soft line-break mid-word rejoiner
+     *   PDFs often break a word across a line without a hyphen. The parser
+     *   concatenates both halves with a space ("caps tone", "solutio n",
+     *   "sec ured"). We detect these by looking for a lowercase fragment
+     *   preceded by a space where the combined string looks like one word.
+     *
+     * Pass B – space-before-hyphen compound fixer
+     *   "time -consuming" → "time-consuming",  "A Cloud -Based" → "A Cloud-Based"
+     *
+     * Pass C – missing-space injection
+     *   "Registrar'sOffice" → "Registrar's Office"  (lowercase → uppercase boundary)
+     *   "aCloud"            → "a Cloud"              (article + uppercase word)
+     *
+     * Pass D – digit ↔ letter boundary spaces
+     *   "of3.48" → "of 3.48",  "3.48it" → "3.48 it"
+     *
+     * Pass E – common spaced-letter OCR artifacts ("t h e" → "the", etc.)
+     *
+     * Paragraph breaks (\n\n) are preserved throughout all passes.
      */
     protected function autoCorrectText(string $text): string
     {
-        // 1. Fix spaces inserted within words by PDF extraction (e.g. "th e" → "the")
-        //    Common single-letter fragments that should rejoin their neighbor
-        $brokenWordPatterns = [
-            '/\b(\w)\s(\w{2,})\b/' => function ($m) {
-                // Only rejoin if the combined word looks valid
-                $combined = $m[1] . $m[2];
-                if ($this->isLikelyWord($combined)) {
-                    return $combined;
-                }
-                return $m[0];
-            },
-            '/\b(\w{2,})\s(\w)\b/' => function ($m) {
-                $combined = $m[1] . $m[2];
-                if ($this->isLikelyWord($combined)) {
-                    return $combined;
-                }
-                return $m[0];
-            },
+        // Protect paragraph breaks from being clobbered by single-line regexes.
+        $paraSentinel = '§§PARA§§';
+        $text = preg_replace('/\n\n+/', $paraSentinel, $text);
+
+        // ── Pass A: rejoin mid-word line-break splits ─────────────────────────
+        // Pattern: a run of ≥2 lowercase letters, then a space, then 1-4
+        // lowercase letters that are NOT a standalone common word.
+        // "caps tone" → "capstone",  "solutio n" → "solution"
+        $commonWords = [
+            'a','an','as','at','be','by','do','go','he','if','in','is','it',
+            'me','my','no','of','on','or','so','to','up','us','we','and','are',
+            'but','can','did','due','for','had','has','her','him','his','how',
+            'its','let','may','not','now','old','our','out','own','say','see',
+            'she','the','too','two','use','was','who','why','yet','you',
+            'been','also','back','both','come','each','even','from','give',
+            'have','here','into','just','know','like','make','many','more',
+            'much','must','need','next','only','open','over','same','some',
+            'such','than','that','them','then','they','this','time','used',
+            'very','want','well','were','what','when','will','with','your',
         ];
+        $text = preg_replace_callback(
+            '/([a-z]{2,})\s+([a-z]{1,4})(?=[\s,\.;:\-]|$)/u',
+            function ($m) use ($commonWords) {
+                $fragment = $m[2];
+                // Don't rejoin if the trailing part is itself a common word
+                if (in_array($fragment, $commonWords, true)) {
+                    return $m[0];
+                }
+                // Rejoin only if the combined word has a vowel (avoids garbled joins)
+                $combined = $m[1] . $fragment;
+                if (preg_match('/[aeiou]/i', $combined) && strlen($combined) >= 4) {
+                    return $combined;
+                }
+                return $m[0];
+            },
+            $text
+        );
 
-        foreach ($brokenWordPatterns as $pattern => $callback) {
-            $text = preg_replace_callback($pattern, $callback, $text);
-        }
+        // ── Pass B: space before hyphen in compounds ──────────────────────────
+        // "time -consuming" → "time-consuming"
+        $text = preg_replace('/([a-zA-Z])\s+-\s*([a-zA-Z])/', '$1-$2', $text);
 
-        // 2. Fix common OCR/extraction spacing artifacts
-        // Multiple spaces → single space
-        $text = preg_replace('/\s{2,}/', ' ', $text);
+        // ── Pass C: missing space at lowercase→uppercase word boundary ────────
+        // "Registrar'sOffice" → "Registrar's Office"
+        // "aCloud"            → "a Cloud"
+        // Only insert when the uppercase letter starts a ≥3-char sequence
+        // (avoids splitting acronyms like "OCR", "PSA").
+        $text = preg_replace_callback(
+            '/([a-z\']{2,})([A-Z][a-z]{2,})/',
+            function ($m) {
+                return $m[1] . ' ' . $m[2];
+            },
+            $text
+        );
 
-        // Space before punctuation (e.g. "word ." → "word.")
-        $text = preg_replace('/\s+([.,;:!?])/', '$1', $text);
+        // ── Pass D: digit ↔ letter boundary spaces ───────────────────────────
+        // "of3.48" → "of 3.48",  "3.48it" → "3.48 it"
+        $text = preg_replace('/([a-zA-Z])(\d)/', '$1 $2', $text);
+        $text = preg_replace('/(\d)([a-zA-Z])/', '$1 $2', $text);
 
-        // Missing space after punctuation (e.g. "word.Next" → "word. Next")
-        $text = preg_replace('/([.,;:!?])([A-Z])/', '$1 $2', $text);
-
-        // Fix "i t" → "it", "o f" → "of", "i n" → "in", etc.
+        // ── Pass E: common OCR spaced-letter artifacts ────────────────────────
         $commonBrokenWords = [
-            '/\bt h e\b/i' => 'the',
-            '/\bt o\b/i' => 'to',
-            '/\bo f\b/i' => 'of',
-            '/\bi n\b/i' => 'in',
-            '/\bi t\b/i' => 'it',
-            '/\bi s\b/i' => 'is',
-            '/\ba n d\b/i' => 'and',
-            '/\bf o r\b/i' => 'for',
-            '/\bw i t h\b/i' => 'with',
-            '/\bt h a t\b/i' => 'that',
-            '/\bt h i s\b/i' => 'this',
-            '/\bw h i c h\b/i' => 'which',
-            '/\bf r o m\b/i' => 'from',
-            '/\bh a v e\b/i' => 'have',
-            '/\bw e r e\b/i' => 'were',
-            '/\bb e e n\b/i' => 'been',
-            '/\bt h e i r\b/i' => 'their',
-            '/\ba r e\b/i' => 'are',
-            '/\bw a s\b/i' => 'was',
-            '/\bn o t\b/i' => 'not',
-            '/\bb u t\b/i' => 'but',
-            '/\ba l s o\b/i' => 'also',
-            '/\bm o r e\b/i' => 'more',
-            '/\bs u c h\b/i' => 'such',
-            '/\bw h e n\b/i' => 'when',
-            '/\bs o m e\b/i' => 'some',
-            '/\bt h e n\b/i' => 'then',
-            '/\bt h a n\b/i' => 'than',
-            '/\bo t h e r\b/i' => 'other',
-            '/\ba b o u t\b/i' => 'about',
-            '/\bc a n\b/i' => 'can',
-            '/\bw i l l\b/i' => 'will',
-            '/\be a c h\b/i' => 'each',
-            '/\bm a k e\b/i' => 'make',
-            '/\bl i k e\b/i' => 'like',
-            '/\bu s e d\b/i' => 'used',
-            '/\bu s e r\b/i' => 'user',
-            '/\bu s e r s\b/i' => 'users',
+            '/\bt h e\b/i'      => 'the',
+            '/\bt o\b/i'        => 'to',
+            '/\bo f\b/i'        => 'of',
+            '/\bi n\b/i'        => 'in',
+            '/\bi t\b/i'        => 'it',
+            '/\bi s\b/i'        => 'is',
+            '/\ba n d\b/i'      => 'and',
+            '/\bf o r\b/i'      => 'for',
+            '/\bw i t h\b/i'    => 'with',
+            '/\bt h a t\b/i'    => 'that',
+            '/\bt h i s\b/i'    => 'this',
+            '/\bw h i c h\b/i'  => 'which',
+            '/\bf r o m\b/i'    => 'from',
+            '/\bh a v e\b/i'    => 'have',
+            '/\bw e r e\b/i'    => 'were',
+            '/\bb e e n\b/i'    => 'been',
+            '/\bt h e i r\b/i'  => 'their',
+            '/\ba r e\b/i'      => 'are',
+            '/\bw a s\b/i'      => 'was',
+            '/\bn o t\b/i'      => 'not',
+            '/\bb u t\b/i'      => 'but',
+            '/\ba l s o\b/i'    => 'also',
+            '/\bm o r e\b/i'    => 'more',
+            '/\bs u c h\b/i'    => 'such',
+            '/\bw h e n\b/i'    => 'when',
+            '/\bs o m e\b/i'    => 'some',
+            '/\bt h e n\b/i'    => 'then',
+            '/\bt h a n\b/i'    => 'than',
+            '/\bo t h e r\b/i'  => 'other',
+            '/\ba b o u t\b/i'  => 'about',
+            '/\bc a n\b/i'      => 'can',
+            '/\bw i l l\b/i'    => 'will',
+            '/\be a c h\b/i'    => 'each',
+            '/\bm a k e\b/i'    => 'make',
+            '/\bl i k e\b/i'    => 'like',
+            '/\bu s e d\b/i'    => 'used',
+            '/\bu s e r\b/i'    => 'user',
+            '/\bu s e r s\b/i'  => 'users',
             '/\bs y s t e m\b/i' => 'system',
             '/\bp r o j e c t\b/i' => 'project',
-            '/\bd a t a\b/i' => 'data',
-            '/\bs t u d y\b/i' => 'study',
+            '/\bd a t a\b/i'    => 'data',
+            '/\bs t u d y\b/i'  => 'study',
             '/\br e s e a r c h\b/i' => 'research',
         ];
-
         foreach ($commonBrokenWords as $pattern => $replacement) {
             $text = preg_replace($pattern, $replacement, $text);
         }
 
-        // 3. Fix double periods, double commas
+        // ── Punctuation cleanup ───────────────────────────────────────────────
+        // Multiple spaces → single space (within a paragraph line only)
+        $text = preg_replace('/[ \t]{2,}/', ' ', $text);
+
+        // Space before punctuation ("word ." → "word.")
+        $text = preg_replace('/\s+([.,;:!?])/', '$1', $text);
+
+        // Missing space after sentence-ending punctuation before next word
+        $text = preg_replace('/([.!?])([A-Z][a-z])/', '$1 $2', $text);
+
+        // Fix double periods / commas
         $text = preg_replace('/\.{2,}/', '.', $text);
         $text = preg_replace('/,{2,}/', ',', $text);
 
-        // 4. Capitalize first letter after period
-        $text = preg_replace_callback('/\.\s+([a-z])/', function ($m) {
-            return '. ' . strtoupper($m[1]);
+        // Capitalize first letter after sentence-ending punctuation + space
+        $text = preg_replace_callback('/([.!?])\s+([a-z])/', function ($m) {
+            return $m[1] . ' ' . strtoupper($m[2]);
         }, $text);
 
-        // 5. Ensure first character is capitalized
-        $text = ucfirst(trim($text));
+        // Restore paragraph breaks
+        $text = str_replace($paraSentinel, "\n\n", $text);
 
-        return $text;
+        // Ensure first character is capitalized
+        return ucfirst(trim($text));
     }
 
     /**
@@ -732,25 +1075,42 @@ class PdfExtractorService
     {
         $keywords = [];
 
-        // 1. Look for explicit "Keywords:" section
-        if (preg_match('/\bkeywords?\s*:?\s*\n?(.*?)(?:\n\s*\n|\b(?:chapter|introduction|abstract|table\s+of\s+contents)\b)/is', $text, $match)) {
-            $raw = trim($match[1]);
-            $parts = preg_split('/[,;]\s*/', $raw);
-            foreach ($parts as $part) {
-                $part = trim($part);
-                if (strlen($part) > 2 && strlen($part) < 50) {
-                    $keywords[] = $this->cleanText($part);
+        // ── Explicit keyword section (multiple label variants) ─────────────
+        $kwPatterns = [
+            // Multi-line block after a keyword heading
+            '/\bkey\s*words?\s*:?\s*[\r\n]+(.*?)(?:[\r\n]{2,}|\b(?:chapter|introduction|abstract|table\s+of\s+contents|acknowledgment)\b)/is',
+            '/\bindex\s+terms?\s*:?\s*[\r\n]+(.*?)(?:[\r\n]{2,}|\b(?:chapter|introduction)\b)/is',
+            // Inline  "Keywords: a, b, c"  on one line
+            '/\bkey\s*words?\s*[:—–]\s*(.{5,300}?)(?:[\r\n]|$)/i',
+        ];
+        foreach ($kwPatterns as $pattern) {
+            if (preg_match($pattern, $text, $m)) {
+                $raw   = trim($m[1]);
+                $parts = preg_split('/[,;|\n]/', $raw);
+                foreach ($parts as $part) {
+                    $part = trim(preg_replace('/[\r\n]+/', ' ', $part));
+                    if (strlen($part) > 2 && strlen($part) < 60) {
+                        $keywords[] = $this->cleanText($part);
+                    }
                 }
+                if (!empty($keywords)) break;
             }
         }
 
-        // 2. Extract tech terms from title and body
-        $techTerms = $this->extractTechTerms($text);
-        $keywords = array_merge($keywords, $techTerms);
+        // ── Tech-term scanning ─────────────────────────────────────────────
+        $keywords = array_merge($keywords, $this->extractTechTerms($text));
 
-        // Remove duplicates and limit
-        $keywords = array_unique(array_map('strtolower', $keywords));
-        return array_slice(array_values($keywords), 0, 15);
+        // Deduplicate, strip noise, limit to 15
+        $seen  = [];
+        $clean = [];
+        foreach ($keywords as $kw) {
+            $lower = mb_strtolower(trim($kw));
+            if (strlen($lower) < 3 || isset($seen[$lower])) continue;
+            if (preg_match('/^[\d\W]+$/', $lower))           continue;
+            $seen[$lower] = true;
+            $clean[] = $lower;
+        }
+        return array_slice(array_values($clean), 0, 15);
     }
 
     /**

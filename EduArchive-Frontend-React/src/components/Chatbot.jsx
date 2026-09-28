@@ -75,37 +75,102 @@ function formatTime(date) {
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
 
-// ─── Role-aware suggestion chips ─────────────────────────────────────────────
-const CHIPS_BY_ROLE = {
-    admin: [
-        'Show me upload trends for the last 6 years',
-        'How many capstones were uploaded this year?',
-        'Which capstone has the most views?',
-        'How many students are registered?',
-        'Recommend healthcare capstones',
-        'Show recent system activity',
+// ─── FAQ Data ─────────────────────────────────────────────────────────────────
+
+const FAQ_DEFINITIONS = [
+    { q: 'What is IMRAD?', icon: '📄' },
+    { q: 'What is an abstract in a research paper?', icon: '📝' },
+    { q: 'What is the difference between a capstone and a thesis?', icon: '🎓' },
+    { q: 'What does publication status mean?', icon: '📰' },
+    { q: 'What does copyright status mean for a capstone?', icon: '©️' },
+    { q: 'What is the difference between archived and published?', icon: '📦' },
+    { q: 'What does it mean when my capstone is pending?', icon: '⏳' },
+    { q: 'What is the role of an adviser in a capstone project?', icon: '👨‍🏫' },
+    { q: 'What are keywords and why do they matter in research?', icon: '🏷️' },
+    { q: 'What does approval status mean?', icon: '✅' },
+    { q: 'What formats are accepted for capstone uploads?', icon: '📁' },
+];
+
+const FAQ_DYNAMIC = [
+    { q: 'What are the top 3 most viewed capstones?', icon: '👁️' },
+    { q: 'What are the top 5 most downloaded capstones?', icon: '⬇️' },
+    { q: 'What are the most bookmarked capstones this year?', icon: '🔖' },
+    { q: 'Which program has the most capstone submissions?', icon: '🏆' },
+    { q: 'Which year had the most capstone submissions?', icon: '📅' },
+    { q: 'What are the most frequently used keywords across all capstones?', icon: '🔑' },
+    { q: 'What capstones are trending this month?', icon: '📈' },
+    { q: 'Who are the most prolific capstone authors in the archive?', icon: '✍️' },
+];
+
+const FAQ_STUDENT = [
+    { q: 'Find capstones about machine learning', icon: '🤖' },
+    { q: 'Recommend a capstone topic related to healthcare', icon: '🏥' },
+    { q: 'Find capstones about IoT or embedded systems', icon: '📡' },
+    { q: 'Find capstones using React or Laravel', icon: '💻' },
+    { q: 'What capstones has my adviser supervised before?', icon: '👨‍🏫' },
+    { q: 'What is the most popular research topic in my program?', icon: '🔥' },
+    { q: 'Find capstones similar to mine in the same program', icon: '🔍' },
+    { q: 'Who else from my program submitted a capstone this year?', icon: '👥' },
+];
+
+const FAQ_FACULTY = [
+    { q: 'What is the most researched topic among capstones I have advised?', icon: '📊' },
+    { q: 'Are there capstone topics in my program that have been overdone?', icon: '⚠️' },
+    { q: 'What year range do capstones in my program span?', icon: '📅' },
+    { q: 'Which capstones in my program were rejected and why?', icon: '❌' },
+    { q: 'How many students have I advised across all years?', icon: '👥' },
+    { q: 'What technologies are students in my program commonly using?', icon: '🛠️' },
+    { q: 'Find capstones in my program about web development', icon: '🌐' },
+    { q: 'Show BSIT capstones from 2023 to 2026', icon: '📋' },
+];
+
+const FAQ_ADMIN = [
+    { q: 'Who has uploaded the most capstones overall?', icon: '🏅' },
+    { q: 'Show the upload trend over the last 5 years', icon: '📈' },
+    { q: 'How many capstones are in the archive in total?', icon: '📚' },
+    { q: 'How many users are registered by role?', icon: '👥' },
+    { q: 'Show recent login activity', icon: '🔒' },
+    { q: 'Which capstones have never been viewed since publishing?', icon: '👻' },
+    { q: 'Are there capstones in the archive with no PDF attached?', icon: '📭' },
+    { q: 'Are there capstones with no keywords tagged?', icon: '🏷️' },
+    { q: 'Which users have never logged in since registering?', icon: '🔐' },
+    { q: 'Who are the most active users this month?', icon: '🔥' },
+    { q: 'Which program produces the fewest capstones per year?', icon: '📉' },
+    { q: 'Are there any capstone titles that appear more than once?', icon: '🔁' },
+    { q: 'How many capstones have been archived vs published?', icon: '📊' },
+    { q: 'Show capstone statistics', icon: '📊' },
+];
+
+const FAQ_CONTEXT = [
+    { q: 'What is this capstone about?', icon: '📋' },
+    { q: 'Who advised this capstone?', icon: '👨‍🏫' },
+    { q: 'What keywords describe this capstone?', icon: '🏷️' },
+    { q: 'Find capstones related to this one', icon: '🔗' },
+    { q: 'What is the publication and copyright status of this?', icon: '©️' },
+    { q: 'When was this capstone approved?', icon: '✅' },
+    { q: 'How does this capstone compare in views to others in its program?', icon: '📊' },
+];
+
+// Build tab structure per role
+const TABS_BY_ROLE = {
+    student: [
+        { id: 'definitions', label: 'Definitions', icon: '📖', questions: FAQ_DEFINITIONS },
+        { id: 'discover',    label: 'Discover',    icon: '📊', questions: FAQ_DYNAMIC },
+        { id: 'student',     label: 'My Research', icon: '🎓', questions: FAQ_STUDENT },
     ],
     faculty: [
-        'Recommend capstones about machine learning',
-        'Find web-based healthcare capstones from 2024',
-        'Show BSIT capstones from 2023 to 2026',
-        'Find capstones related to IoT',
-        'What capstones are about inventory management?',
-        'What is this capstone about?',
+        { id: 'definitions', label: 'Definitions', icon: '📖', questions: FAQ_DEFINITIONS },
+        { id: 'discover',    label: 'Discover',    icon: '📊', questions: FAQ_DYNAMIC },
+        { id: 'faculty',     label: 'My Program',  icon: '🏫', questions: FAQ_FACULTY },
     ],
-    student: [
-        'I need a capstone idea related to healthcare',
-        'Find machine learning capstones',
-        'Recommend tourism or agriculture projects',
-        'Show me BSIT capstones from 2025',
-        'Find capstones using Laravel or React',
-        'What is this capstone about?',
+    admin: [
+        { id: 'definitions', label: 'Definitions', icon: '📖', questions: FAQ_DEFINITIONS },
+        { id: 'discover',    label: 'Discover',    icon: '📊', questions: FAQ_DYNAMIC },
+        { id: 'admin',       label: 'System',      icon: '🔐', questions: FAQ_ADMIN },
     ],
     visitor: [
-        'Show available capstones about healthcare',
-        'Find web development capstones',
-        'Recommend capstones from 2025',
-        'Show me capstones about agriculture',
+        { id: 'definitions', label: 'Definitions', icon: '📖', questions: FAQ_DEFINITIONS },
+        { id: 'discover',    label: 'Discover',    icon: '📊', questions: FAQ_DYNAMIC },
     ],
 };
 
@@ -116,12 +181,71 @@ const ROLE_SUBTITLE = {
     visitor: 'Browse Available Capstones',
 };
 
-const ROLE_EMPTY_DESC = {
-    admin:   'Ask me about system stats, upload trends, activity logs, or search and recommend capstone projects from the archive.',
-    faculty: 'Ask me to find or recommend capstone projects by category, keyword, year, author, or technology.',
-    student: 'Ask me to find capstones that match your research interests — by topic, category, keyword, or year.',
-    visitor: 'Ask me to find publicly available capstone projects by topic, category, or year.',
-};
+// ─── FAQ Panel (replaces old empty state) ────────────────────────────────────
+function FaqPanel({ role, capstoneContext, onAsk, filter }) {
+    const [activeTab, setActiveTab] = useState(
+        capstoneContext?.title ? 'context' : 'definitions'
+    );
+
+    const tabs = capstoneContext?.title
+        ? [{ id: 'context', label: 'This Capstone', icon: '📋', questions: FAQ_CONTEXT }]
+        : (TABS_BY_ROLE[role] ?? TABS_BY_ROLE.visitor);
+
+    const currentQuestions = tabs.find(t => t.id === activeTab)?.questions ?? [];
+
+    // Filter by the bottom textarea value
+    const filtered = filter.trim()
+        ? currentQuestions.filter(item =>
+            item.q.toLowerCase().includes(filter.trim().toLowerCase())
+          )
+        : currentQuestions;
+
+    return (
+        <div className="faq-panel">
+
+            {/* Role tabs */}
+            <div className="faq-tabs">
+                {tabs.map(tab => (
+                    <button
+                        key={tab.id}
+                        className={`faq-tab${activeTab === tab.id ? ' active' : ''}`}
+                        onClick={() => setActiveTab(tab.id)}
+                    >
+                        <span>{tab.icon}</span>
+                        <span>{tab.label}</span>
+                    </button>
+                ))}
+            </div>
+
+            {/* Question list */}
+            <div className="faq-list">
+                {filtered.length === 0 ? (
+                    <div className="faq-empty-search">
+                        {filter.trim()
+                            ? <>No questions match — press <strong>Enter</strong> to ask it directly.</>
+                            : 'No questions available.'}
+                    </div>
+                ) : (
+                    filtered.map((item, i) => (
+                        <button
+                            key={i}
+                            className="faq-item"
+                            onClick={() => onAsk(item.q)}
+                        >
+                            <span className="faq-item-icon">{item.icon}</span>
+                            <span className="faq-item-text">{item.q}</span>
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+                                 stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+                                 className="faq-item-arrow">
+                                <polyline points="9 18 15 12 9 6"/>
+                            </svg>
+                        </button>
+                    ))
+                )}
+            </div>
+        </div>
+    );
+}
 
 // ─── Chatbot Component ────────────────────────────────────────────────────────
 export default function Chatbot() {
@@ -135,11 +259,11 @@ export default function Chatbot() {
     const [input, setInput] = useState('');
     const [loading, setLoading] = useState(false);
     const [unread, setUnread] = useState(0);
-    const [hidden, setHidden] = useState(false); // Hide/show FAB
-    const [position, setPosition] = useState({ x: 0, y: 0 }); // FAB position (offset from default)
+    const [showFaqDrawer, setShowFaqDrawer] = useState(false); // FAQ drawer in mid-conversation
+    const [position, setPosition] = useState({ x: 0, y: 0 });
     const [isDragging, setIsDragging] = useState(false);
     const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
-    const [hasMoved, setHasMoved] = useState(false); // Track if user actually dragged
+    const [hasMoved, setHasMoved] = useState(false);
 
     const messagesEndRef = useRef(null);
     const textareaRef = useRef(null);
@@ -155,22 +279,29 @@ export default function Chatbot() {
         if (open) setUnread(0);
     }, [open]);
 
-    // Load saved position and hidden state from localStorage
+    // Load saved position from localStorage; clear any stale 'hidden' flag
     useEffect(() => {
+        // Always clear hidden state — if the FAB was hidden the user has no way to find it
+        localStorage.removeItem('chatbot_hidden');
+
         const savedPosition = localStorage.getItem('chatbot_position');
-        const savedHidden = localStorage.getItem('chatbot_hidden');
-        
         if (savedPosition) {
             try {
                 const pos = JSON.parse(savedPosition);
-                setPosition(pos);
+                // Clamp to keep FAB inside viewport (fab is ~56px = 3.5rem)
+                const FAB = 56;
+                const maxX = window.innerWidth  - FAB - 28; // 28 = 1.75rem right
+                const maxY = window.innerHeight - FAB - 28;
+                const minX = -(window.innerWidth  - FAB - 28);
+                const minY = -(window.innerHeight - FAB - 28);
+                const clamped = {
+                    x: Math.max(minX, Math.min(maxX, pos.x ?? 0)),
+                    y: Math.max(minY, Math.min(maxY, pos.y ?? 0)),
+                };
+                setPosition(clamped);
             } catch (e) {
-                // Ignore parse errors
+                localStorage.removeItem('chatbot_position');
             }
-        }
-        
-        if (savedHidden === 'true') {
-            setHidden(true);
         }
     }, []);
 
@@ -178,21 +309,27 @@ export default function Chatbot() {
     useEffect(() => {
         const handleMove = (e) => {
             if (!isDragging) return;
-            
+
             const clientX = e.type === 'touchmove' ? e.touches[0].clientX : e.clientX;
             const clientY = e.type === 'touchmove' ? e.touches[0].clientY : e.clientY;
-            
-            const deltaX = clientX - dragStart.x;
-            const deltaY = clientY - dragStart.y;
-            
+
+            const FAB = 56;
+            const maxX = window.innerWidth  - FAB - 28;
+            const maxY = window.innerHeight - FAB - 28;
+            const minX = -(window.innerWidth  - FAB - 28);
+            const minY = -(window.innerHeight - FAB - 28);
+
+            const newX = Math.max(minX, Math.min(maxX, clientX - dragStart.x));
+            const newY = Math.max(minY, Math.min(maxY, clientY - dragStart.y));
+
             // Check if user has moved more than 5px (to distinguish from click)
-            if (Math.abs(deltaX) > 5 || Math.abs(deltaY) > 5) {
+            if (Math.abs(newX - position.x) > 5 || Math.abs(newY - position.y) > 5) {
                 setHasMoved(true);
             }
-            
-            setPosition({ x: deltaX, y: deltaY });
+
+            setPosition({ x: newX, y: newY });
         };
-        
+
         const handleEnd = () => {
             if (isDragging) {
                 setIsDragging(false);
@@ -200,13 +337,13 @@ export default function Chatbot() {
                 localStorage.setItem('chatbot_position', JSON.stringify(position));
             }
         };
-        
+
         if (isDragging) {
             document.addEventListener('mousemove', handleMove);
             document.addEventListener('mouseup', handleEnd);
             document.addEventListener('touchmove', handleMove);
             document.addEventListener('touchend', handleEnd);
-            
+
             return () => {
                 document.removeEventListener('mousemove', handleMove);
                 document.removeEventListener('mouseup', handleEnd);
@@ -219,7 +356,7 @@ export default function Chatbot() {
     const handleDragStart = (e) => {
         const clientX = e.type === 'touchstart' ? e.touches[0].clientX : e.clientX;
         const clientY = e.type === 'touchstart' ? e.touches[0].clientY : e.clientY;
-        
+
         setIsDragging(true);
         setHasMoved(false); // Reset movement flag
         setDragStart({
@@ -234,15 +371,6 @@ export default function Chatbot() {
             setOpen((o) => !o);
         }
         setHasMoved(false); // Reset for next interaction
-    };
-
-    const toggleHidden = () => {
-        const newHidden = !hidden;
-        setHidden(newHidden);
-        localStorage.setItem('chatbot_hidden', newHidden.toString());
-        if (newHidden) {
-            setOpen(false); // Close panel when hiding
-        }
     };
 
     // Auto-resize textarea
@@ -294,6 +422,7 @@ export default function Chatbot() {
 
         setMessages((prev) => [...prev, userMsg]);
         setInput('');
+        setShowFaqDrawer(false); // hide drawer when a message is sent
         if (textareaRef.current) textareaRef.current.style.height = 'auto';
         setLoading(true);
 
@@ -344,8 +473,6 @@ export default function Chatbot() {
         }
     };
 
-    const handleChip = (chip) => sendMessage(chip);
-
     const handleClear = () => setMessages([]);
 
     if (!user) return null;
@@ -359,53 +486,36 @@ export default function Chatbot() {
 
     return (
         <>
-            {/* ── Show/Hide Toggle (Mini button when hidden) ──────────── */}
-            {hidden && (
-                <button
-                    className="chatbot-show-btn"
-                    onClick={toggleHidden}
-                    title="Show EduBot"
-                >
+            {/* ── Floating Action Button (Draggable) ──────────────────── */}
+            <button
+                ref={fabRef}
+                id="chatbot-fab"
+                className="chatbot-fab"
+                style={fabStyle}
+                onClick={handleFabClick}
+                onMouseDown={handleDragStart}
+                onTouchStart={handleDragStart}
+                title="EduBot — AI Capstone Assistant (Drag to move)"
+            >
+                {open ? (
+                    // X icon
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+                         stroke="white" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"
+                         style={{ width: '1.25rem', height: '1.25rem', pointerEvents: 'none' }}>
+                        <line x1="18" y1="6" x2="6" y2="18" />
+                        <line x1="6" y1="6" x2="18" y2="18" />
+                    </svg>
+                ) : (
+                    // Chat icon
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="white"
-                         style={{ width: '1rem', height: '1rem' }}>
+                         style={{ width: '1.35rem', height: '1.35rem', pointerEvents: 'none' }}>
                         <path d="M20 2H4C2.9 2 2 2.9 2 4v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-2 12H6v-2h12v2zm0-3H6V9h12v2zm0-3H6V6h12v2z"/>
                     </svg>
-                </button>
-            )}
-
-            {/* ── Floating Action Button (Draggable) ──────────────────── */}
-            {!hidden && (
-                <button
-                    ref={fabRef}
-                    id="chatbot-fab"
-                    className="chatbot-fab"
-                    style={fabStyle}
-                    onClick={handleFabClick}
-                    onMouseDown={handleDragStart}
-                    onTouchStart={handleDragStart}
-                    title="EduBot — AI Capstone Assistant (Drag to move)"
-                >
-                    {open ? (
-                        // X icon
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
-                             stroke="white" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"
-                             style={{ width: '1.25rem', height: '1.25rem', pointerEvents: 'none' }}>
-                            <line x1="18" y1="6" x2="6" y2="18" />
-                            <line x1="6" y1="6" x2="18" y2="18" />
-                        </svg>
-                    ) : (
-                        // Chat icon
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="white"
-                             style={{ width: '1.35rem', height: '1.35rem', pointerEvents: 'none' }}>
-                            <path d="M20 2H4C2.9 2 2 2.9 2 4v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-2 12H6v-2h12v2zm0-3H6V9h12v2zm0-3H6V6h12v2z"/>
-                        </svg>
-                    )}
-                    {/* Unread badge */}
-                    {!open && unread > 0 && (
-                        <span className="chatbot-fab-badge">{unread}</span>
-                    )}
-                </button>
-            )}
+                )}
+                {!open && unread > 0 && (
+                    <span className="chatbot-fab-badge">{unread}</span>
+                )}
+            </button>
 
             {/* ── Chat Panel ──────────────────────────────────────────── */}
             {open && (
@@ -426,19 +536,6 @@ export default function Chatbot() {
                                 {ROLE_SUBTITLE[currentRole] ?? 'AI Capstone Assistant'}
                             </div>
                         </div>
-                        {/* Hide button */}
-                        <button
-                            onClick={toggleHidden}
-                            className="chatbot-header-close"
-                            title="Hide EduBot (can restore later)"
-                            style={{ marginRight: '0.2rem' }}
-                        >
-                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
-                                 stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"
-                                 style={{ width: '1rem', height: '1rem' }}>
-                                <path d="M19 12H5M12 19l-7-7 7-7"/>
-                            </svg>
-                        </button>
                         {/* Clear button */}
                         {messages.length > 0 && (
                             <button
@@ -486,33 +583,13 @@ export default function Chatbot() {
                     {/* Messages */}
                     <div className="chatbot-messages" id="chatbot-messages">
                         {messages.length === 0 ? (
-                            /* Empty state */
-                            <div className="chatbot-empty">
-                                <div className="chatbot-empty-icon">
-                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"
-                                         style={{ width: '1.5rem', height: '1.5rem' }}>
-                                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H8c0-2.21 1.79-4 4-4s4 1.79 4 4c0 .88-.36 1.68-.93 2.25z"/>
-                                    </svg>
-                                </div>
-                                <div className="chatbot-empty-title">Hi, I'm EduBot! 👋</div>
-                                <div className="chatbot-empty-desc">
-                                    {ROLE_EMPTY_DESC[currentRole] ?? 'Ask me anything about capstone projects.'}
-                                </div>
-                                <div className="chatbot-chips">
-                                    {(capstoneContext?.title
-                                        ? ['What is this capstone about?', 'Who are the authors?', 'What are the keywords?', 'Find related capstones']
-                                        : (CHIPS_BY_ROLE[currentRole] ?? CHIPS_BY_ROLE.student)
-                                    ).map((chip) => (
-                                        <button
-                                            key={chip}
-                                            className="chatbot-chip"
-                                            onClick={() => handleChip(chip)}
-                                        >
-                                            {chip}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
+                            /* ── FAQ Panel replaces old empty/chip state ── */
+                            <FaqPanel
+                                role={currentRole}
+                                capstoneContext={capstoneContext}
+                                onAsk={(q) => sendMessage(q)}
+                                filter={input}
+                            />
                         ) : (
                             messages.map((msg) => (
                                 <div
@@ -581,14 +658,52 @@ export default function Chatbot() {
                         <div ref={messagesEndRef} />
                     </div>
 
-                    {/* Input area */}
-                    <div className="chatbot-input-area">
+                    {/* FAQ Drawer — slides up mid-conversation when toggled */}
+                    {messages.length > 0 && showFaqDrawer && (
+                        <div className="chatbot-faq-drawer">
+                            <FaqPanel
+                                role={currentRole}
+                                capstoneContext={capstoneContext}
+                                onAsk={(q) => sendMessage(q)}
+                                filter={input}
+                            />
+                        </div>
+                    )}
+
+                    <div className="chatbot-footer">
+                        {/* FAQ toggle — only visible once conversation has started */}
+                        {messages.length > 0 && (
+                            <button
+                                className={`chatbot-faq-toggle${showFaqDrawer ? ' active' : ''}`}
+                                onClick={() => setShowFaqDrawer(v => !v)}
+                                title={showFaqDrawer ? 'Hide questions' : 'Browse questions'}
+                            >
+                                {showFaqDrawer ? (
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+                                         stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"
+                                         style={{ width: '1rem', height: '1rem' }}>
+                                        <polyline points="9 18 15 12 9 6" />
+                                    </svg>
+                                ) : (
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+                                         stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"
+                                         style={{ width: '1rem', height: '1rem' }}>
+                                        <line x1="8" y1="6" x2="21" y2="6" />
+                                        <line x1="8" y1="12" x2="21" y2="12" />
+                                        <line x1="8" y1="18" x2="21" y2="18" />
+                                        <line x1="3" y1="6" x2="3.01" y2="6" />
+                                        <line x1="3" y1="12" x2="3.01" y2="12" />
+                                        <line x1="3" y1="18" x2="3.01" y2="18" />
+                                    </svg>
+                                )}
+                            </button>
+                        )}
                         <textarea
                             ref={textareaRef}
                             id="chatbot-input"
                             className="chatbot-textarea"
                             rows={1}
-                            placeholder="Ask about capstone projects…"
+                            placeholder={messages.length === 0 ? 'Search questions or ask anything…' : 'Ask about capstone projects…'}
                             value={input}
                             onChange={handleInputChange}
                             onKeyDown={handleKeyDown}

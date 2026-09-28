@@ -116,6 +116,9 @@ export const uploadStudentImrad = (formData) => axios.post('/student/capstones/u
     headers: { 'Content-Type': 'multipart/form-data' },
 });
 export const deleteStudentCapstone = (id) => axios.delete(`/student/capstones/${id}`);
+export const updateStudentCapstone = (id, data) => axios.put(`/student/capstones/${id}`, data);
+export const archiveStudentCapstone = (id) => axios.post(`/student/capstones/${id}/archive`);
+export const unarchiveStudentCapstone = (id) => axios.post(`/student/capstones/${id}/unarchive`);
 export const getArchivedStudentCapstones = (params = {}) => axios.get('/student/capstones/archived', { params });
 
 // ── Password Reset & Email Verification ───────────
