@@ -10,6 +10,7 @@ import {
 import { HiOutlineArchiveBoxArrowDown, HiOutlineArchiveBoxXMark } from 'react-icons/hi2';
 import {
     getFacultyCapstones,
+    getCapstone,
     getPublishedYears, getPublishedPrograms,
     getPublishedCategories,
     deleteFacultyCapstone,
@@ -47,6 +48,7 @@ export default function FacultyCapstoneLibrary() {
     const [selectedCapstone, setSelectedCapstone] = useState(null);
     const [showViewModal, setShowViewModal] = useState(false);
     const [showEditModal, setShowEditModal] = useState(false);
+    const [fetchingEdit, setFetchingEdit] = useState(false);
     const searchTimer = useRef(null);
     const [debouncedSearch, setDebouncedSearch] = useState('');
 
@@ -102,7 +104,18 @@ export default function FacultyCapstoneLibrary() {
 
     const handleView = (capstone) => { setSelectedCapstone(capstone); setShowViewModal(true); };
     const openCapstoneViewer = (capId) => navigate(`/faculty/capstones/${capId}`);
-    const handleEdit = (capstone) => { setSelectedCapstone(capstone); setShowEditModal(true); };
+    const handleEdit = async (capstone) => {
+        setFetchingEdit(true);
+        try {
+            const res = await getCapstone(capstone.id);
+            setSelectedCapstone(res.data.data);
+            setShowEditModal(true);
+        } catch {
+            notify.error('Failed to load capstone details.');
+        } finally {
+            setFetchingEdit(false);
+        }
+    };
 
     const handleDelete = (capstone) => setConfirm({
         open: true,
@@ -452,6 +465,8 @@ export default function FacultyCapstoneLibrary() {
                     onClose={() => setUploadOpen(false)}
                 />
             )}
+
+            {fetchingEdit && <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50"><div className="bg-white rounded-xl px-6 py-4 shadow-xl text-sm font-medium text-gray-700">Loading capstone data…</div></div>}
 
             <ConfirmDialog
                 open={confirm.open}

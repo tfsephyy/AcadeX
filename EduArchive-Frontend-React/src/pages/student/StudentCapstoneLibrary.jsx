@@ -7,7 +7,7 @@ import {
     HiOutlineUpload, HiOutlinePencil,
 } from 'react-icons/hi';
 import {
-    getStudentCapstones, deleteStudentCapstone, getArchivedStudentCapstones,
+    getStudentCapstones, getCapstone, deleteStudentCapstone, getArchivedStudentCapstones,
     updateStudentCapstone, archiveStudentCapstone, unarchiveStudentCapstone,
     getPublishedYears, getPublishedPrograms, getPublishedCategories,
 } from '../../api/admin';
@@ -59,6 +59,7 @@ export default function StudentCapstoneLibrary() {
     const [confirm, setConfirm] = useState({ open: false, title: '', message: '', action: null, variant: 'danger' });
     const [selectedCapstone, setSelectedCapstone] = useState(null);
     const [showEditModal, setShowEditModal] = useState(false);
+    const [fetchingEdit, setFetchingEdit] = useState(false);
     const searchTimer = useRef(null);
 
     useEffect(() => {
@@ -137,7 +138,18 @@ export default function StudentCapstoneLibrary() {
         },
     });
 
-    const handleEdit = (cap) => { setSelectedCapstone(cap); setShowEditModal(true); };
+    const handleEdit = async (cap) => {
+        setFetchingEdit(true);
+        try {
+            const res = await getCapstone(cap.id);
+            setSelectedCapstone(res.data.data);
+            setShowEditModal(true);
+        } catch {
+            notify.error('Failed to load capstone details.');
+        } finally {
+            setFetchingEdit(false);
+        }
+    };
 
     const setFilter = (k, v) => { setFilters(p => ({ ...p, [k]: v })); setPage(1); };
 
@@ -429,6 +441,8 @@ export default function StudentCapstoneLibrary() {
                     </div>
                 )}
             </div>
+
+            {fetchingEdit && <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50"><div className="bg-white rounded-xl px-6 py-4 shadow-xl text-sm font-medium text-gray-700">Loading capstone data…</div></div>}
 
             <ConfirmDialog open={confirm.open} title={confirm.title} message={confirm.message}
                 variant={confirm.variant} onConfirm={confirm.action}

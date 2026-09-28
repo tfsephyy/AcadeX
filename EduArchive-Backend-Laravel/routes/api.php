@@ -68,9 +68,14 @@ Route::prefix('v1')->group(function () {
         Route::get('/capstones/{capstone}/pdf-token',      [CapstoneController::class, 'getPdfToken']);
         // IMRAD serving — all authenticated roles
         Route::get('/capstones/{capstone}/imrad',          [CapstoneController::class, 'serveImrad']);
+        // Additional resource serving (inline) — all authenticated roles
+        Route::get('/capstones/{capstone}/resources/{resource}/view', [CapstoneController::class, 'serveResource']);
         // Download — rate-limited to 10 per hour per user
         Route::get('/capstones/{capstone}/download',       [CapstoneController::class, 'download'])
             ->middleware('throttle:10,60');
+        // Resource download — admin + faculty only (enforced in controller)
+        Route::get('/capstones/{capstone}/resources/{resource}/download', [CapstoneController::class, 'downloadResource'])
+            ->middleware('throttle:20,60');
         Route::post('/capstones/{capstone}/bookmark',      [CapstoneController::class, 'toggleBookmark']);
         Route::get('/capstones/{capstone}',                [CapstoneController::class, 'show']);
 

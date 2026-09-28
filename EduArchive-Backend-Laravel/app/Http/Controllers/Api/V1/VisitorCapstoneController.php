@@ -169,7 +169,7 @@ class VisitorCapstoneController extends Controller
             return $this->errorResponse('Capstone not found.', 404);
         }
 
-        $capstone->load(['keywords', 'uploader:id,name', 'adviser:id,name', 'referencedCapstones:id,title,author,year,program']);
+        $capstone->load(['keywords', 'uploader:id,name', 'adviser:id,name', 'resources', 'referencedCapstones:id,title,author,year,program']);
 
         $data = $capstone->toArray();
         $data['visitor_can_see_pdf'] = $this->canSeeCapstonePdf($capstone);

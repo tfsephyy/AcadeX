@@ -50,8 +50,8 @@ const COPYRIGHT_OPTIONS = [
 /* ─── Reusable section card ──────────────────────────────────── */
 function SectionCard({ icon: Icon, title, subtitle, children, accent = 'var(--color-primary)' }) {
     return (
-        <div className="rounded-2xl border overflow-hidden" style={{ background: 'var(--color-surface)', borderColor: 'var(--color-border)' }}>
-            <div className="px-5 py-3.5 border-b flex items-center gap-3" style={{ background: 'var(--color-bg-tertiary)', borderColor: 'var(--color-border)' }}>
+        <div className="rounded-2xl border" style={{ background: 'var(--color-surface)', borderColor: 'var(--color-border)' }}>
+            <div className="px-5 py-3.5 border-b flex items-center gap-3 rounded-t-2xl" style={{ background: 'var(--color-bg-tertiary)', borderColor: 'var(--color-border)' }}>
                 <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: `${accent}22` }}>
                     <Icon className="w-4 h-4" style={{ color: accent }} />
                 </div>
@@ -411,7 +411,7 @@ export default function CapstoneAdditionalInfoPage() {
                         {/* References */}
                         <SectionCard icon={HiOutlineBookOpen} title="References" subtitle="Cite other capstones used as references" accent="#7c3aed">
                             {references.length > 0 && (
-                                <div className="mb-3 space-y-2">
+                                <div className="mb-3 space-y-2 max-h-40 overflow-y-auto admin-scroll pr-0.5">
                                     {references.map((r) => (
                                         <div key={r.id} className="flex items-center gap-2 p-2.5 rounded-lg border"
                                             style={{ background: 'rgba(124,58,237,0.08)', borderColor: 'rgba(124,58,237,0.25)' }}>
@@ -441,12 +441,12 @@ export default function CapstoneAdditionalInfoPage() {
                                     {refLoading && <span className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 border-2 rounded-full animate-spin" style={{ borderColor: 'var(--color-primary)', borderTopColor: 'transparent' }} />}
                                 </div>
                                 {refDropdownOpen && (refResults.length > 0 || refSearch.trim()) && (
-                                    <div className="absolute top-full left-0 right-0 z-30 mt-1 rounded-xl border shadow-lg overflow-hidden"
+                                    <div className="absolute top-full left-0 right-0 z-30 mt-1 rounded-xl border shadow-xl"
                                         style={{ background: 'var(--color-surface-elevated)', borderColor: 'var(--color-border-strong)' }}>
                                         {refResults.length === 0 ? (
                                             <div className="px-4 py-3 text-xs text-center" style={{ color: 'var(--color-text-muted)' }}>{refLoading ? 'Searching…' : 'No capstones found'}</div>
                                         ) : (
-                                            <div className="max-h-48 overflow-y-auto admin-scroll divide-y" style={{ borderColor: 'var(--color-border)' }}>
+                                            <div className="max-h-56 overflow-y-auto admin-scroll divide-y" style={{ borderColor: 'var(--color-border)' }}>
                                                 {refResults.map((cap) => (
                                                     <button key={cap.id} onClick={() => addReference(cap)}
                                                         className="w-full text-left px-4 py-2.5 transition-colors"
@@ -497,12 +497,12 @@ export default function CapstoneAdditionalInfoPage() {
                                         {adviserLoading && <span className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 border-2 rounded-full animate-spin" style={{ borderColor: 'var(--color-primary)', borderTopColor: 'transparent' }} />}
                                     </div>
                                     {adviserDropdownOpen && (
-                                        <div className="absolute top-full left-0 right-0 z-30 mt-1 rounded-xl border shadow-lg overflow-hidden"
+                                        <div className="absolute top-full left-0 right-0 z-30 mt-1 rounded-xl border shadow-xl"
                                             style={{ background: 'var(--color-surface-elevated)', borderColor: 'var(--color-border-strong)' }}>
                                             {adviserResults.length === 0 ? (
                                                 <div className="px-4 py-3 text-xs text-center" style={{ color: 'var(--color-text-muted)' }}>{adviserLoading ? 'Loading…' : 'No faculty found'}</div>
                                             ) : (
-                                                <div className="max-h-64 overflow-y-auto admin-scroll divide-y" style={{ borderColor: 'var(--color-border)' }}>
+                                                <div className="max-h-56 overflow-y-auto admin-scroll divide-y" style={{ borderColor: 'var(--color-border)' }}>
                                                     {adviserResults.filter(f => !adviserSearch || f.name.toLowerCase().includes(adviserSearch.toLowerCase())).map((fac) => (
                                                         <button key={fac.id}
                                                             onClick={() => { setAdviser(fac); setAdviserDropdownOpen(false); setAdviserSearch(''); }}

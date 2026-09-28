@@ -72,6 +72,11 @@ export const downloadCapstone = (id) => axios.get(`/capstones/${id}/download`, {
 export const getCapstoneBlob = (id) => axios.get(`/capstones/${id}/pdf`, { responseType: 'blob' });
 export const getCapstoneImradBlob = (id) => axios.get(`/capstones/${id}/imrad`, { responseType: 'blob' });
 export const getCaptonePdf = (id) => `/capstones/${id}/pdf`; // kept for backward compat
+// Resource helpers — view returns a blob URL for new tab, download forces attachment
+export const getCapstoneResourceBlob = (capstoneId, resourceId) =>
+    axios.get(`/capstones/${capstoneId}/resources/${resourceId}/view`, { responseType: 'blob' });
+export const downloadCapstoneResource = (capstoneId, resourceId) =>
+    axios.get(`/capstones/${capstoneId}/resources/${resourceId}/download`, { responseType: 'blob' });
 export const getFacultyList = (params = {}) => axios.get('/capstones/faculty-list', { params });
 
 // ── Notifications ──────────────────────────────────

@@ -275,21 +275,21 @@ export default function CapstoneApproval() {
                                 <div className="flex items-center gap-2">
                                     <button
                                         onClick={() => handleView(cap)}
-                                        className="flex-1 inline-flex items-center justify-center gap-1 px-3 py-2 text-sm font-medium text-gray-700 bg-gray-50 border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors"
+                                        className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                        title="View"
                                     >
                                         <HiOutlineEye className="w-4 h-4" />
-                                        View
                                     </button>
                                     <button
                                         onClick={() => handleApprove(cap)}
-                                        className="flex-1 inline-flex items-center justify-center gap-1 px-3 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors"
+                                        className="p-1.5 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                                        title="Approve"
                                     >
                                         <HiOutlineCheck className="w-4 h-4" />
-                                        Approve
                                     </button>
                                     <button
                                         onClick={() => handleReject(cap)}
-                                        className="inline-flex items-center justify-center p-2 text-red-600 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 transition-colors"
+                                        className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                                         title="Reject"
                                     >
                                         <HiOutlineX className="w-4 h-4" />
@@ -315,6 +315,12 @@ export default function CapstoneApproval() {
                 onClose={() => {
                     setShowViewModal(false);
                     setSelectedCapstone(null);
+                }}
+                onViewFull={() => {
+                    setShowViewModal(false);
+                    if (selectedCapstone?.id) {
+                        navigate(`/admin/capstones/${selectedCapstone.id}`);
+                    }
                 }}
             />
 

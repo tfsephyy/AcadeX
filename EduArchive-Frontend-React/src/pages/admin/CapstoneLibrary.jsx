@@ -10,7 +10,7 @@ import {
     HiOutlineArchiveBoxArrowDown, HiOutlineArchiveBoxXMark,
 } from 'react-icons/hi2';
 import {
-    getCapstones, deleteCapstone, archiveCapstone, unarchiveCapstone, getArchivedCapstones,
+    getCapstones, getCapstone, deleteCapstone, archiveCapstone, unarchiveCapstone, getArchivedCapstones,
 } from '../../api/admin';
 import { useNotification } from '../../components/Notification';
 import Loading from '../../components/Loading';
@@ -63,6 +63,7 @@ export default function CapstoneLibrary() {
     const [selectedCapstone, setSelectedCapstone] = useState(null);
     const [showViewModal, setShowViewModal] = useState(false);
     const [showEditModal, setShowEditModal] = useState(false);
+    const [fetchingEdit, setFetchingEdit] = useState(false);
 
     // ── Derived ───────────────────────────────────────────────────────────────────
     const activeFilterCount = [filters.year, filters.program, filters.category, filters.adviser_id].filter(Boolean).length;
@@ -151,7 +152,18 @@ export default function CapstoneLibrary() {
     const handleSearch = (e) => { setSearch(e.target.value); setPage(1); };
     const handleFilterChange = (key, value) => { setFilters(prev => ({ ...prev, [key]: value })); setPage(1); };
     const handleView = (cap) => { setSelectedCapstone(cap); setShowViewModal(true); };
-    const handleEdit = (cap) => { setSelectedCapstone(cap); setShowEditModal(true); };
+    const handleEdit = async (cap) => {
+        setFetchingEdit(true);
+        try {
+            const res = await getCapstone(cap.id);
+            setSelectedCapstone(res.data.data);
+            setShowEditModal(true);
+        } catch {
+            notify.error('Failed to load capstone details.');
+        } finally {
+            setFetchingEdit(false);
+        }
+    };
 
     const handleAdviserSelect = (adviser) => {
         setFilters(prev => ({ ...prev, adviser_id: adviser ? adviser.id : '' }));
@@ -543,6 +555,7 @@ export default function CapstoneLibrary() {
                     }} />
             )}
             {uploadOpen && <UploadCapstoneModal open={uploadOpen} onClose={() => setUploadOpen(false)} />}
+            {fetchingEdit && <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50"><div className="bg-white rounded-xl px-6 py-4 shadow-xl text-sm font-medium text-gray-700">Loading capstone data…</div></div>}
 
             <ConfirmDialog open={confirm.open} title={confirm.title} message={confirm.message} variant={confirm.variant}
                 onConfirm={confirm.action} onCancel={() => setConfirm(p => ({ ...p, open: false }))} />

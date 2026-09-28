@@ -1068,6 +1068,118 @@ class CapstoneController extends Controller
     }
 
     /**
+     * Serve an additional resource file inline (for viewing in a new tab).
+     * Available to all authenticated users.
+     */
+    public function serveResource(Request $request, Capstone $capstone, CapstoneResource $resource): \Symfony\Component\HttpFoundation\StreamedResponse|JsonResponse
+    {
+        // Ensure the resource belongs to this capstone
+        if ($resource->capstone_id !== $capstone->id) {
+            return $this->errorResponse('Resource not found.', 404);
+        }
+
+        if (!$resource->file_path || !Storage::disk('local')->exists($resource->file_path)) {
+            return $this->errorResponse('Resource file not found.', 404);
+        }
+
+        $encryptor = new PdfEncryptorService();
+        $rawBytes  = $encryptor->decryptFromDisk($resource->file_path);
+
+        if ($rawBytes === null) {
+            return $this->errorResponse('Resource file could not be decrypted.', 500);
+        }
+
+        $originalName = $resource->file_original_name ?? $resource->name;
+        $extension    = strtolower(pathinfo($originalName, PATHINFO_EXTENSION));
+
+        $mimeMap = [
+            'pdf'  => 'application/pdf',
+            'doc'  => 'application/msword',
+            'docx' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'xls'  => 'application/vnd.ms-excel',
+            'xlsx' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'ppt'  => 'application/vnd.ms-powerpoint',
+            'pptx' => 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+            'png'  => 'image/png',
+            'jpg'  => 'image/jpeg',
+            'jpeg' => 'image/jpeg',
+            'gif'  => 'image/gif',
+            'zip'  => 'application/zip',
+            'txt'  => 'text/plain',
+        ];
+
+        $mimeType = $mimeMap[$extension] ?? 'application/octet-stream';
+        $size     = strlen($rawBytes);
+
+        return response()->stream(
+            function () use ($rawBytes) { echo $rawBytes; },
+            200,
+            [
+                'Content-Type'           => $mimeType,
+                'Content-Disposition'    => 'inline; filename="' . addslashes($originalName) . '"',
+                'Content-Length'         => $size,
+                'Cache-Control'          => 'no-store, no-cache, must-revalidate, max-age=0',
+                'Pragma'                 => 'no-cache',
+                'X-Content-Type-Options' => 'nosniff',
+            ]
+        );
+    }
+
+    /**
+     * Download an additional resource file (admin + faculty only).
+     */
+    public function downloadResource(Request $request, Capstone $capstone, CapstoneResource $resource): \Symfony\Component\HttpFoundation\StreamedResponse|JsonResponse
+    {
+        $user = $request->user();
+
+        // Students are not permitted to download resource files
+        if ($user->hasRole('student')) {
+            return $this->errorResponse('Students are not authorised to download resource files.', 403);
+        }
+
+        // Ensure the resource belongs to this capstone
+        if ($resource->capstone_id !== $capstone->id) {
+            return $this->errorResponse('Resource not found.', 404);
+        }
+
+        if (!$resource->file_path || !Storage::disk('local')->exists($resource->file_path)) {
+            return $this->errorResponse('Resource file not found.', 404);
+        }
+
+        $encryptor = new PdfEncryptorService();
+        $rawBytes  = $encryptor->decryptFromDisk($resource->file_path);
+
+        if ($rawBytes === null) {
+            return $this->errorResponse('Resource file could not be decrypted.', 500);
+        }
+
+        $filename = $resource->file_original_name ?? $resource->name;
+        $size     = strlen($rawBytes);
+
+        AuditLog::log(
+            'download_resource',
+            $user->id,
+            Capstone::class,
+            $capstone->id,
+            null,
+            ['resource' => $filename]
+        );
+
+        return response()->stream(
+            function () use ($rawBytes) { echo $rawBytes; },
+            200,
+            [
+                'Content-Type'           => 'application/octet-stream',
+                'Content-Disposition'    => 'attachment; filename="' . addslashes($filename) . '"',
+                'Content-Length'         => $size,
+                'Cache-Control'          => 'no-store, no-cache, must-revalidate, max-age=0',
+                'Pragma'                 => 'no-cache',
+                'X-Content-Type-Options' => 'nosniff',
+            ]
+        );
+    }
+
+    /**
      * Toggle bookmark.
      */
     public function toggleBookmark(Request $request, Capstone $capstone): JsonResponse

@@ -3,8 +3,9 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import {
     HiArrowLeft, HiDownload, HiBookmark, HiShare, HiEye,
     HiArrowsExpand, HiX, HiAcademicCap, HiExternalLink, HiShieldCheck,
+    HiOutlineFolder, HiOutlineDocumentText,
 } from 'react-icons/hi';
-import { getCapstone, recordView, downloadCapstone, toggleBookmark, getCapstoneImradBlob } from '../../api/admin';
+import { getCapstone, recordView, downloadCapstone, toggleBookmark, getCapstoneImradBlob, getCapstoneResourceBlob, downloadCapstoneResource } from '../../api/admin';
 import { useNotification } from '../../components/Notification';
 import CitationGenerator from '../../components/CitationGenerator';
 import CapstoneAnalyticsPanel from '../../components/CapstoneAnalyticsPanel';
@@ -182,6 +183,36 @@ export default function CapstoneMainPage() {
 
     const switchToCapstone = () => { setActivePdf('capstone'); setNumPages(null); };
 
+    const handleViewResource = async (resource) => {
+        try {
+            const res = await getCapstoneResourceBlob(id, resource.id);
+            const blob = new Blob([res.data], { type: res.headers['content-type'] || 'application/octet-stream' });
+            const url = URL.createObjectURL(blob);
+            window.open(url, '_blank', 'noopener,noreferrer');
+            // Revoke after a short delay to allow tab to load
+            setTimeout(() => URL.revokeObjectURL(url), 60000);
+        } catch {
+            notify.error('Could not open resource file.');
+        }
+    };
+
+    const handleDownloadResource = async (resource) => {
+        try {
+            const res = await downloadCapstoneResource(id, resource.id);
+            const url = URL.createObjectURL(new Blob([res.data]));
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', resource.file_original_name || resource.name);
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            URL.revokeObjectURL(url);
+            notify.success('Download started.');
+        } catch {
+            notify.error('Download failed.');
+        }
+    };
+
     const handleBookmark = async () => {
         try {
             const res = await toggleBookmark(id);
@@ -327,6 +358,45 @@ export default function CapstoneMainPage() {
                                     ))}
                                 </div>
                             </div>
+                        )}
+
+                        {/* Additional Resources */}
+                        {capstone.resources?.length > 0 && (
+                            <details className="group">
+                                <summary className="text-xs font-semibold text-gray-500 uppercase cursor-pointer select-none flex items-center gap-1">
+                                    <HiOutlineFolder className="w-3.5 h-3.5" />
+                                    Additional Resources ({capstone.resources.length})
+                                    <svg className="w-3.5 h-3.5 transition-transform group-open:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                                    </svg>
+                                </summary>
+                                <div className="mt-2 flex flex-col gap-1.5">
+                                    {capstone.resources.map((res) => (
+                                        <div key={res.id} className="flex items-center gap-2 p-2.5 rounded-lg bg-white border border-green-100 hover:border-green-300 transition-colors group/res">
+                                            <HiOutlineDocumentText className="w-4 h-4 text-green-500 shrink-0" />
+                                            <p className="flex-1 text-xs font-medium text-gray-800 truncate" title={res.file_original_name || res.name}>
+                                                {res.name || res.file_original_name}
+                                            </p>
+                                            <div className="flex items-center gap-1 shrink-0">
+                                                <button
+                                                    onClick={() => handleViewResource(res)}
+                                                    className="inline-flex items-center gap-1 px-2 py-1 rounded text-[10px] font-semibold bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 transition-colors"
+                                                    title="Open in new tab"
+                                                >
+                                                    <HiExternalLink className="w-3 h-3" /> View
+                                                </button>
+                                                <button
+                                                    onClick={() => handleDownloadResource(res)}
+                                                    className="inline-flex items-center gap-1 px-2 py-1 rounded text-[10px] font-semibold bg-green-50 text-green-700 border border-green-200 hover:bg-green-100 transition-colors"
+                                                    title="Download resource"
+                                                >
+                                                    <HiDownload className="w-3 h-3" /> Download
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </details>
                         )}
 
                         {/* Abstract — collapsible */}
