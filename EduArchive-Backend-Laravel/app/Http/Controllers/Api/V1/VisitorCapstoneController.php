@@ -15,7 +15,7 @@ use Illuminate\Support\Facades\Storage;
  * VisitorCapstoneController
  *
  * Visitor visibility rules:
- *   1. is_published = true                   → full capstone PDF accessible
+ *   1. publication_status = 'published'       → full capstone PDF accessible
  *   2. copyright_status = 'copyrighted'       → full capstone PDF accessible
  *   3. has imrad_path but NOT (1) or (2)      → IMRAD-only (capstone PDF hidden)
  *   4. None of the above                      → not shown to visitor
@@ -39,7 +39,7 @@ class VisitorCapstoneController extends Controller
         return Capstone::with(['keywords', 'uploader:id,name', 'adviser:id,name'])
             ->where('is_archived', false)
             ->where(function ($q) {
-                $q->where('is_published', true)
+                $q->where('publication_status', 'published')
                   ->orWhere('copyright_status', 'copyrighted')
                   ->orWhereNotNull('imrad_path');
             });
@@ -50,7 +50,7 @@ class VisitorCapstoneController extends Controller
      */
     private function canSeeCapstonePdf(Capstone $capstone): bool
     {
-        return $capstone->is_published || $capstone->copyright_status === 'copyrighted';
+        return $capstone->publication_status === 'published' || $capstone->copyright_status === 'copyrighted';
     }
 
     // ──────────────────────────────────────────────────────────────
@@ -119,7 +119,7 @@ class VisitorCapstoneController extends Controller
     {
         $advisers = \App\Models\User::whereHas('advisedCapstones', function ($q) {
             $q->where('is_archived', false)->where(function ($inner) {
-                $inner->where('is_published', true)
+                $inner->where('publication_status', 'published')
                       ->orWhere('copyright_status', 'copyrighted')
                       ->orWhereNotNull('imrad_path');
             });
@@ -160,7 +160,7 @@ class VisitorCapstoneController extends Controller
     {
         // Enforce visibility: capstone must be in the visitor-visible set
         $visible = $capstone->is_archived === false && (
-            $capstone->is_published ||
+            $capstone->publication_status === 'published' ||
             $capstone->copyright_status === 'copyrighted' ||
             !empty($capstone->imrad_path)
         );

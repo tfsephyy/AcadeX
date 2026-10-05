@@ -7,11 +7,12 @@ import api from '../api/axios';
 // ─── Simple markdown renderer ─────────────────────────────────────────────────
 // Converts **bold**, *italic*, `code`, bullet lists, and numbered lists
 // to HTML elements — no external dependency needed.
-function renderMarkdown(text) {
+// linkRenderer(id) → called for [LINK:id] tags to produce a clickable element.
+function renderMarkdown(text, linkRenderer) {
     const lines = text.split('\n');
     const elements = [];
-    let listItems = [];
-    let listType = null; // 'ul' | 'ol'
+    let listItems = [];   // each entry: string (plain) or React element
+    let listType = null;  // 'ul' | 'ol'
     let key = 0;
 
     const flushList = () => {
@@ -19,14 +20,42 @@ function renderMarkdown(text) {
         const Tag = listType === 'ul' ? 'ul' : 'ol';
         elements.push(
             <Tag key={`list-${key++}`}>
-                {listItems.map((li, i) => (
-                    <li key={i} dangerouslySetInnerHTML={{ __html: inlineMarkdown(li) }} />
-                ))}
+                {listItems.map((li, i) =>
+                    typeof li === 'string'
+                        ? <li key={i} dangerouslySetInnerHTML={{ __html: inlineMarkdown(li) }} />
+                        : <li key={i}>{li}</li>
+                )}
             </Tag>
         );
         listItems = [];
         listType = null;
     };
+
+    // Parse a text fragment that may contain [LINK:N] into React nodes
+    const parseWithLinks = (raw) => {
+        const linkRx = /\[LINK:(\d+)\]/g;
+        const parts = [];
+        let last = 0;
+        let m;
+        while ((m = linkRx.exec(raw)) !== null) {
+            if (m.index > last) {
+                parts.push(
+                    <span key={`t-${key++}`} dangerouslySetInnerHTML={{ __html: inlineMarkdown(raw.slice(last, m.index)) }} />
+                );
+            }
+            const capId = parseInt(m[1], 10);
+            if (linkRenderer) parts.push(linkRenderer(capId, key++));
+            last = m.index + m[0].length;
+        }
+        if (last < raw.length) {
+            parts.push(
+                <span key={`t-${key++}`} dangerouslySetInnerHTML={{ __html: inlineMarkdown(raw.slice(last)) }} />
+            );
+        }
+        return parts.length === 1 ? parts[0] : <>{parts}</>;
+    };
+
+    const hasLink = (s) => /\[LINK:\d+\]/.test(s);
 
     lines.forEach((line) => {
         const ulMatch = line.match(/^[\*\-]\s+(.*)/);
@@ -35,13 +64,15 @@ function renderMarkdown(text) {
         if (ulMatch) {
             if (listType === 'ol') flushList();
             listType = 'ul';
-            listItems.push(ulMatch[1]);
+            const content = ulMatch[1];
+            listItems.push(hasLink(content) && linkRenderer ? parseWithLinks(content) : content);
             return;
         }
         if (olMatch) {
             if (listType === 'ul') flushList();
             listType = 'ol';
-            listItems.push(olMatch[1]);
+            const content = olMatch[1];
+            listItems.push(hasLink(content) && linkRenderer ? parseWithLinks(content) : content);
             return;
         }
 
@@ -52,7 +83,13 @@ function renderMarkdown(text) {
             return;
         }
 
-        // Strip [ID:N] tags from visible text (they're handled separately)
+        // Check for [LINK:id] tags — render title as a clickable link
+        if (hasLink(line) && linkRenderer) {
+            elements.push(<p key={`p-${key++}`}>{parseWithLinks(line)}</p>);
+            return;
+        }
+
+        // Strip [ID:N] tags from visible text (legacy — kept for safety)
         const cleanLine = line.replace(/\[ID:\d+\]/g, '');
         elements.push(
             <p key={`p-${key++}`} dangerouslySetInnerHTML={{ __html: inlineMarkdown(cleanLine) }} />
@@ -66,8 +103,8 @@ function renderMarkdown(text) {
 function inlineMarkdown(text) {
     return text
         .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-        .replace(/\*(.+?)\*/g, '<em>$1</em>')
-        .replace(/`(.+?)`/g, '<code>$1</code>');
+        .replace(/\*(.+?)\*/g,   '<em>$1</em>')
+        .replace(/`(.+?)`/g,     '<code>$1</code>');
 }
 
 // ─── Helper: format timestamp ─────────────────────────────────────────────────
@@ -93,52 +130,42 @@ const FAQ_DEFINITIONS = [
 
 const FAQ_DYNAMIC = [
     { q: 'What are the top 3 most viewed capstones?', icon: '👁️' },
-    { q: 'What are the top 5 most downloaded capstones?', icon: '⬇️' },
-    { q: 'What are the most bookmarked capstones this year?', icon: '🔖' },
+    { q: 'What is the top most downloaded capstones?', icon: '⬇️' },
+    { q: 'What is the most bookmarked capstones this year?', icon: '🔖' },
     { q: 'Which program has the most capstone submissions?', icon: '🏆' },
     { q: 'Which year had the most capstone submissions?', icon: '📅' },
-    { q: 'What are the most frequently used keywords across all capstones?', icon: '🔑' },
-    { q: 'What capstones are trending this month?', icon: '📈' },
-    { q: 'Who are the most prolific capstone authors in the archive?', icon: '✍️' },
 ];
 
 const FAQ_STUDENT = [
+    { q: 'What capstones has my adviser supervised before?', icon: '👨‍🏫' },
+    { q: 'What is the most popular research topic?', icon: '🔥' },
+    { q: 'How has the number of capstone submissions changed over the years?', icon: '📅' },
+    { q: 'Which advisers handle the most research projects?', icon: '🏆' },
+    { q: 'What is the most referenced capstone?', icon: '🔗' },
     { q: 'Find capstones about machine learning', icon: '🤖' },
     { q: 'Recommend a capstone topic related to healthcare', icon: '🏥' },
     { q: 'Find capstones about IoT or embedded systems', icon: '📡' },
-    { q: 'Find capstones using React or Laravel', icon: '💻' },
-    { q: 'What capstones has my adviser supervised before?', icon: '👨‍🏫' },
-    { q: 'What is the most popular research topic in my program?', icon: '🔥' },
-    { q: 'Find capstones similar to mine in the same program', icon: '🔍' },
-    { q: 'Who else from my program submitted a capstone this year?', icon: '👥' },
 ];
 
 const FAQ_FACULTY = [
-    { q: 'What is the most researched topic among capstones I have advised?', icon: '📊' },
-    { q: 'Are there capstone topics in my program that have been overdone?', icon: '⚠️' },
-    { q: 'What year range do capstones in my program span?', icon: '📅' },
-    { q: 'Which capstones in my program were rejected and why?', icon: '❌' },
-    { q: 'How many students have I advised across all years?', icon: '👥' },
-    { q: 'What technologies are students in my program commonly using?', icon: '🛠️' },
-    { q: 'Find capstones in my program about web development', icon: '🌐' },
-    { q: 'Show BSIT capstones from 2023 to 2026', icon: '📋' },
+    { q: 'What is the most viewed title capstone among I advised?', icon: '👁️' },
+    { q: 'Are there capstone topics in my advisory that have been overdone?', icon: '⚠️' },
+    { q: 'How many capstone have I advised across all years?', icon: '📊' },
+    { q: 'Find capstones in my advisory that has been published.', icon: '📰' },
+    { q: 'Find capstones in my advisory that has been copyrighted', icon: '©️' },
+    { q: 'Show All the capstone I have advised for the past 3 years', icon: '📅' },
 ];
 
 const FAQ_ADMIN = [
-    { q: 'Who has uploaded the most capstones overall?', icon: '🏅' },
-    { q: 'Show the upload trend over the last 5 years', icon: '📈' },
     { q: 'How many capstones are in the archive in total?', icon: '📚' },
     { q: 'How many users are registered by role?', icon: '👥' },
     { q: 'Show recent login activity', icon: '🔒' },
     { q: 'Which capstones have never been viewed since publishing?', icon: '👻' },
-    { q: 'Are there capstones in the archive with no PDF attached?', icon: '📭' },
-    { q: 'Are there capstones with no keywords tagged?', icon: '🏷️' },
+    { q: 'How many capstone has no IMRAD attached?', icon: '📭' },
     { q: 'Which users have never logged in since registering?', icon: '🔐' },
     { q: 'Who are the most active users this month?', icon: '🔥' },
-    { q: 'Which program produces the fewest capstones per year?', icon: '📉' },
-    { q: 'Are there any capstone titles that appear more than once?', icon: '🔁' },
-    { q: 'How many capstones have been archived vs published?', icon: '📊' },
-    { q: 'Show capstone statistics', icon: '📊' },
+    { q: 'How many capstones are published?', icon: '📰' },
+    { q: 'How many capstone are copyrighted?', icon: '©️' },
 ];
 
 const FAQ_CONTEXT = [
@@ -175,7 +202,7 @@ const TABS_BY_ROLE = {
 };
 
 const ROLE_SUBTITLE = {
-    admin:   'System Assistant & Capstone Finder',
+    admin:   'System Assistant Chatbot',
     faculty: 'Capstone Research Assistant',
     student: 'Capstone Research Assistant',
     visitor: 'Browse Available Capstones',
@@ -183,13 +210,9 @@ const ROLE_SUBTITLE = {
 
 // ─── FAQ Panel (replaces old empty state) ────────────────────────────────────
 function FaqPanel({ role, capstoneContext, onAsk, filter }) {
-    const [activeTab, setActiveTab] = useState(
-        capstoneContext?.title ? 'context' : 'definitions'
-    );
+    const [activeTab, setActiveTab] = useState('definitions');
 
-    const tabs = capstoneContext?.title
-        ? [{ id: 'context', label: 'This Capstone', icon: '📋', questions: FAQ_CONTEXT }]
-        : (TABS_BY_ROLE[role] ?? TABS_BY_ROLE.visitor);
+    const tabs = TABS_BY_ROLE[role] ?? TABS_BY_ROLE.visitor;
 
     const currentQuestions = tabs.find(t => t.id === activeTab)?.questions ?? [];
 
@@ -409,7 +432,7 @@ export default function Chatbot() {
             content: m.text,
         }));
 
-    const sendMessage = useCallback(async (messageText) => {
+    const sendMessage = useCallback(async (messageText, extraPayload = {}) => {
         const text = (messageText ?? input).trim();
         if (!text || loading) return;
 
@@ -430,13 +453,14 @@ export default function Chatbot() {
             const payload = {
                 message: text,
                 conversation_history: buildHistory([...messages, userMsg]),
+                ...extraPayload,
             };
             if (capstoneContext?.id) {
                 payload.capstone_id = capstoneContext.id;
             }
 
             const res = await api.post('/chatbot/message', payload);
-            const { reply, suggested_capstones } = res.data.data;
+            const { reply, suggested_capstones, faculty_list } = res.data.data;
 
             const botMsg = {
                 id: Date.now() + 1,
@@ -444,6 +468,7 @@ export default function Chatbot() {
                 text: reply,
                 time: new Date(),
                 suggestions: suggested_capstones ?? [],
+                facultyList: faculty_list ?? [],
             };
 
             setMessages((prev) => [...prev, botMsg]);
@@ -459,6 +484,7 @@ export default function Chatbot() {
                 time: new Date(),
                 isError: true,
                 suggestions: [],
+                facultyList: [],
             };
             setMessages((prev) => [...prev, errMsg]);
         } finally {
@@ -495,7 +521,7 @@ export default function Chatbot() {
                 onClick={handleFabClick}
                 onMouseDown={handleDragStart}
                 onTouchStart={handleDragStart}
-                title="EduBot — AI Capstone Assistant (Drag to move)"
+                title="AcaBot — AI Capstone Assistant (Drag to move)"
             >
                 {open ? (
                     // X icon
@@ -530,7 +556,7 @@ export default function Chatbot() {
                             </svg>
                         </div>
                         <div className="chatbot-header-info">
-                            <div className="chatbot-header-name">EduBot</div>
+                            <div className="chatbot-header-name">AcaBot</div>
                             <div className="chatbot-header-status">
                                 <span className="chatbot-status-dot" />
                                 {ROLE_SUBTITLE[currentRole] ?? 'AI Capstone Assistant'}
@@ -569,16 +595,7 @@ export default function Chatbot() {
                         </button>
                     </div>
 
-                    {/* Capstone context pill */}
-                    {capstoneContext?.title && (
-                        <div className="chatbot-context-pill" style={{ marginTop: '0.6rem' }}>
-                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"
-                                 style={{ width: '0.8rem', height: '0.8rem', flexShrink: 0 }}>
-                                <path d="M4 6H2v14a2 2 0 002 2h14v-2H4V6zm16-4H8a2 2 0 00-2 2v12a2 2 0 002 2h12a2 2 0 002-2V4a2 2 0 00-2-2z"/>
-                            </svg>
-                            <span>Context: {capstoneContext.title}</span>
-                        </div>
-                    )}
+
 
                     {/* Messages */}
                     <div className="chatbot-messages" id="chatbot-messages">
@@ -605,12 +622,41 @@ export default function Chatbot() {
                                     <div className="chatbot-msg-body">
                                         <div className={`chatbot-bubble ${msg.role} ${msg.isError ? 'chatbot-error' : ''}`}>
                                             {msg.role === 'bot'
-                                                ? renderMarkdown(msg.text)
+                                                ? renderMarkdown(msg.text, (capId, keyProp) => (
+                                                    <button
+                                                        key={keyProp ?? capId}
+                                                        className="chatbot-inline-link"
+                                                        onClick={() => {
+                                                            setOpen(false);
+                                                            navigate(getCapstoneRoute(capId));
+                                                        }}
+                                                        title="View capstone"
+                                                    >
+                                                        🔗 View
+                                                    </button>
+                                                ))
                                                 : msg.text
                                             }
                                         </div>
 
-                                        {/* Suggested capstone cards */}
+                                        {/* Faculty selection buttons — shown when adviser flow is active */}
+                                        {msg.role === 'bot' && msg.facultyList?.length > 0 && (
+                                            <div className="chatbot-faculty-list">
+                                                {msg.facultyList.map((faculty) => (
+                                                    <button
+                                                        key={faculty.id}
+                                                        className="chatbot-faculty-btn"
+                                                        onClick={() => sendMessage(
+                                                            `Show capstones advised by ${faculty.name}`,
+                                                            { selected_adviser_id: faculty.id }
+                                                        )}
+                                                    >
+                                                        👨‍🏫 {faculty.name}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        )}
+
                                         {msg.role === 'bot' && msg.suggestions?.length > 0 && (
                                             <div className="chatbot-suggestions">
                                                 {msg.suggestions.map((cap) => (

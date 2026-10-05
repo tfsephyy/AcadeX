@@ -1411,6 +1411,29 @@ input[type="password"]::-ms-clear {
   font-size: 0.75rem;
 }
 
+/* Inline capstone link button rendered inside bot replies */
+.chatbot-inline-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  margin-left: 0.35rem;
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+  background: rgba(91, 190, 99, 0.15);
+  border: 1px solid rgba(91, 190, 99, 0.35);
+  color: var(--color-primary, #5bbe63);
+  font-size: 0.7rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.12s;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+.chatbot-inline-link:hover {
+  background: rgba(91, 190, 99, 0.3);
+  transform: translateY(-1px);
+}
+
 .chatbot-msg-time {
   font-size: 0.65rem;
   color: var(--chat-time-text);
@@ -1450,6 +1473,35 @@ input[type="password"]::-ms-clear {
   font-size: 0.65rem;
   color: var(--chat-time-text);
   margin-top: 0.15rem;
+}
+
+/* ── Faculty selection list ──────────────────────────────────── */
+.chatbot-faculty-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin-top: 0.5rem;
+}
+.chatbot-faculty-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.85rem;
+  border-radius: 2rem;
+  background: rgba(27, 94, 32, 0.07);
+  border: 1px solid rgba(27, 94, 32, 0.2);
+  color: #1B5E20;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s, transform 0.15s, border-color 0.15s;
+  width: 100%;
+}
+.chatbot-faculty-btn:hover {
+  background: rgba(27, 94, 32, 0.15);
+  border-color: rgba(27, 94, 32, 0.4);
+  transform: translateX(3px);
 }
 
 /* ── Typing indicator ────────────────────────────────────────── */

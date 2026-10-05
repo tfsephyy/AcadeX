@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import {
     HiOutlineX, HiOutlineCheck, HiOutlineSearch, HiOutlineUser,
     HiOutlineDocumentText, HiOutlineTrash, HiOutlinePlus,
-    HiOutlineUpload, HiOutlineShieldCheck,
+    HiOutlineUpload, HiOutlineShieldCheck, HiOutlineMail, HiOutlinePhone, HiOutlineUserGroup,
 } from 'react-icons/hi';
 import { HiOutlineGlobeAlt, HiOutlineEyeSlash, HiOutlineClock, HiOutlineDocumentDuplicate } from 'react-icons/hi2';
 import {
@@ -72,6 +72,11 @@ export default function EditCapstoneModal({ capstone, onClose, onSuccess, update
     });
     const [newKeyword, setNewKeyword] = useState('');
 
+    /* ── Author details state ── */
+    const [authorDetails, setAuthorDetails] = useState([]);
+    // newAuthor row being typed into the "add" inputs
+    const [newAuthor, setNewAuthor] = useState({ name: '', email: '', contact: '' });
+
     /* ── Step 3 state ── */
     const [publicationStatus, setPublicationStatus] = useState('published');
     const [copyrightStatus, setCopyrightStatus] = useState('');
@@ -121,6 +126,18 @@ export default function EditCapstoneModal({ capstone, onClose, onSuccess, update
         setResources(capstone.resources?.map(r => ({ ...r, id: r.id || Date.now() + Math.random() })) || []);
         setReferences(capstone.references?.map(r => ({ id: r.id, title: r.title, author: r.author, year: r.year })) || []);
         setAdviser(capstone.adviser ? { id: capstone.adviser.id, name: capstone.adviser.name } : null);
+
+        // Seed author details: prefer structured array, fallback to splitting comma-separated author string
+        if (capstone.author_details && Array.isArray(capstone.author_details) && capstone.author_details.length > 0) {
+            setAuthorDetails(capstone.author_details.map(a => ({ name: a.name || '', email: a.email || '', contact: a.contact || '' })));
+        } else if (capstone.author) {
+            setAuthorDetails(
+                capstone.author.split(',').map(s => s.trim()).filter(s => s.length > 0)
+                    .map(name => ({ name, email: '', contact: '' }))
+            );
+        } else {
+            setAuthorDetails([]);
+        }
     }, [capstone]);
 
     /* ── Reference search ── */
@@ -187,6 +204,18 @@ export default function EditCapstoneModal({ capstone, onClose, onSuccess, update
         } finally { setUploadingResource(false); }
     };
 
+    /* ── Author detail helpers ── */
+    const addAuthorRow = () => {
+        if (!newAuthor.name.trim()) { notify.error('Author name is required.'); return; }
+        setAuthorDetails(prev => [...prev, { name: newAuthor.name.trim(), email: newAuthor.email.trim(), contact: newAuthor.contact.trim() }]);
+        setNewAuthor({ name: '', email: '', contact: '' });
+    };
+
+    const removeAuthorRow = (idx) => setAuthorDetails(prev => prev.filter((_, i) => i !== idx));
+
+    const updateAuthorRow = (idx, field, value) =>
+        setAuthorDetails(prev => prev.map((row, i) => i === idx ? { ...row, [field]: value } : row));
+
     /* ── Save ── */
     const handleSave = async () => {
         if (!form.title.trim()) { notify.error('Title is required.'); return; }
@@ -195,6 +224,7 @@ export default function EditCapstoneModal({ capstone, onClose, onSuccess, update
         try {
             const res = await actualUpdate(capstone.id, {
                 ...form,
+                author_details:      authorDetails.length > 0 ? authorDetails : null,
                 publication_status:  publicationStatus,
                 copyright_status:    copyrightStatus || null,
                 imrad_path:          imradInfo?.file_path || null,
@@ -342,6 +372,126 @@ export default function EditCapstoneModal({ capstone, onClose, onSuccess, update
                                                 className="leading-none opacity-70 hover:opacity-100">×</button>
                                         </span>
                                     ))}
+                                </div>
+                            </div>
+
+                            {/* Authors & Contact Info */}
+                            <div>
+                                <SectionLabel>
+                                    <span className="flex items-center gap-1.5">
+                                        <HiOutlineUserGroup className="w-4 h-4" />
+                                        Authors &amp; Contact Info
+                                    </span>
+                                </SectionLabel>
+
+                                {/* Existing rows table */}
+                                {authorDetails.length > 0 && (
+                                    <div className="mb-3 rounded-xl border overflow-hidden" style={{ borderColor: 'var(--color-border-strong)' }}>
+                                        <table className="w-full text-sm border-collapse">
+                                            <thead>
+                                                <tr style={{ background: 'var(--color-bg-tertiary)' }}>
+                                                    {['Name', 'Email', 'Contact'].map(h => (
+                                                        <th key={h} className="text-left text-xs font-semibold uppercase tracking-wider px-3 py-2.5"
+                                                            style={{ color: 'var(--color-text-muted)' }}>{h}</th>
+                                                    ))}
+                                                    <th className="w-8" />
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y" style={{ borderColor: 'var(--color-border)' }}>
+                                                {authorDetails.map((row, idx) => (
+                                                    <tr key={idx} style={{ background: idx % 2 === 0 ? 'var(--color-bg-secondary)' : 'var(--color-bg-tertiary)' }}>
+                                                        <td className="px-2 py-1.5">
+                                                            <input
+                                                                value={row.name}
+                                                                onChange={e => updateAuthorRow(idx, 'name', e.target.value)}
+                                                                placeholder="Full name"
+                                                                className={inputCls + ' !py-1.5 !text-xs'}
+                                                            />
+                                                        </td>
+                                                        <td className="px-2 py-1.5">
+                                                            <div className="relative">
+                                                                <HiOutlineMail className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none" style={{ color: 'var(--color-text-muted)' }} />
+                                                                <input
+                                                                    type="email"
+                                                                    value={row.email}
+                                                                    onChange={e => updateAuthorRow(idx, 'email', e.target.value)}
+                                                                    placeholder="email@example.com"
+                                                                    className={inputCls + ' !py-1.5 !text-xs pl-8'}
+                                                                />
+                                                            </div>
+                                                        </td>
+                                                        <td className="px-2 py-1.5">
+                                                            <div className="relative">
+                                                                <HiOutlinePhone className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none" style={{ color: 'var(--color-text-muted)' }} />
+                                                                <input
+                                                                    value={row.contact}
+                                                                    onChange={e => updateAuthorRow(idx, 'contact', e.target.value)}
+                                                                    placeholder="09xxxxxxxxx"
+                                                                    className={inputCls + ' !py-1.5 !text-xs pl-8'}
+                                                                />
+                                                            </div>
+                                                        </td>
+                                                        <td className="px-2 py-1.5 text-center">
+                                                            <button
+                                                                onClick={() => removeAuthorRow(idx)}
+                                                                className="p-1 rounded-md transition-colors"
+                                                                style={{ color: 'var(--color-text-muted)' }}
+                                                                onMouseEnter={e => e.currentTarget.style.color = '#ef4444'}
+                                                                onMouseLeave={e => e.currentTarget.style.color = 'var(--color-text-muted)'}
+                                                                title="Remove author"
+                                                            >
+                                                                <HiOutlineTrash className="w-3.5 h-3.5" />
+                                                            </button>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                )}
+
+                                {/* Add new author row */}
+                                <div className="rounded-xl border-2 border-dashed p-3 space-y-2" style={{ borderColor: 'var(--color-border-strong)' }}>
+                                    <p className="text-xs font-semibold" style={{ color: 'var(--color-text-muted)' }}>Add Author</p>
+                                    <div className="grid grid-cols-3 gap-2">
+                                        <div>
+                                            <input
+                                                value={newAuthor.name}
+                                                onChange={e => setNewAuthor(p => ({ ...p, name: e.target.value }))}
+                                                onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addAuthorRow(); } }}
+                                                placeholder="Full name *"
+                                                className={inputCls + ' !text-xs'}
+                                            />
+                                        </div>
+                                        <div className="relative">
+                                            <HiOutlineMail className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none" style={{ color: 'var(--color-text-muted)' }} />
+                                            <input
+                                                type="email"
+                                                value={newAuthor.email}
+                                                onChange={e => setNewAuthor(p => ({ ...p, email: e.target.value }))}
+                                                onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addAuthorRow(); } }}
+                                                placeholder="Email (optional)"
+                                                className={inputCls + ' !text-xs pl-8'}
+                                            />
+                                        </div>
+                                        <div className="relative">
+                                            <HiOutlinePhone className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none" style={{ color: 'var(--color-text-muted)' }} />
+                                            <input
+                                                value={newAuthor.contact}
+                                                onChange={e => setNewAuthor(p => ({ ...p, contact: e.target.value }))}
+                                                onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addAuthorRow(); } }}
+                                                placeholder="Contact (optional)"
+                                                className={inputCls + ' !text-xs pl-8'}
+                                            />
+                                        </div>
+                                    </div>
+                                    <button
+                                        onClick={addAuthorRow}
+                                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border transition-colors"
+                                        style={{ background: 'rgba(27,94,32,0.1)', color: 'var(--color-primary)', borderColor: 'rgba(27,94,32,0.3)' }}
+                                    >
+                                        <HiOutlinePlus className="w-3.5 h-3.5" /> Add Author
+                                    </button>
                                 </div>
                             </div>
                         </div>

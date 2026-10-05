@@ -40,13 +40,13 @@ class ChatbotQueryService
         if ($role === ChatbotPermissionService::ROLE_VISITOR) {
             $query->where('is_archived', false)
                   ->where(function ($q) {
-                      $q->where('is_published', true)
+                      $q->where('publication_status', 'published')
                         ->orWhere('copyright_status', 'copyrighted')
                         ->orWhereNotNull('imrad_path');
                   });
         } else {
             // Admin, Faculty, Student
-            $query->where('is_published', true)
+            $query->where('publication_status', 'published')
                   ->where('is_archived', false);
         }
 
@@ -104,16 +104,39 @@ class ChatbotQueryService
     /**
      * Return popular capstones ranked by a given metric.
      * Metric must be one of: view_count, download_count, bookmark_count.
+     * $limit: how many results to return (default 10).
+     * $thisYear: if true, restrict to capstones where the bookmark was created this year.
+     *
+     * NOTE: Queries ALL capstones regardless of publication_status / copyright_status /
+     *       is_archived — so the results match the live counts shown on each capstone's
+     *       analytics panel (which also reads directly from the capstones table).
      */
-    public function popular(string $role, string $metric = 'view_count'): Collection
+    public function popular(string $role, string $metric = 'view_count', int $limit = 10, bool $thisYear = false): Collection
     {
         $allowed = ['view_count', 'download_count', 'bookmark_count'];
         if (!in_array($metric, $allowed)) $metric = 'view_count';
 
-        return $this->baseQuery($role)
-                    ->orderByDesc($metric)
-                    ->limit(10)
-                    ->get(['id', 'title', 'author', 'year', 'program', 'category', $metric]);
+        // Query ALL capstones — no publication/copyright filter — so the counts
+        // are the same numbers the analytics panel shows on the capstone main page.
+        $query = Capstone::query();
+
+        if ($thisYear) {
+            // For bookmarks "this year": join the bookmarks table and restrict by year
+            if ($metric === 'bookmark_count') {
+                $query->whereExists(function ($sub) {
+                    $sub->from('bookmarks')
+                        ->whereColumn('bookmarks.capstone_id', 'capstones.id')
+                        ->whereYear('bookmarks.created_at', now()->year);
+                });
+            } else {
+                $query->whereYear('created_at', now()->year);
+            }
+        }
+
+        return $query->orderByDesc($metric)
+                     ->where($metric, '>', 0)
+                     ->limit($limit)
+                     ->get(['id', 'title', 'author', 'year', 'program', 'category', $metric]);
     }
 
     /**

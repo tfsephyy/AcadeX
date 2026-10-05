@@ -353,14 +353,14 @@ class CapstoneController extends Controller
         $publicationStatus = $request->input('publication_status', 'published');
         
         // Determine approval status based on user role:
-        // - Admin/Faculty: Auto-approved (status='approved', is_published=true)
-        // - Student: Requires approval (status='pending', approval_status='pending', is_published=false)
+        // - Admin/Faculty: Auto-approved (status='approved', publication_status='published')
+        // - Student: Requires approval (status='pending', approval_status='pending', publication_status='unpublished')
         $user = $request->user();
         $isStudent = $user->hasRole('student');
-        
+
         $status = $isStudent ? 'pending' : 'approved';
         $approvalStatus = $isStudent ? 'pending' : 'approved';
-        $isPublished = !$isStudent; // Only published if NOT a student
+        $publicationStatus = $isStudent ? 'unpublished' : $request->input('publication_status', 'published');
 
         $capstone = Capstone::create([
             'title'              => $request->title,
@@ -375,7 +375,6 @@ class CapstoneController extends Controller
             'uploaded_by'        => $user->id,
             'status'             => $status,
             'approval_status'    => $approvalStatus,
-            'is_published'       => $isPublished,
             'publication_status' => $publicationStatus,
             'copyright_status'   => $request->copyright_status,
             'imrad_path'         => $request->imrad_path,
@@ -602,12 +601,12 @@ class CapstoneController extends Controller
         $oldStatus = $capstone->status;
 
         $capstone->update([
-            'status'          => 'approved',
-            'approval_status' => 'approved',
-            'is_published'    => true,
-            'is_archived'     => false,
-            'approved_by'     => $request->user()->id,
-            'approved_at'     => now(),
+            'status'             => 'approved',
+            'approval_status'    => 'approved',
+            'publication_status' => 'published',
+            'is_archived'        => false,
+            'approved_by'        => $request->user()->id,
+            'approved_at'        => now(),
         ]);
 
         AuditLog::log(
@@ -649,7 +648,7 @@ class CapstoneController extends Controller
         $capstone->update([
             'status'          => 'rejected',
             'approval_status' => 'rejected',
-            'is_published'    => false,
+            'publication_status' => 'unpublished',
             'is_archived'     => true,  // Auto-archive rejected capstones
             'approved_by'     => $request->user()->id,
             'approved_at'     => now(),
@@ -682,8 +681,8 @@ class CapstoneController extends Controller
         }
 
         $capstone->update([
-            'is_archived'  => true,
-            'is_published' => false,
+            'is_archived'        => true,
+            'publication_status' => 'unpublished',
         ]);
 
         AuditLog::log('archive_capstone', $request->user()->id, Capstone::class, $capstone->id);
@@ -740,9 +739,9 @@ class CapstoneController extends Controller
         }
 
         $capstone->update([
-            'status'       => 'approved',
-            'is_archived'  => false,
-            'is_published' => true,
+            'status'             => 'approved',
+            'is_archived'        => false,
+            'publication_status' => 'published',
         ]);
 
         AuditLog::log('unarchive_capstone', $request->user()->id, Capstone::class, $capstone->id);
@@ -762,10 +761,10 @@ class CapstoneController extends Controller
         $oldStatus = $capstone->status;
 
         $capstone->update([
-            'status'       => 'pending',
-            'is_published' => false,
-            'approved_by'  => null,
-            'approved_at'  => null,
+            'status'             => 'pending',
+            'publication_status' => 'unpublished',
+            'approved_by'        => null,
+            'approved_at'        => null,
         ]);
 
         AuditLog::log(
@@ -925,10 +924,10 @@ class CapstoneController extends Controller
         // Non-admins and non-faculty can only access published capstones.
         // Faculty can access published capstones OR their own uploads.
         if (!$user->hasRole('admin') && !$user->hasRole('faculty')) {
-            if (!$capstone->is_published) {
+            if ($capstone->publication_status !== 'published') {
                 return $this->errorResponse('Capstone not available.', 403);
             }
-        } elseif ($user->hasRole('faculty') && !$capstone->is_published) {
+        } elseif ($user->hasRole('faculty') && $capstone->publication_status !== 'published') {
             if ((int) $capstone->uploader_id !== (int) $user->id) {
                 return $this->errorResponse('Capstone not available.', 403);
             }
@@ -1209,14 +1208,13 @@ class CapstoneController extends Controller
         }
 
         $validator = Validator::make($request->all(), [
-            'title'    => 'sometimes|string|max:500',
-            'year'     => 'nullable|integer|min:2000|max:2099',
-            'author'   => 'sometimes|string|max:500',
-            'program'  => 'nullable|string|in:BSIT,BSCpE',
-            'abstract' => 'nullable|string',
             'title'               => 'sometimes|string|max:500',
             'year'                => 'nullable|integer|min:2000|max:2099',
             'author'              => 'sometimes|string|max:500',
+            'author_details'      => 'nullable|array',
+            'author_details.*.name'    => 'required|string|max:255',
+            'author_details.*.email'   => 'nullable|string|max:255',
+            'author_details.*.contact' => 'nullable|string|max:50',
             'program'             => 'nullable|string|in:BSIT,BSCpE',
             'category'            => 'nullable|string|max:100',
             'abstract'            => 'nullable|string',
@@ -1242,13 +1240,11 @@ class CapstoneController extends Controller
         $oldValues = $capstone->only(['title', 'year', 'author', 'program', 'category', 'abstract', 'publication_status', 'copyright_status', 'adviser_id']);
 
         $updateData = $request->only([
-            'title', 'year', 'author', 'program', 'category', 'abstract',
+            'title', 'year', 'author', 'author_details', 'program', 'category', 'abstract',
             'publication_status', 'copyright_status', 'imrad_path', 'imrad_original_name', 'adviser_id',
         ]);
 
-        if ($request->has('publication_status')) {
-            $updateData['is_published'] = $request->publication_status === 'published';
-        }
+        // publication_status is already in $updateData — no need to sync is_published
 
         $capstone->update($updateData);
 

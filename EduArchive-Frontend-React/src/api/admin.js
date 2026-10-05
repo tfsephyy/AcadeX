@@ -95,7 +95,9 @@ export const getActivityLogCapstones = (params = {}) => axios.get('/admin/activi
 
 // ── Faculty Capstone Management ────────────────────
 export const getFacultyCapstones = (params = {}) => axios.get('/faculty/capstones', { params });
+export const getFacultyAllCapstones = (params = {}) => axios.get('/faculty/capstones/all', { params });
 export const getFacultyCapstoneFilterOptions = () => axios.get('/faculty/capstones/filter-options');
+export const getFacultyBrowseFilterOptions = () => axios.get('/faculty/capstones/browse-filter-options');
 export const uploadFacultyCapstone = (formData) => axios.post('/faculty/capstones/upload', formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
 });
@@ -108,6 +110,10 @@ export const deleteFacultyCapstone = (id) => axios.delete(`/faculty/capstones/${
 export const getArchivedFacultyCapstones = (params = {}) => axios.get('/faculty/capstones/archived', { params });
 export const archiveFacultyCapstone = (id) => axios.post(`/faculty/capstones/${id}/archive`);
 export const unarchiveFacultyCapstone = (id) => axios.post(`/faculty/capstones/${id}/unarchive`);
+
+// ── Student Browse (all capstones) ─────────────────
+export const getStudentAllCapstones = (params = {}) => axios.get('/student/capstones/all', { params });
+export const getStudentBrowseFilterOptions = () => axios.get('/student/capstones/browse-filter-options');
 
 // ── Student Capstone Library (own uploads) ──────────
 export const getStudentCapstones = (params = {}) => axios.get('/student/capstones', { params });

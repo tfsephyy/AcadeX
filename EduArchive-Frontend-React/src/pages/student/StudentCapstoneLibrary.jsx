@@ -199,7 +199,7 @@ export default function StudentCapstoneLibrary() {
                             <div className="text-xs text-gray-400">{new Date(cap.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</div>
                         </div>
                         <div className="px-4 py-3 border-t border-gray-100 bg-gray-50 flex items-center justify-between gap-1.5">
-                            <StatusBadge status={cap.status} isPublished={cap.is_published} />
+                            <StatusBadge status={cap.status} isPublished={cap.publication_status === 'published'} />
                             <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
                                 <ActionButtons cap={cap} size="sm" />
                             </div>
@@ -244,7 +244,7 @@ export default function StudentCapstoneLibrary() {
                                     <div className="text-gray-800">{cap.program || '—'}</div>
                                     <div className="text-xs text-gray-500">{cap.year || '—'}</div>
                                 </td>
-                                <td className="py-3 px-4"><StatusBadge status={cap.status} isPublished={cap.is_published} /></td>
+                                <td className="py-3 px-4"><StatusBadge status={cap.status} isPublished={cap.publication_status === 'published'} /></td>
                                 <td className="py-3 px-4 text-sm text-gray-600">
                                     {new Date(cap.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                                 </td>

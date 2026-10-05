@@ -249,7 +249,7 @@ export default function VisitorCapstoneMainPage() {
                             >
                                 {capstone.title}
                             </h1>
-                            {capstone.is_published && (
+                            {capstone.publication_status === 'published' && (
                                 <span className="shrink-0 inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase border bg-green-100 text-green-700 border-green-300">
                                     <span className="w-1.5 h-1.5 rounded-full bg-green-500" /> Published
                                 </span>
@@ -330,7 +330,7 @@ export default function VisitorCapstoneMainPage() {
                         )}
 
                         {/* Additional Resources — visible when capstone is published OR copyrighted */}
-                        {capstone.resources?.length > 0 && (capstone.is_published || capstone.copyright_status === 'copyrighted') && (
+                        {capstone.resources?.length > 0 && (capstone.publication_status === 'published' || capstone.copyright_status === 'copyrighted') && (
                             <details className="group">
                                 <summary className="text-xs font-semibold text-gray-500 uppercase cursor-pointer select-none flex items-center gap-1">
                                     <HiOutlineFolder className="w-3.5 h-3.5" />

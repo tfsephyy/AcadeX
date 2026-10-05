@@ -130,8 +130,8 @@ class CapstoneSeeder extends Seeder
                 'abstract'          => $data['abstract'],
                 'pdf_path'          => $dummyPdf,
                 'pdf_original_name' => str_replace(' ', '_', strtolower($data['title'])) . '.pdf',
-                'is_published'      => true,
-                'uploaded_by'       => $adminUser->id,
+                'publication_status' => 'published',
+                'uploaded_by'        => $adminUser->id,
             ]);
             $kwIds = array_map(fn($k) => $keywords[$k]->id, $data['keywords']);
             $cap->keywords()->sync($kwIds);
@@ -162,8 +162,8 @@ class CapstoneSeeder extends Seeder
                 'abstract'          => $data['abstract'],
                 'pdf_path'          => $dummyPdf,
                 'pdf_original_name' => str_replace(' ', '_', strtolower($data['title'])) . '.pdf',
-                'is_published'      => true,
-                'uploaded_by'       => $adminUser->id,
+                'publication_status' => 'published',
+                'uploaded_by'        => $adminUser->id,
             ]);
             $kwIds = array_map(fn($k) => $keywords[$k]->id, $data['keywords']);
             $cap->keywords()->sync($kwIds);

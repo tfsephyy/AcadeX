@@ -154,6 +154,9 @@ Route::prefix('v1')->group(function () {
             Route::post('/capstones/{capstone}/unarchive',   [CapstoneController::class, 'unarchive']);
             Route::put('/capstones/{capstone}',              [CapstoneController::class, 'update']);
             Route::delete('/capstones/{capstone}',           [CapstoneController::class, 'destroy']);
+            // Browse ALL capstones (no uploader scope) — for the Uploaded Capstones listing page
+            Route::get('/capstones/browse-filter-options',   [CapstoneController::class, 'browseFilterOptions']);
+            Route::get('/capstones/all',                     [CapstoneController::class, 'browse']);
         });
 
         // ── Student capstone library routes ──────────────
@@ -169,6 +172,9 @@ Route::prefix('v1')->group(function () {
             Route::delete('/capstones/{capstone}',           [CapstoneController::class, 'destroy']);
             Route::post('/capstones/{capstone}/archive',     [CapstoneController::class, 'archive']);
             Route::post('/capstones/{capstone}/unarchive',   [CapstoneController::class, 'unarchive']);
+            // Browse ALL capstones (no uploader scope, no publish/copyright filter)
+            Route::get('/capstones/browse-filter-options',   [CapstoneController::class, 'browseFilterOptions']);
+            Route::get('/capstones/all',                     [CapstoneController::class, 'browse']);
         });
 
         // ── Visitor routes ───────────────────────────────

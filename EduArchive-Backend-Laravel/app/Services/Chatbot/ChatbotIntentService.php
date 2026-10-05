@@ -22,6 +22,7 @@ class ChatbotIntentService
     const INTENT_CATEGORY_INFO    = 'category_info';
     const INTENT_DEFINITION       = 'definition';
     const INTENT_PROGRAM_STATS    = 'program_stats';
+    const INTENT_STUDENT_RESEARCH = 'student_research';
     const INTENT_UNKNOWN          = 'unknown';
 
     // ── Pattern groups (checked in priority order) ─────────────────────────────
@@ -52,6 +53,29 @@ class ChatbotIntentService
         '/\btopics?\s+(that\s+have\s+been\s+)?overdone\b/i',
         // upload trend (catch before admin_trends to avoid conflict)
         '/\bupload\s+trend\s+over\s+the\s+last\b/i',
+        // New admin chatbot questions
+        '/\bhow\s+many\s+capstones?\s+are\s+in\s+the\s+archive\b/i',
+        '/\bin\s+the\s+archive\s+in\s+total\b/i',
+        '/\bno\s+imrad\s+attached\b/i',
+        '/\bhow\s+many\s+capstones?\s+has?\s+no\s+imrad\b/i',
+        '/\bhow\s+many\s+capstones?\s+are\s+published\b/i',
+        '/\bhow\s+many\s+capstones?\s+are\s+copyrighted\b/i',
+        // ── Faculty advisory questions ─────────────────────────────────────────
+        // "most viewed title capstone among I advised"
+        '/\bmost\s+viewed\s+(title\s+)?capstone\s+(among|that)\s+i\s+(have\s+)?advis(ed|e)\b/i',
+        '/\bmost\s+viewed.*(?:i|my)\s+advis\b/i',
+        // "overdone" in advisory context
+        '/\boverdone\b/i',
+        // "how many capstone have I advised"
+        '/\bhow\s+many\s+capstones?\s+(have\s+)?i\s+(have\s+)?advis(ed)?\b/i',
+        '/\bi\s+advis(ed)?\s+across\s+all\s+years\b/i',
+        // "find capstones in my advisory that has been published"
+        '/\bmy\s+advisory\b/i',
+        '/\bi\s+(have\s+)?advis(ed)?\b/i',
+        // "show all the capstone I have advised for the past 3 years"
+        '/\bcapstones?\s+i\s+have\s+advis(ed)?\s+for\s+the\s+past\b/i',
+        '/\badvis(ed)?\s+for\s+the\s+past\s+\d+\s+years?\b/i',
+        '/\bpast\s+3\s+years\b/i',
     ];
 
     private const ADMIN_LOGS_PATTERNS = [
@@ -111,6 +135,33 @@ class ChatbotIntentService
         '/\b(what\s+categor|list\s+categor|available\s+categor|show\s+(me\s+)?categor|all\s+categor)\b/i',
     ];
 
+    private const STUDENT_RESEARCH_PATTERNS = [
+        // "What capstones has my adviser supervised before?"
+        '/\bwhat\s+capstones?\s+(has|have)\s+my\s+adviser\s+supervised\b/i',
+        '/\bcapstones?\s+my\s+adviser\s+(has\s+)?supervised\b/i',
+        '/\bmy\s+adviser\s+supervised\b/i',
+        
+        // "What is the most popular research topic?"
+        '/\bmost\s+popular\s+(research\s+)?topic\b/i',
+        '/\bwhat\s+is\s+the\s+most\s+popular\s+topic\b/i',
+        
+        // "How has the number of capstone submissions changed over the years?"
+        '/\bcapstone\s+submission(s)?\s+(changed\s+)?over\s+the\s+years?\b/i',
+        '/\bnumber\s+of\s+capstone\s+submission(s)?\s+(changed|per\s+year)\b/i',
+        '/\bsubmission(s)?\s+changed\s+over\b/i',
+        '/\bcapstone(s)?\s+per\s+year\b/i',
+        
+        // "Which advisers handle the most research projects?"
+        '/\bwhich\s+adviser(s)?\s+handle(s)?\s+the\s+most\b/i',
+        '/\badvisers?\s+(with\s+)?the\s+most\s+(research\s+)?projects?\b/i',
+        '/\badvisers?\s+handle\s+the\s+most\b/i',
+        
+        // "What is the most referenced capstone?"
+        '/\bmost\s+referenced\s+capstone\b/i',
+        '/\bwhat\s+is\s+the\s+most\s+referenced\b/i',
+        '/\bmost\s+referenced\b/i',
+    ];
+
     // ── Public API ─────────────────────────────────────────────────────────────
 
     /**
@@ -135,6 +186,7 @@ class ChatbotIntentService
         foreach (self::POPULAR_PATTERNS       as $p) { if (preg_match($p, $message)) return self::INTENT_POPULAR; }
         foreach (self::CAPSTONE_DETAILS_PATTERNS as $p) { if (preg_match($p, $message)) return self::INTENT_CAPSTONE_DETAILS; }
         foreach (self::CATEGORY_INFO_PATTERNS as $p) { if (preg_match($p, $message)) return self::INTENT_CATEGORY_INFO; }
+        foreach (self::STUDENT_RESEARCH_PATTERNS as $p) { if (preg_match($p, $message)) return self::INTENT_STUDENT_RESEARCH; }
         foreach (self::RECOMMEND_PATTERNS     as $p) { if (preg_match($p, $message)) return self::INTENT_RECOMMEND; }
 
         // Default to SEARCH only if message contains capstone-related keywords
@@ -178,7 +230,15 @@ class ChatbotIntentService
      */
     public function extractFilters(string $message): array
     {
-        $f = ['year' => null, 'year_from' => null, 'year_to' => null, 'author' => null, 'metric' => 'view_count'];
+        $f = [
+            'year'      => null,
+            'year_from' => null,
+            'year_to'   => null,
+            'author'    => null,
+            'metric'    => 'view_count',
+            'limit'     => 10,        // default result count
+            'this_year' => false,     // restrict to current year
+        ];
 
         // Year range: "2024 to 2026" or "2024-2026"
         if (preg_match('/(?:from\s+)?(\d{4})\s*(?:to|-)\s*(\d{4})/i', $message, $m)) {
@@ -197,9 +257,27 @@ class ChatbotIntentService
             $f['author'] = trim($m[1]);
         }
 
-        // Popularity metric
-        if (preg_match('/\bdownload\b/i', $message))      $f['metric'] = 'download_count';
-        elseif (preg_match('/\bbookmark\b/i', $message))  $f['metric'] = 'bookmark_count';
+        // Popularity metric — match root word AND inflected forms (downloaded, downloads, bookmarked, bookmarks)
+        if (preg_match('/\bdownload(ed|s)?\b/i', $message))      $f['metric'] = 'download_count';
+        elseif (preg_match('/\bbookmark(ed|s)?\b/i', $message))  $f['metric'] = 'bookmark_count';
+
+        // Explicit numeric limit: "top 3", "top 5", "top 10"
+        if (preg_match('/\btop\s+(\d+)\b/i', $message, $m)) {
+            $f['limit'] = (int) $m[1];
+        }
+        // "top most" (no number) → single result
+        elseif (preg_match('/\btop\s+most\b/i', $message)) {
+            $f['limit'] = 1;
+        }
+        // "what is the most downloaded/bookmarked" (singular 'is', no number) → single result
+        elseif (preg_match('/\bwhat\s+is\s+the\s+most\s+(downloaded|bookmarked)\b/i', $message)) {
+            $f['limit'] = 1;
+        }
+
+        // "this year" / "this month" flag for bookmarks
+        if (preg_match('/\bthis\s+(year|month)\b/i', $message)) {
+            $f['this_year'] = true;
+        }
 
         return $f;
     }

@@ -198,7 +198,7 @@ export default function FacultyCapstoneLibrary() {
                         </div>
                         <div className="px-4 py-3 border-t border-gray-100 bg-gray-50 flex items-center justify-between gap-1.5">
                             <span className="text-[10px] text-gray-400 italic">
-                                {cap.is_published ? '🟢 Published' : cap.publication_status === 'in_progress' ? '🟡 In Progress' : '⚫ Unpublished'}
+                                {cap.publication_status === 'published' ? '🟢 Published' : cap.publication_status === 'in_progress' ? '🟡 In Progress' : '⚫ Unpublished'}
                             </span>
                             <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
                                 <ActionButtons cap={cap} size="sm" />

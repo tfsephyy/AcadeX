@@ -24,7 +24,6 @@ class Capstone extends Model
         'pdf_original_name',
         'pdf_text',          // full extracted text from PDF — used by chatbot
         'status',
-        'is_published',
         'is_archived',
         'publication_status',
         'copyright_status',
@@ -44,12 +43,20 @@ class Capstone extends Model
     protected function casts(): array
     {
         return [
-            'is_published'   => 'boolean',
             'is_archived'    => 'boolean',
             'approved_at'    => 'datetime',
             'year'           => 'integer',
             'author_details' => 'array',
         ];
+    }
+
+    /**
+     * Virtual accessor so existing code that checks $capstone->is_published
+     * continues to work without touching the database column.
+     */
+    public function getIsPublishedAttribute(): bool
+    {
+        return $this->publication_status === 'published';
     }
 
     // --- Relationships ---
@@ -118,14 +125,10 @@ class Capstone extends Model
 
     public function scopePublished($query)
     {
-        // A capstone is considered published if is_published is true,
-        // OR if it has been approved and is not archived (safety fallback).
-        return $query->where(function ($q) {
-            $q->where('is_published', true)
-              ->orWhere(function ($q2) {
-                  $q2->where('status', 'approved')->where('is_archived', false);
-              });
-        });
+        // A capstone is considered published when publication_status = 'published'
+        // and it is not archived.
+        return $query->where('publication_status', 'published')
+                     ->where('is_archived', false);
     }
 
     public function scopeArchived($query)

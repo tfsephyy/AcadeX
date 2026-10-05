@@ -58,6 +58,7 @@ class ChatbotController extends Controller
         $validated = $request->validate([
             'message'    => 'required|string|max:2000',
             'capstone_id' => 'nullable|integer|exists:capstones,id',
+            'selected_adviser_id' => 'nullable|integer|exists:users,id',
         ]);
 
         // ── 2. Role from authenticated server-side session (never from message) ──
@@ -87,7 +88,7 @@ class ChatbotController extends Controller
 
         // ── 6. Handle intent → query DB → format response ───────────────────────
         try {
-            $result = $this->handleIntent($intent, $msg, $role, $filters, $openCapstone);
+            $result = $this->handleIntent($intent, $msg, $role, $filters, $openCapstone, $user, $validated['selected_adviser_id'] ?? null);
         } catch (\Throwable $e) {
             Log::error('Chatbot DB error', [
                 'role'   => $role,
@@ -108,11 +109,18 @@ class ChatbotController extends Controller
         string $msg,
         string $role,
         array  $filters,
-        ?Capstone $openCapstone
+        ?Capstone $openCapstone,
+        $user = null,
+        ?int $selectedAdviserId = null
     ): array {
         // If a capstone is open and the user is asking about it specifically
         if ($openCapstone && $this->isAskingAboutOpenCapstone($intent, $msg)) {
             return $this->responseSvc->formatCapstoneDetails($openCapstone);
+        }
+
+        // If adviser was selected via faculty button, always route to student research handler
+        if ($selectedAdviserId !== null) {
+            return $this->handleStudentResearch($msg, $selectedAdviserId);
         }
 
         return match ($intent) {
@@ -122,7 +130,8 @@ class ChatbotController extends Controller
             ChatbotIntentService::INTENT_POPULAR        => $this->handlePopular($role, $filters),
             ChatbotIntentService::INTENT_CATEGORY_INFO  => $this->handleCategories($role),
             ChatbotIntentService::INTENT_DEFINITION     => $this->handleDefinition($msg, $role),
-            ChatbotIntentService::INTENT_PROGRAM_STATS  => $this->handleProgramStats($msg, $role),
+            ChatbotIntentService::INTENT_PROGRAM_STATS  => $this->handleProgramStats($msg, $role, $user),
+            ChatbotIntentService::INTENT_STUDENT_RESEARCH => $this->handleStudentResearch($msg, $selectedAdviserId),
             ChatbotIntentService::INTENT_CAPSTONE_DETAILS => $openCapstone
                 ? $this->responseSvc->formatCapstoneDetails($openCapstone)
                 : $this->handleSearch($role, $msg, $filters),
@@ -163,17 +172,31 @@ class ChatbotController extends Controller
     }
 
     /** Program and archive-level analytics — available to all authenticated roles */
-    private function handleProgramStats(string $msg, string $role): array
+    private function handleProgramStats(string $msg, string $role, $user = null): array
     {
-        $data = $this->analyticsSvc->programStats($msg, $role);
+        $data = $this->analyticsSvc->programStats($msg, $role, $user);
         return $this->responseSvc->formatProgramStats($data, $msg);
     }
 
     /** Popular capstones by view/download/bookmark count */
     private function handlePopular(string $role, array $filters): array
     {
-        $metric  = $filters['metric'] ?? 'view_count';
-        $results = $this->querySvc->popular($role, $metric);
+        $metric   = $filters['metric'] ?? 'view_count';
+        $thisYear = $filters['this_year'] ?? false;
+
+        // If an explicit limit was set in filters (e.g. top 3, top most → 1), use it directly
+        if (!empty($filters['limit']) && $filters['limit'] !== 10) {
+            $limit = (int) $filters['limit'];
+        } else {
+            // Sensible defaults per metric
+            $limit = match ($metric) {
+                'download_count' => 5,
+                'bookmark_count' => 5,
+                default          => 3, // view_count default = top 3
+            };
+        }
+
+        $results = $this->querySvc->popular($role, $metric, $limit, $thisYear);
         return $this->responseSvc->formatPopular($results, $metric);
     }
 
@@ -222,7 +245,10 @@ class ChatbotController extends Controller
         $downloadStats  = null;
         $copyrightStats = null;
 
-        if ($sub['wants_users']) {
+        // Detect if the user is ONLY asking about registered users by role
+        $userOnly = (bool) preg_match('/\b(registered\s+by\s+role|users?\s+registered|how\s+many\s+users?\s+are\s+registered|registered\s+users?\s+by\s+role)\b/i', $msg);
+
+        if ($sub['wants_users'] || $userOnly) {
             try { $userStats = $this->analyticsSvc->userStats(); } catch (\Throwable $e) {}
         }
         if ($sub['wants_categories']) {
@@ -236,19 +262,77 @@ class ChatbotController extends Controller
         }
 
         // If no specific sub-context detected, show the full overview
-        if (!array_filter($sub)) {
+        if (!array_filter($sub) && !$userOnly) {
             try { $userStats = $this->analyticsSvc->userStats(); } catch (\Throwable $e) {}
             $categories = $this->analyticsSvc->categoryDistribution();
         }
 
-        return $this->responseSvc->formatAdminStats($stats, $userStats, $categories, $downloadStats, $copyrightStats);
+        return $this->responseSvc->formatAdminStats($stats, $userStats, $categories, $downloadStats, $copyrightStats, $userOnly);
     }
 
     /** Admin upload trend by year */
     private function handleAdminTrends(): array
     {
-        $trend = $this->analyticsSvc->uploadTrend(6);
+        $trend = $this->analyticsSvc->uploadTrend(5);
         return $this->responseSvc->formatTrend($trend);
+    }
+
+    /** Student research section questions */
+    private function handleStudentResearch(string $msg, ?int $selectedAdviserId): array
+    {
+        $msg = strtolower($msg);
+
+        // 1. "What capstones has my adviser supervised before?"
+        //    Also handles follow-up: "Show capstones advised by {name}" (sent when faculty button clicked)
+        $isAdviserQuery =
+            preg_match('/\badviser\s+supervised\b/i', $msg) ||
+            preg_match('/\bmy\s+adviser\b/i', $msg) ||
+            preg_match('/\bshow\s+capstones\s+advised\s+by\b/i', $msg) ||
+            preg_match('/\bcapstones?\s+advised\s+by\b/i', $msg);
+
+        if ($isAdviserQuery || $selectedAdviserId) {
+            // If adviser is already selected via button, skip the faculty list step
+            if ($selectedAdviserId) {
+                $adviser = \App\Models\User::find($selectedAdviserId);
+                if (!$adviser) {
+                    return ['reply' => "The selected adviser could not be found.", 'suggested_capstones' => []];
+                }
+                $capstones = $this->analyticsSvc->getCapstonesByAdviser($selectedAdviserId);
+                return $this->responseSvc->formatAdviserCapstones($capstones, $adviser->name);
+            }
+
+            // No adviser selected yet — show the faculty selection list
+            $faculty = $this->analyticsSvc->getAllFaculty();
+            return $this->responseSvc->formatFacultySelection($faculty);
+        }
+
+
+        // 2. "What is the most popular research topic?"
+        if (str_contains($msg, 'most popular topic') || str_contains($msg, 'popular research topic')) {
+            $topicData = $this->analyticsSvc->getMostPopularTopic();
+            return $this->responseSvc->formatMostPopularTopic($topicData);
+        }
+
+        // 3. "How has the number of capstone submissions changed over the years?"
+        if (str_contains($msg, 'submission') && (str_contains($msg, 'over the years') || str_contains($msg, 'per year') || str_contains($msg, 'changed'))) {
+            $submissions = $this->analyticsSvc->getSubmissionsPerYear();
+            return $this->responseSvc->formatSubmissionsPerYear($submissions);
+        }
+
+        // 4. "Which advisers handle the most research projects?"
+        if (str_contains($msg, 'advisers') && str_contains($msg, 'handle') && str_contains($msg, 'most')) {
+            $advisers = $this->analyticsSvc->getTopAdvisers(10);
+            return $this->responseSvc->formatTopAdvisers($advisers);
+        }
+
+        // 5. "What is the most referenced capstone?"
+        if (str_contains($msg, 'most referenced')) {
+            $data = $this->analyticsSvc->getMostReferencedCapstone();
+            return $this->responseSvc->formatMostReferencedCapstone($data);
+        }
+
+        // Fallback if no specific question matched
+        return ['reply' => "I couldn't understand that question. Please try asking about adviser supervision, popular topics, submission trends, top advisers, or most referenced capstones.", 'suggested_capstones' => []];
     }
 
     /** Admin activity / audit logs */
@@ -272,8 +356,10 @@ class ChatbotController extends Controller
         }
 
         if ($wantsLogin) {
+            // Always set the key so formatLogs knows it was requested
+            $data['logins'] = [];
             try {
-                $logins = $this->analyticsSvc->recentLogins(10);
+                $logins = $this->analyticsSvc->recentLogins(7);
                 $data['logins'] = $logins->map(fn($l) => [
                     'email'        => $l->email,
                     'status'       => $l->status,
@@ -372,10 +458,17 @@ class ChatbotController extends Controller
      */
     private function buildResponse(array $data, string $intent): JsonResponse
     {
-        return $this->successResponse([
+        $payload = [
             'reply'               => $data['reply']               ?? '',
             'suggested_capstones' => $data['suggested_capstones'] ?? [],
             'intent'              => $intent,
-        ], 'Chatbot response generated.');
+        ];
+
+        // Pass faculty_list through when present (adviser selection flow)
+        if (!empty($data['faculty_list'])) {
+            $payload['faculty_list'] = $data['faculty_list'];
+        }
+
+        return $this->successResponse($payload, 'Chatbot response generated.');
     }
 }

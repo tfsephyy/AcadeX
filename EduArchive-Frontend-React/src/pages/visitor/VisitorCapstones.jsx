@@ -1,11 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-    HiOutlineSearch, HiOutlineFilter, HiOutlineDocumentText,
+    HiOutlineFilter, HiOutlineDocumentText,
     HiOutlineEye, HiOutlineViewGrid, HiOutlineViewList,
     HiOutlineCalendar, HiOutlineAcademicCap, HiOutlineX,
-    HiOutlineBookmark, HiOutlineUser, HiBookmark, HiLockClosed,
-    HiOutlineTag,
+    HiOutlineBookmark, HiBookmark, HiOutlineTrash,
+    HiOutlineTag, HiOutlineChevronLeft, HiOutlineChevronRight,
 } from 'react-icons/hi';
 import {
     getVisitorCapstones, getVisitorYears, getVisitorPrograms,
@@ -19,27 +19,27 @@ import SearchWithSuggestions from '../../components/SearchWithSuggestions';
 export default function VisitorCapstones() {
     const navigate = useNavigate();
 
-    const [capstones, setCapstones]     = useState([]);
-    const [loading, setLoading]         = useState(true);
+    const [capstones, setCapstones] = useState([]);
+    const [loading, setLoading] = useState(true);
     const [displayMode, setDisplayMode] = useState('card');
     const [showFilters, setShowFilters] = useState(false);
-    const [savedOpen, setSavedOpen]     = useState(false);
+    const [savedOpen, setSavedOpen] = useState(false);
 
-    const [search, setSearch]   = useState('');
+    const [search, setSearch] = useState('');
     const [filters, setFilters] = useState({ year: '', program: '', category: '', adviser_id: '' });
     const [selectedCategory, setSelectedCategory] = useState('');
 
-    const [years, setYears]         = useState([]);
-    const [programs, setPrograms]   = useState([]);
+    const [years, setYears] = useState([]);
+    const [programs, setPrograms] = useState([]);
     const [categories, setCategories] = useState([]);
-    const [advisers, setAdvisers]   = useState([]);
+    const [advisers, setAdvisers] = useState([]);
 
-    const [page, setPage]         = useState(1);
-    const [lastPage, setLastPage] = useState(1);
+    const [page, setPage]     = useState(1);
+    const [pagination, setPagination] = useState({ current_page: 1, last_page: 1, total: 0, from: 0, to: 0 });
 
     // Bookmarks
-    const [bookmarks, setBookmarks]   = useState([]);
-    const [savedIds, setSavedIds]     = useState(new Set());
+    const [bookmarks, setBookmarks] = useState([]);
+    const [savedIds, setSavedIds] = useState(new Set());
     const [savedLoading, setSavedLoading] = useState(false);
 
     const activeFilterCount = Object.values(filters).filter(Boolean).length;
@@ -61,16 +61,22 @@ export default function VisitorCapstones() {
     const fetchCapstones = useCallback(async () => {
         try {
             setLoading(true);
-            const params = { page, per_page: 12 };
-            if (search)              params.search     = search;
-            if (filters.year)        params.year       = filters.year;
-            if (filters.program)     params.program    = filters.program;
-            if (filters.category)    params.category   = filters.category;
-            if (filters.adviser_id)  params.adviser_id = filters.adviser_id;
+            const params = { page, per_page: 3 };
+            if (search)             params.search     = search;
+            if (filters.year)       params.year       = filters.year;
+            if (filters.program)    params.program    = filters.program;
+            if (filters.category)   params.category   = filters.category;
+            if (filters.adviser_id) params.adviser_id = filters.adviser_id;
             const res  = await getVisitorCapstones(params);
-            const data = res.data.data;
+            const data = res.data.data;   // Laravel paginator
             setCapstones(data?.data || data || []);
-            setLastPage(data?.last_page || 1);
+            setPagination({
+                current_page: data?.current_page ?? 1,
+                last_page:    data?.last_page    ?? 1,
+                total:        data?.total        ?? 0,
+                from:         data?.from         ?? 0,
+                to:           data?.to           ?? 0,
+            });
         } catch (err) {
             console.error(err);
         } finally {
@@ -98,9 +104,9 @@ export default function VisitorCapstones() {
     useEffect(() => { fetchBookmarks(); }, []);
 
     // ── Handlers ───────────────────────────────────────────
-    const handleSearch       = (val) => { setSearch(val); setPage(1); };
+    const handleSearch = (val) => { setSearch(val); setPage(1); };
     const handleFilterChange = (key, val) => { setFilters(p => ({ ...p, [key]: val })); setPage(1); };
-    const clearFilters       = () => { setSearch(''); setFilters({ year: '', program: '', category: '', adviser_id: '' }); setSelectedCategory(''); setPage(1); };
+    const clearFilters = () => { setSearch(''); setFilters({ year: '', program: '', category: '', adviser_id: '' }); setSelectedCategory(''); setPage(1); };
 
     const handleCategoryTab = (cat) => {
         const val = cat === selectedCategory ? '' : cat;
@@ -133,7 +139,7 @@ export default function VisitorCapstones() {
                 </span>
             );
         }
-        if (cap.is_published) return (
+        if (cap.publication_status === 'published') return (
             <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold rounded-full bg-green-50 text-green-700 border border-green-200">Published</span>
         );
         if (cap.copyright_status === 'copyrighted') return (
@@ -142,20 +148,55 @@ export default function VisitorCapstones() {
         return null;
     };
 
-    // ── Pagination ─────────────────────────────────────────
-    const Pagination = () => lastPage > 1 ? (
-        <div className="flex items-center justify-center gap-2 pt-8">
-            <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
-                className="px-4 py-2 text-sm font-medium rounded-lg bg-[#1B5E20] text-white hover:bg-green-800 disabled:bg-gray-300 disabled:text-gray-500 disabled:cursor-not-allowed transition-colors">
-                Previous
-            </button>
-            <span className="text-sm font-medium" style={{ color: 'var(--color-text-muted)' }}>Page {page} of {lastPage}</span>
-            <button onClick={() => setPage(p => Math.min(lastPage, p + 1))} disabled={page === lastPage}
-                className="px-4 py-2 text-sm font-medium rounded-lg bg-[#1B5E20] text-white hover:bg-green-800 disabled:bg-gray-300 disabled:text-gray-500 disabled:cursor-not-allowed transition-colors">
-                Next
-            </button>
-        </div>
-    ) : null;
+    // ── Pagination (matches ActivityLogs style) ─────────────────
+    const renderPagination = () => {
+        if (!pagination || pagination.total === 0) return null;
+        const pages = Array.from({ length: Math.min(5, pagination.last_page) }, (_, i) => {
+            if (pagination.last_page <= 5) return i + 1;
+            if (page <= 3)                 return i + 1;
+            if (page >= pagination.last_page - 2) return pagination.last_page - 4 + i;
+            return page - 2 + i;
+        });
+        return (
+            <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 border-t border-gray-200 bg-gray-100 rounded-b-xl mt-4">
+                <p className="text-xs text-gray-700">
+                    Showing <span className="font-medium text-gray-900">{pagination.from || 1}</span> to{' '}
+                    <span className="font-medium text-gray-900">{pagination.to || Math.min(3, pagination.total)}</span> of{' '}
+                    <span className="font-medium text-gray-900">{pagination.total}</span> entries
+                </p>
+                <div className="flex items-center gap-1">
+                    <button
+                        onClick={() => setPage(p => Math.max(1, p - 1))}
+                        disabled={page <= 1}
+                        className="p-2 text-gray-700 hover:bg-gray-200 rounded-lg disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                    >
+                        <HiOutlineChevronLeft className="w-4 h-4" />
+                    </button>
+                    {pages.map(pageNum => (
+                        <button
+                            key={pageNum}
+                            onClick={() => setPage(pageNum)}
+                            className={`w-8 h-8 text-xs font-medium rounded-lg transition-colors ${
+                                pageNum === page
+                                    ? 'bg-green-600 text-white shadow-sm'
+                                    : 'text-gray-800 hover:bg-gray-200'
+                            }`}
+                        >
+                            {pageNum}
+                        </button>
+                    ))}
+                    <button
+                        onClick={() => setPage(p => Math.min(pagination.last_page, p + 1))}
+                        disabled={page >= pagination.last_page}
+                        className="p-2 text-gray-700 hover:bg-gray-200 rounded-lg disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                    >
+                        <HiOutlineChevronRight className="w-4 h-4" />
+                    </button>
+                </div>
+            </div>
+        );
+    };
+
 
     // ── Card View ──────────────────────────────────────────
     const CardView = () => (
@@ -202,7 +243,7 @@ export default function VisitorCapstones() {
                     </div>
                 ))}
             </div>
-            <Pagination />
+            {renderPagination()}
         </>
     );
 
@@ -215,7 +256,7 @@ export default function VisitorCapstones() {
                     <table className="w-full">
                         <thead>
                             <tr className="border-b" style={{ background: 'var(--color-bg-tertiary)', borderColor: 'var(--color-border)' }}>
-                                {['Title','Author','Programme','Year','Access',''].map(h => (
+                                {['Title', 'Author', 'Programme', 'Year', 'Access', ''].map(h => (
                                     <th key={h} className="py-3 px-4 text-left text-xs font-semibold uppercase" style={{ color: 'var(--color-text-muted)' }}>{h}</th>
                                 ))}
                             </tr>
@@ -247,7 +288,7 @@ export default function VisitorCapstones() {
                     </table>
                 </div>
             </div>
-            <Pagination />
+            {renderPagination()}
         </>
     );
 

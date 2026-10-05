@@ -7,8 +7,7 @@ import {
     HiOutlineTag, HiOutlineCalendar, HiOutlineAcademicCap, HiOutlineChevronDown,
 } from 'react-icons/hi';
 import {
-    getPublishedCapstones, getPublishedYears, getPublishedPrograms,
-    getPublishedAdvisers, getPublishedCategories,
+    getStudentAllCapstones, getStudentBrowseFilterOptions,
     toggleBookmark, getStudentBookmarkedCapstones,
 } from '../../api/admin';
 import { useNotification } from '../../components/Notification';
@@ -16,6 +15,8 @@ import Loading from '../../components/Loading';
 import EmptyState from '../../components/EmptyState';
 import ConfirmDialog from '../../components/ConfirmDialog';
 import CapstoneModal from '../../components/admin/CapstoneModal';
+import SearchWithSuggestions from '../../components/SearchWithSuggestions';
+import Pagination from '../../components/Pagination';
 
 export default function StudentUploadedCapstones() {
     const navigate = useNavigate();
@@ -37,13 +38,13 @@ export default function StudentUploadedCapstones() {
     const [filters, setFilters] = useState({ year: '', program: '', category: '', adviser_id: '' });
     const [selectedCategory, setSelectedCategory] = useState('');
 
-    // ── Filter option lists (from dedicated DB endpoints) ─────────────────────────
+    // ── Filter option lists ───────────────────────────────────────────────────────
     const [years, setYears] = useState([]);
     const [programs, setPrograms] = useState([]);
     const [categories, setCategories] = useState([]);
-    const [adviserOptions, setAdviserOptions] = useState([]);
+    const [adviserOptions, setAdviserOptions] = useState([]); // { id, name }
 
-    // ── Adviser dropdown ──────────────────────────────────────────────────────────
+    // ── Adviser dropdown state ────────────────────────────────────────────────────
     const [adviserSearch, setAdviserSearch] = useState('');
     const [adviserDropdownOpen, setAdviserDropdownOpen] = useState(false);
     const [selectedAdviserName, setSelectedAdviserName] = useState('');
@@ -52,6 +53,7 @@ export default function StudentUploadedCapstones() {
     // ── Pagination ────────────────────────────────────────────────────────────────
     const [page, setPage] = useState(1);
     const [lastPage, setLastPage] = useState(1);
+    const [pagination, setPagination] = useState({ current_page: 1, last_page: 1, total: 0, from: 0, to: 0 });
 
     // ── Modal / confirm state ─────────────────────────────────────────────────────
     const [confirm, setConfirm] = useState({ open: false, title: '', message: '', action: null, variant: 'danger' });
@@ -60,56 +62,61 @@ export default function StudentUploadedCapstones() {
 
     // ── Derived ───────────────────────────────────────────────────────────────────
     const activeFilterCount = [filters.year, filters.program, filters.category, filters.adviser_id].filter(Boolean).length;
-    const filteredAdviserOptions = adviserOptions.filter(a => a.name.toLowerCase().includes(adviserSearch.toLowerCase()));
+    const filteredAdviserOptions = adviserOptions.filter(f => f.name.toLowerCase().includes(adviserSearch.toLowerCase()));
 
     // ── Effects ───────────────────────────────────────────────────────────────────
-    useEffect(() => { loadFilters(); }, []);
-
     useEffect(() => {
-        const handler = (e) => {
-            if (adviserDropdownRef.current && !adviserDropdownRef.current.contains(e.target))
-                setAdviserDropdownOpen(false);
-        };
-        document.addEventListener('mousedown', handler);
-        return () => document.removeEventListener('mousedown', handler);
+        loadFilters();
     }, []);
 
-    useEffect(() => { fetchCapstones(); }, [search, filters, page]);
+    useEffect(() => {
+        const handleClickOutside = (e) => {
+            if (adviserDropdownRef.current && !adviserDropdownRef.current.contains(e.target)) {
+                setAdviserDropdownOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    useEffect(() => {
+        fetchCapstones();
+    }, [search, filters, page]);
 
     // ── API calls ─────────────────────────────────────────────────────────────────
-    /**
-     * Load filter options from dedicated DB endpoints — no duplication, always fresh.
-     */
     const loadFilters = async () => {
         try {
-            const [yRes, pRes, cRes, aRes] = await Promise.all([
-                getPublishedYears(),
-                getPublishedPrograms(),
-                getPublishedCategories(),
-                getPublishedAdvisers(),
-            ]);
-            setYears(yRes.data.data || []);
-            setPrograms(pRes.data.data || []);
-            setCategories(cRes.data.data || []);
-            setAdviserOptions(aRes.data.data || []);
+            const res = await getStudentBrowseFilterOptions();
+            const opts = res.data.data;
+            setYears(opts.years || []);
+            setPrograms(opts.programs || []);
+            setCategories(opts.categories || []);
+            setAdviserOptions(opts.advisers || []);
         } catch (err) {
-            console.error('Failed to load filters:', err);
+            console.error('Failed to load filter options:', err);
         }
     };
 
     const fetchCapstones = useCallback(async () => {
         try {
             setLoading(true);
-            const params = { page, per_page: 12 };
+            const params = { page, per_page: 15 };
             if (search) params.search = search;
             if (filters.year) params.year = filters.year;
             if (filters.program) params.program = filters.program;
             if (filters.category) params.category = filters.category;
             if (filters.adviser_id) params.adviser_id = filters.adviser_id;
-            const res = await getPublishedCapstones(params);
+            const res = await getStudentAllCapstones(params);
             const data = res.data.data;
             setCapstones(data?.data || data || []);
             setLastPage(data?.last_page || 1);
+            setPagination({
+                current_page: data?.current_page || 1,
+                last_page: data?.last_page || 1,
+                total: data?.total || 0,
+                from: data?.from || 0,
+                to: data?.to || 0,
+            });
         } catch (err) {
             notify.error('Failed to load capstones.');
         } finally {
@@ -124,6 +131,7 @@ export default function StudentUploadedCapstones() {
             const data = res.data.data;
             setSavedCapstones(data?.data || data || []);
         } catch (err) {
+            console.error('Failed to load bookmarked capstones:', err);
             setSavedCapstones([]);
         } finally {
             setSavedLoading(false);
@@ -133,9 +141,9 @@ export default function StudentUploadedCapstones() {
     // ── Handlers ──────────────────────────────────────────────────────────────────
     const openSavedPanel = () => { setSavedOpen(true); fetchSavedCapstones(); };
     const openCapstoneModal = (cap) => { setSelectedCapstone(cap); setShowModal(true); };
-    const openCapstoneViewer = (id) => navigate(`/student/capstones/${id}`);
+    const openCapstoneViewer = (capId) => navigate(`/student/capstones/${capId}`);
 
-    const handleSearch = (e) => { setSearch(e.target.value); setPage(1); };
+    const handleSearch = (val) => { setSearch(val); setPage(1); };
     const handleFilterChange = (key, value) => { setFilters(prev => ({ ...prev, [key]: value })); setPage(1); };
 
     const handleAdviserSelect = (adviser) => {
@@ -147,11 +155,11 @@ export default function StudentUploadedCapstones() {
     };
 
     const clearFilters = () => {
+        setSearch('');
         setFilters({ year: '', program: '', category: '', adviser_id: '' });
         setSelectedCategory('');
         setSelectedAdviserName('');
         setAdviserSearch('');
-        setSearch('');
         setPage(1);
     };
 
@@ -162,30 +170,32 @@ export default function StudentUploadedCapstones() {
         setPage(1);
     };
 
-    const handleRemoveBookmark = (cap) => setConfirm({
-        open: true, title: 'Remove from Saved',
-        message: `Remove "${cap.title}" from saved folder?`,
-        variant: 'danger',
-        action: async () => {
-            try { await toggleBookmark(cap.id); notify.success('Removed from saved folder.'); fetchSavedCapstones(); }
-            catch { notify.error('Failed to remove bookmark.'); }
-            setConfirm(p => ({ ...p, open: false }));
-        },
-    });
+    const handleRemoveBookmark = (cap) => {
+        setConfirm({
+            open: true,
+            title: 'Remove from Saved',
+            message: `Remove "${cap.title}" from saved folder?`,
+            variant: 'danger',
+            action: async () => {
+                try { await toggleBookmark(cap.id); notify.success('Removed from saved.'); fetchSavedCapstones(); }
+                catch (err) { notify.error('Failed to remove bookmark.'); }
+                setConfirm(prev => ({ ...prev, open: false }));
+            },
+        });
+    };
 
-    // ── Pagination helpers ────────────────────────────────────────────────────────
-    const Pagination = () => lastPage > 1 ? (
-        <div className="flex items-center justify-center gap-2 pt-8">
-            <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
-                className="px-4 py-2 text-sm font-medium rounded-lg transition-colors bg-[#1B5E20] text-white hover:bg-green-800 disabled:bg-gray-300 disabled:text-gray-500 disabled:cursor-not-allowed">Previous</button>
-            <span className="text-sm font-medium text-gray-600">Page {page} of {lastPage}</span>
-            <button onClick={() => setPage(p => Math.min(lastPage, p + 1))} disabled={page === lastPage}
-                className="px-4 py-2 text-sm font-medium rounded-lg transition-colors bg-[#1B5E20] text-white hover:bg-green-800 disabled:bg-gray-300 disabled:text-gray-500 disabled:cursor-not-allowed">Next</button>
-        </div>
-    ) : null;
+    // ── Shared pagination JSX (inlined, not a sub-component, avoids hooks-order issues) ────
+    const paginationJsx = (
+        <Pagination
+            paginationData={pagination}
+            page={page}
+            onPageChange={setPage}
+            perPage={15}
+        />
+    );
 
-    // ── Card View ─────────────────────────────────────────────────────────────────
-    const CardView = () => (
+    // ── Card grid JSX ─────────────────────────────────────────────────────────────
+    const cardGridJsx = (
         <>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                 {capstones.map((cap) => (
@@ -208,19 +218,21 @@ export default function StudentUploadedCapstones() {
                                     {cap.keywords.slice(0, 3).map((kw, i) => (
                                         <span key={i} className="px-1.5 py-0.5 text-[10px] font-medium bg-gray-100 text-gray-500 rounded">{kw.name || kw}</span>
                                     ))}
-                                    {cap.keywords.length > 3 && <span className="px-1.5 py-0.5 text-[10px] font-medium bg-gray-100 text-gray-500 rounded">+{cap.keywords.length - 3}</span>}
+                                    {cap.keywords.length > 3 && (
+                                        <span className="px-1.5 py-0.5 text-[10px] font-medium bg-gray-100 text-gray-500 rounded">+{cap.keywords.length - 3}</span>
+                                    )}
                                 </div>
                             )}
                         </div>
                     </div>
                 ))}
             </div>
-            <Pagination />
+            {paginationJsx}
         </>
     );
 
-    // ── Table View ────────────────────────────────────────────────────────────────
-    const TableView = () => (
+    // ── Table JSX ─────────────────────────────────────────────────────────────────
+    const tableJsx = (
         <>
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
                 <div className="overflow-x-auto">
@@ -232,7 +244,7 @@ export default function StudentUploadedCapstones() {
                                 <th className="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase">Program</th>
                                 <th className="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase">Category</th>
                                 <th className="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase">Year</th>
-                                <th className="py-3 px-4 text-center text-xs font-semibold text-gray-600 uppercase">View</th>
+                                <th className="py-3 px-4 text-center text-xs font-semibold text-gray-600 uppercase">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -247,7 +259,7 @@ export default function StudentUploadedCapstones() {
                                     </td>
                                     <td className="py-3 px-4 text-sm text-gray-600">{cap.year || '—'}</td>
                                     <td className="py-3 px-4 text-center">
-                                        <button onClick={e => { e.stopPropagation(); openCapstoneModal(cap); }}
+                                        <button onClick={(e) => { e.stopPropagation(); openCapstoneModal(cap); }}
                                             className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="View">
                                             <HiOutlineEye className="w-4 h-4" />
                                         </button>
@@ -258,7 +270,7 @@ export default function StudentUploadedCapstones() {
                     </table>
                 </div>
             </div>
-            <Pagination />
+            {paginationJsx}
         </>
     );
 
@@ -271,7 +283,7 @@ export default function StudentUploadedCapstones() {
                 <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                         <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Uploaded Capstones</h1>
-                        <p className="text-sm text-gray-500 mt-2">Browse approved capstone projects.</p>
+                        <p className="text-sm text-gray-500 mt-2">Browse all uploaded capstone projects</p>
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0">
                         {/* Card / Table toggle */}
@@ -296,15 +308,17 @@ export default function StudentUploadedCapstones() {
             {/* ── Search & Filter Bar (sticky) ── */}
             <div className="sticky top-0 z-20 bg-white border-b border-gray-200 shadow-sm px-4 lg:px-8 py-3">
                 <div className="flex flex-row gap-2 items-center">
-                    <div className="relative flex-1 min-w-0">
-                        <HiOutlineSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                        <input type="text" value={search} onChange={handleSearch} placeholder="Search by title, author, keyword..."
-                            className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg text-sm text-gray-900 placeholder-gray-400 bg-white focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none" />
-                    </div>
+                    <SearchWithSuggestions
+                        id="student-capstone-search"
+                        value={search}
+                        onChange={handleSearch}
+                        placeholder="Search by title, author, keyword…"
+                        className="flex-1 min-w-0"
+                    />
                     <button onClick={() => setShowFilters(!showFilters)}
                         className={`relative flex-shrink-0 inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg border transition-colors ${showFilters ? 'bg-green-50 text-green-700 border-green-200' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}`}>
                         <HiOutlineFilter className="w-4 h-4" />
-                        Filters
+                        <span className="hidden xs:inline">Filters</span>
                         {activeFilterCount > 0 && (
                             <span className="absolute -top-1.5 -right-1.5 flex items-center justify-center w-4 h-4 text-[10px] font-bold text-white bg-[#1B5E20] rounded-full">{activeFilterCount}</span>
                         )}
@@ -317,27 +331,27 @@ export default function StudentUploadedCapstones() {
                         {/* Year */}
                         <div>
                             <label className="text-xs text-gray-600 font-semibold uppercase block mb-1">Year</label>
-                            <select value={filters.year} onChange={e => handleFilterChange('year', e.target.value)}
+                            <select value={filters.year} onChange={(e) => handleFilterChange('year', e.target.value)}
                                 className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 bg-white focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none">
                                 <option value="">All Years</option>
-                                {years.map(y => <option key={y} value={y}>{y}</option>)}
+                                {years.map((y) => <option key={y} value={y}>{y}</option>)}
                             </select>
                         </div>
                         {/* Program */}
                         <div>
                             <label className="text-xs text-gray-600 font-semibold uppercase block mb-1">Program</label>
-                            <select value={filters.program} onChange={e => handleFilterChange('program', e.target.value)}
+                            <select value={filters.program} onChange={(e) => handleFilterChange('program', e.target.value)}
                                 className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 bg-white focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none">
                                 <option value="">All Programs</option>
-                                {programs.map(p => <option key={p} value={p}>{p}</option>)}
+                                {programs.map((p) => <option key={p} value={p}>{p}</option>)}
                             </select>
                         </div>
-                        {/* Adviser (searchable — only shows advisers with published capstones) */}
+                        {/* Adviser (searchable dropdown) */}
                         <div ref={adviserDropdownRef} className="relative">
                             <label className="text-xs text-gray-600 font-semibold uppercase block mb-1">Adviser</label>
                             <button type="button" onClick={() => setAdviserDropdownOpen(!adviserDropdownOpen)}
-                                className={`flex items-center gap-2 px-3 py-2 border rounded-lg text-sm bg-white focus:ring-2 focus:ring-green-500 outline-none min-w-[176px] text-left transition-colors ${filters.adviser_id ? 'border-green-400' : 'border-gray-300'}`}>
-                                <span className="flex-1 truncate text-gray-900">{selectedAdviserName || 'All Advisers'}</span>
+                                className={`flex items-center gap-2 px-3 py-2 border rounded-lg text-sm bg-white focus:ring-2 focus:ring-green-500 outline-none min-w-[176px] text-left transition-colors ${filters.adviser_id ? 'border-green-400 text-gray-900' : 'border-gray-300 text-gray-900'}`}>
+                                <span className="flex-1 truncate">{selectedAdviserName || 'All Advisers'}</span>
                                 <HiOutlineChevronDown className={`w-4 h-4 text-gray-400 flex-shrink-0 transition-transform ${adviserDropdownOpen ? 'rotate-180' : ''}`} />
                             </button>
                             {adviserDropdownOpen && (
@@ -345,9 +359,9 @@ export default function StudentUploadedCapstones() {
                                     <div className="p-2 border-b border-gray-100">
                                         <div className="relative">
                                             <HiOutlineSearch className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
-                                            <input type="text" value={adviserSearch} onChange={e => setAdviserSearch(e.target.value)}
-                                                placeholder="Search adviser..." autoFocus
-                                                className="w-full pl-8 pr-3 py-1.5 text-xs border border-gray-200 rounded-md focus:ring-1 focus:ring-green-400 focus:border-green-400 outline-none" />
+                                            <input type="text" value={adviserSearch} onChange={(e) => setAdviserSearch(e.target.value)}
+                                                placeholder="Search adviser..."
+                                                className="w-full pl-8 pr-3 py-1.5 text-xs border border-gray-200 rounded-md focus:ring-1 focus:ring-green-400 focus:border-green-400 outline-none" autoFocus />
                                         </div>
                                     </div>
                                     <div className="max-h-48 overflow-y-auto">
@@ -357,10 +371,10 @@ export default function StudentUploadedCapstones() {
                                         </button>
                                         {filteredAdviserOptions.length === 0 ? (
                                             <div className="px-3 py-4 text-xs text-gray-400 text-center">No advisers found</div>
-                                        ) : filteredAdviserOptions.map(a => (
-                                            <button key={a.id} type="button" onClick={() => handleAdviserSelect(a)}
-                                                className={`w-full text-left px-3 py-2 text-sm hover:bg-green-50 transition-colors ${String(filters.adviser_id) === String(a.id) ? 'font-medium text-[#1B5E20] bg-green-50' : 'text-gray-700'}`}>
-                                                {a.name}
+                                        ) : filteredAdviserOptions.map((f) => (
+                                            <button key={f.id} type="button" onClick={() => handleAdviserSelect(f)}
+                                                className={`w-full text-left px-3 py-2 text-sm hover:bg-green-50 transition-colors ${filters.adviser_id === f.id ? 'font-medium text-[#1B5E20] bg-green-50' : 'text-gray-700'}`}>
+                                                {f.name}
                                             </button>
                                         ))}
                                     </div>
@@ -423,14 +437,14 @@ export default function StudentUploadedCapstones() {
                         <Loading text="Loading capstones..." />
                     ) : capstones.length === 0 ? (
                         <EmptyState
-                            title="No capstones found"
-                            description={search || Object.values(filters).some(Boolean) ? 'Try adjusting your search or filters.' : 'No approved capstones available yet.'}
+                            title="No uploaded capstones"
+                            description={search || filters.year || filters.program || filters.category || filters.adviser_id ? 'Try adjusting your search or filters.' : 'No capstones available yet.'}
                             icon={<HiOutlineDocumentText className="w-12 h-12" />}
                         />
                     ) : displayMode === 'table' ? (
-                        <TableView />
+                        tableJsx
                     ) : (
-                        <CardView />
+                        cardGridJsx
                     )}
                 </div>
             </div>
@@ -439,10 +453,10 @@ export default function StudentUploadedCapstones() {
             {showModal && selectedCapstone && (
                 <CapstoneModal capstone={selectedCapstone} open={true}
                     onClose={() => { setShowModal(false); setSelectedCapstone(null); }}
-                    onViewFull={() => { setShowModal(false); openCapstoneViewer(selectedCapstone.id); }} />
+                    onViewFull={() => openCapstoneViewer(selectedCapstone.id)} />
             )}
 
-            {/* ── Saved Folder slide-over ── */}
+            {/* ── Saved slide-over panel ── */}
             {savedOpen && (
                 <div className="fixed inset-0 z-50 flex justify-end">
                     <div className="absolute inset-0 bg-black/30" onClick={() => setSavedOpen(false)} />
@@ -451,7 +465,8 @@ export default function StudentUploadedCapstones() {
                             <h2 className="text-base font-semibold text-gray-900 flex items-center gap-2">
                                 <HiOutlineBookmark className="w-4 h-4 text-amber-500" />Saved Capstones
                             </h2>
-                            <button onClick={() => setSavedOpen(false)} className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
+                            <button onClick={() => setSavedOpen(false)}
+                                className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
                                 <HiOutlineX className="w-5 h-5" />
                             </button>
                         </div>
@@ -463,43 +478,49 @@ export default function StudentUploadedCapstones() {
                                     <HiOutlineBookmark className="w-10 h-10 text-gray-300 mx-auto mb-2" />
                                     <p className="text-sm text-gray-400">No saved capstones yet.</p>
                                 </div>
-                            ) : savedCapstones.map((cap) => (
-                                <div key={cap.id} className="bg-white rounded-lg border border-gray-100 p-3 hover:border-amber-200 hover:shadow-sm transition-all">
-                                    <h4 className="text-sm font-semibold text-gray-800 line-clamp-2 leading-tight">{cap.title}</h4>
-                                    <p className="text-xs text-gray-500 mt-1">{cap.author}</p>
-                                    <div className="flex items-center gap-2 mt-1.5">
-                                        <span className="text-xs text-gray-400">{cap.year || '—'}</span>
-                                        {cap.program && <span className="px-1.5 py-0.5 text-[10px] font-medium bg-green-50 text-green-600 rounded-full">{cap.program}</span>}
-                                        <span className="ml-auto px-1.5 py-0.5 text-[10px] font-bold bg-amber-50 text-amber-600 rounded-full flex items-center gap-0.5">
-                                            <HiOutlineBookmark className="w-2.5 h-2.5" />{cap.bookmarks_count ?? cap.bookmark_count ?? 0}
-                                        </span>
-                                    </div>
-                                    {cap.keywords?.length > 0 && (
-                                        <div className="flex flex-wrap gap-1 mt-2">
-                                            {cap.keywords.slice(0, 3).map((kw, i) => (
-                                                <span key={i} className="px-1.5 py-0.5 text-[10px] font-medium bg-gray-100 text-gray-500 rounded">{kw.name || kw}</span>
-                                            ))}
+                            ) : (
+                                savedCapstones.map((cap) => (
+                                    <div key={cap.id} className="bg-white rounded-lg border border-gray-100 p-3 hover:border-amber-200 hover:shadow-sm transition-all">
+                                        <h4 className="text-sm font-semibold text-gray-800 line-clamp-2 leading-tight">{cap.title}</h4>
+                                        <p className="text-xs text-gray-500 mt-1">{cap.author}</p>
+                                        <div className="flex items-center gap-2 mt-1.5">
+                                            <span className="text-xs text-gray-400">{cap.year || '—'}</span>
+                                            {cap.program && (
+                                                <span className="px-1.5 py-0.5 text-[10px] font-medium bg-green-50 text-green-600 rounded-full">{cap.program}</span>
+                                            )}
+                                            <span className="ml-auto px-1.5 py-0.5 text-[10px] font-bold bg-amber-50 text-amber-600 rounded-full flex items-center gap-0.5">
+                                                <HiOutlineBookmark className="w-2.5 h-2.5" />
+                                                {cap.bookmarks_count ?? cap.bookmark_count ?? 0}
+                                            </span>
                                         </div>
-                                    )}
-                                    <div className="flex gap-2 mt-2.5 pt-2 border-t border-gray-50">
-                                        <button onClick={() => { openCapstoneModal(cap); setSavedOpen(false); }}
-                                            className="flex-1 inline-flex items-center justify-center gap-1 px-2 py-1 text-xs font-medium text-blue-700 bg-blue-50 rounded hover:bg-blue-100 transition-colors">
-                                            <HiOutlineEye className="w-3 h-3" />View
-                                        </button>
-                                        <button onClick={() => handleRemoveBookmark(cap)}
-                                            className="flex-1 inline-flex items-center justify-center gap-1 px-2 py-1 text-xs font-medium text-red-700 bg-red-50 rounded hover:bg-red-100 transition-colors">
-                                            <HiOutlineTrash className="w-3 h-3" />Remove
-                                        </button>
+                                        {cap.keywords?.length > 0 && (
+                                            <div className="flex flex-wrap gap-1 mt-2">
+                                                {cap.keywords.slice(0, 3).map((kw, i) => (
+                                                    <span key={i} className="px-1.5 py-0.5 text-[10px] font-medium bg-gray-100 text-gray-500 rounded">{kw.name || kw}</span>
+                                                ))}
+                                            </div>
+                                        )}
+                                        <div className="flex gap-2 mt-2.5 pt-2 border-t border-gray-50">
+                                            <button onClick={() => { openCapstoneModal(cap); setSavedOpen(false); }}
+                                                className="flex-1 inline-flex items-center justify-center gap-1 px-2 py-1 text-xs font-medium text-blue-700 bg-blue-50 rounded hover:bg-blue-100 transition-colors">
+                                                <HiOutlineEye className="w-3 h-3" />View
+                                            </button>
+                                            <button onClick={() => handleRemoveBookmark(cap)}
+                                                className="flex-1 inline-flex items-center justify-center gap-1 px-2 py-1 text-xs font-medium text-red-700 bg-red-50 rounded hover:bg-red-100 transition-colors">
+                                                <HiOutlineTrash className="w-3 h-3" />Remove
+                                            </button>
+                                        </div>
                                     </div>
-                                </div>
-                            ))}
+                                ))
+                            )}
                         </div>
                     </div>
                 </div>
             )}
 
             <ConfirmDialog open={confirm.open} title={confirm.title} message={confirm.message} variant={confirm.variant}
-                onConfirm={confirm.action} onCancel={() => setConfirm(p => ({ ...p, open: false }))} />
+                onConfirm={confirm.action} onCancel={() => setConfirm(prev => ({ ...prev, open: false }))} />
         </div>
     );
 }
+

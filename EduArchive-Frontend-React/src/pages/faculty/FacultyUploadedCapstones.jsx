@@ -7,8 +7,7 @@ import {
     HiOutlineTag, HiOutlineCalendar, HiOutlineAcademicCap, HiOutlineChevronDown,
 } from 'react-icons/hi';
 import {
-    getPublishedCapstones, getPublishedYears, getPublishedPrograms,
-    getPublishedCategories, getPublishedAdvisers,
+    getFacultyAllCapstones, getFacultyBrowseFilterOptions,
     getStudentBookmarkedCapstones, toggleBookmark,
 } from '../../api/admin';
 import { useNotification } from '../../components/Notification';
@@ -17,6 +16,7 @@ import EmptyState from '../../components/EmptyState';
 import ConfirmDialog from '../../components/ConfirmDialog';
 import CapstoneModal from '../../components/admin/CapstoneModal';
 import SearchWithSuggestions from '../../components/SearchWithSuggestions';
+import Pagination from '../../components/Pagination';
 
 export default function FacultyUploadedCapstones() {
     const navigate = useNavigate();
@@ -53,6 +53,7 @@ export default function FacultyUploadedCapstones() {
     // ── Pagination ────────────────────────────────────────────────────────────────
     const [page, setPage] = useState(1);
     const [lastPage, setLastPage] = useState(1);
+    const [pagination, setPagination] = useState({ current_page: 1, last_page: 1, total: 0, from: 0, to: 0 });
 
     // ── Modal / confirm state ─────────────────────────────────────────────────────
     const [confirm, setConfirm] = useState({ open: false, title: '', message: '', action: null, variant: 'danger' });
@@ -81,16 +82,12 @@ export default function FacultyUploadedCapstones() {
     // ── API calls ─────────────────────────────────────────────────────────────────
     const loadFilters = async () => {
         try {
-            const [yRes, pRes, cRes, aRes] = await Promise.all([
-                getPublishedYears(),
-                getPublishedPrograms(),
-                getPublishedCategories(),
-                getPublishedAdvisers(),
-            ]);
-            setYears(yRes.data.data || []);
-            setPrograms(pRes.data.data || []);
-            setCategories(cRes.data.data || []);
-            setAdviserOptions(aRes.data.data || []);
+            const res = await getFacultyBrowseFilterOptions();
+            const d = res.data.data || {};
+            setYears(d.years || []);
+            setPrograms(d.programs || []);
+            setCategories(d.categories || []);
+            setAdviserOptions(d.advisers || []);
         } catch (err) {
             console.error('Failed to load filter options:', err);
         }
@@ -99,17 +96,23 @@ export default function FacultyUploadedCapstones() {
     const fetchCapstones = useCallback(async () => {
         try {
             setLoading(true);
-            const params = { page, per_page: 12 };
+            const params = { page, per_page: 15 };
             if (search) params.search = search;
             if (filters.year) params.year = filters.year;
             if (filters.program) params.program = filters.program;
             if (filters.category) params.category = filters.category;
             if (filters.adviser_id) params.adviser_id = filters.adviser_id;
-            // Show ALL published capstones (same as student panel)
-            const res = await getPublishedCapstones(params);
+            const res = await getFacultyAllCapstones(params);
             const data = res.data.data;
             setCapstones(data?.data || data || []);
             setLastPage(data?.last_page || 1);
+            setPagination({
+                current_page: data?.current_page || 1,
+                last_page: data?.last_page || 1,
+                total: data?.total || 0,
+                from: data?.from || 0,
+                to: data?.to || 0,
+            });
         } catch (err) {
             notify.error('Failed to load capstones.');
         } finally {
@@ -177,20 +180,15 @@ export default function FacultyUploadedCapstones() {
         });
     };
 
-    // ── Pagination helpers ────────────────────────────────────────────────────────
-    const Pagination = () => lastPage > 1 ? (
-        <div className="flex items-center justify-center gap-2 pt-8">
-            <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
-                className="px-4 py-2 text-sm font-medium rounded-lg transition-colors bg-[#1B5E20] text-white hover:bg-green-800 disabled:bg-gray-300 disabled:text-gray-500 disabled:cursor-not-allowed">
-                Previous
-            </button>
-            <span className="text-sm font-medium text-gray-600">Page {page} of {lastPage}</span>
-            <button onClick={() => setPage(p => Math.min(lastPage, p + 1))} disabled={page === lastPage}
-                className="px-4 py-2 text-sm font-medium rounded-lg transition-colors bg-[#1B5E20] text-white hover:bg-green-800 disabled:bg-gray-300 disabled:text-gray-500 disabled:cursor-not-allowed">
-                Next
-            </button>
-        </div>
-    ) : null;
+    // ── Pagination component usage ───────────────────────────────────────────────
+    const PaginationComponent = () => (
+        <Pagination
+            paginationData={pagination}
+            page={page}
+            onPageChange={setPage}
+            perPage={15}
+        />
+    );
 
     // ── Card View ─────────────────────────────────────────────────────────────────
     const CardView = () => (
@@ -225,7 +223,7 @@ export default function FacultyUploadedCapstones() {
                     </div>
                 ))}
             </div>
-            <Pagination />
+            <PaginationComponent />
         </>
     );
 
@@ -268,7 +266,7 @@ export default function FacultyUploadedCapstones() {
                     </table>
                 </div>
             </div>
-            <Pagination />
+            <PaginationComponent />
         </>
     );
 
@@ -316,7 +314,7 @@ export default function FacultyUploadedCapstones() {
                     <button onClick={() => setShowFilters(!showFilters)}
                         className={`relative flex-shrink-0 inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg border transition-colors ${showFilters ? 'bg-green-50 text-green-700 border-green-200' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}`}>
                         <HiOutlineFilter className="w-4 h-4" />
-                        Filters
+                        <span className="hidden xs:inline">Filters</span>
                         {activeFilterCount > 0 && (
                             <span className="absolute -top-1.5 -right-1.5 flex items-center justify-center w-4 h-4 text-[10px] font-bold text-white bg-[#1B5E20] rounded-full">{activeFilterCount}</span>
                         )}
@@ -371,7 +369,7 @@ export default function FacultyUploadedCapstones() {
                                             <div className="px-3 py-4 text-xs text-gray-400 text-center">No advisers found</div>
                                         ) : filteredAdviserOptions.map((f) => (
                                             <button key={f.id} type="button" onClick={() => handleAdviserSelect(f)}
-                                                className={`w-full text-left px-3 py-2 text-sm hover:bg-green-50 transition-colors ${String(filters.adviser_id) === String(f.id) ? 'font-medium text-[#1B5E20] bg-green-50' : 'text-gray-700'}`}>
+                                                className={`w-full text-left px-3 py-2 text-sm hover:bg-green-50 transition-colors ${filters.adviser_id === f.id ? 'font-medium text-[#1B5E20] bg-green-50' : 'text-gray-700'}`}>
                                                 {f.name}
                                             </button>
                                         ))}

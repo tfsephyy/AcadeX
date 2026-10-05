@@ -243,7 +243,7 @@ export default function StudentCapstoneMainPage() {
                             >
                                 {capstone.title}
                             </h1>
-                            <PublishedBadge published={capstone.is_published} />
+                            <PublishedBadge published={capstone.publication_status === 'published'} />
                         </div>
 
                         {/* Metadata */}

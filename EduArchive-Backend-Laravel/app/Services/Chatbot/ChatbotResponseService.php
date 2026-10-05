@@ -67,6 +67,7 @@ class ChatbotResponseService
 
     /**
      * Format popular capstones with engagement metrics.
+     * Titles include a [LINK:{id}] marker so the frontend can render them as clickable links.
      *
      * @return array{reply: string, suggested_capstones: array}
      */
@@ -76,26 +77,40 @@ class ChatbotResponseService
             return ['reply' => "No capstone engagement data is available yet in the repository.", 'suggested_capstones' => []];
         }
 
-        $label = match ($metric) {
-            'download_count' => 'Most Downloaded',
-            'bookmark_count' => 'Most Bookmarked',
-            default          => 'Most Viewed',
+        $count    = $capstones->count();
+        $isSingle = $count === 1;
+
+        // Header and count label per metric
+        $header     = match ($metric) {
+            'download_count' => 'Most Downloaded Capstone Project:',
+            'bookmark_count' => 'Most Bookmarked Capstone Project:',
+            default          => $isSingle ? 'Most Viewed Capstone Project:' : "Top {$count} Most Viewed Capstone Projects:",
         };
-        $metricLabel = match ($metric) {
-            'download_count' => 'Downloads',
-            'bookmark_count' => 'Bookmarks',
-            default          => 'Views',
+        $countLabel = match ($metric) {
+            'download_count' => 'Total Download',
+            'bookmark_count' => 'Total Bookmarks',
+            default          => 'Total views',
         };
 
-        $lines = ["📊 **{$label} Capstone Projects:**\n*(All counts are live from the AcadeX database)*\n"];
+        $lines = [
+            "📊 **{$header}**",
+            "*(Live count" . ($isSingle ? '' : 's') . " from the AcadeX database)*",
+            "",
+        ];
 
-        foreach ($capstones->values() as $i => $c) {
-            $num   = $i + 1;
-            $count = number_format($c->$metric ?? 0);
-            $lines[] = "**{$num}. {$c->title}** [ID:{$c->id}]";
-            $lines[] = "   📂 {$c->category} &nbsp;|&nbsp; 📅 {$c->year} &nbsp;|&nbsp; {$metricLabel}: **{$count}**";
-            $lines[] = "   👤 {$c->author}";
-            $lines[] = '';
+        if ($isSingle) {
+            $c         = $capstones->first();
+            $metricVal = number_format($c->$metric ?? 0);
+            $lines[] = "**Capstone title:** {$c->title} [LINK:{$c->id}]";
+            $lines[] = "**{$countLabel}:** {$metricVal}";
+        } else {
+            foreach ($capstones->values() as $i => $c) {
+                $num       = $i + 1;
+                $metricVal = number_format($c->$metric ?? 0);
+                $lines[] = "**{$num}. Capstone title:** {$c->title} [LINK:{$c->id}]";
+                $lines[] = "**{$countLabel}:** {$metricVal}";
+                $lines[] = "";
+            }
         }
 
         return [
@@ -109,6 +124,7 @@ class ChatbotResponseService
             ])->values()->toArray(),
         ];
     }
+
 
     // ── Category information ──────────────────────────────────────────────────
 
@@ -191,62 +207,84 @@ class ChatbotResponseService
         ?array $userStats       = null,
         ?Collection $categories = null,
         ?array $downloadStats   = null,
-        ?Collection $copyrightStats = null
+        ?Collection $copyrightStats = null,
+        bool $userOnly          = false
     ): array {
-        $lines = ["📊 **AcadeX Repository Statistics**\n*All values are live from the database.*\n"];
+        // User-only mode: just return clean user count breakdown
+        if ($userOnly && $userStats) {
+            $total    = $userStats['total'];
+            $faculty  = $userStats['faculty']  ?? 0;
+            $students = $userStats['student']  ?? 0;
+            $visitors = $userStats['visitor']  ?? 0;
+
+            $lines = [
+                "There are **{$total}** users in total.",
+                "",
+                "\u2022 **{$faculty}** facult" . ($faculty === 1 ? 'y' : 'ies') . ".",
+                "\u2022 **{$students}** student" . ($students === 1 ? '' : 's') . ".",
+                "\u2022 **{$visitors}** visitor" . ($visitors === 1 ? '' : 's') . ".",
+            ];
+            return ['reply' => implode("\n", $lines), 'suggested_capstones' => []];
+        }
+
+        $lines = ["\ud83d\udcca **AcadeX Repository Statistics**\n*All values are live from the database.*\n"];
 
         // Capstone overview
-        $lines[] = "---\n**📚 Capstones**";
-        $lines[] = "• Published: **{$stats['total_published']}**";
-        $lines[] = "• Total (all statuses): **{$stats['total_all']}**";
-        $lines[] = "• Pending Approval: **{$stats['pending_approval']}**";
-        $lines[] = "• Archived: **{$stats['total_archived']}**";
-        $lines[] = "• Uploads this year: **{$stats['uploads_this_year']}**";
-        $lines[] = "• Uploads this month: **{$stats['uploads_this_month']}**";
+        $lines[] = "---\n**\ud83d\udcda Capstones**";
+        $lines[] = "\u2022 Published: **{$stats['total_published']}**";
+        $lines[] = "\u2022 Total (all statuses): **{$stats['total_all']}**";
+        $lines[] = "\u2022 Pending Approval: **{$stats['pending_approval']}**";
+        $lines[] = "\u2022 Archived: **{$stats['total_archived']}**";
+        $lines[] = "\u2022 Uploads this year: **{$stats['uploads_this_year']}**";
+        $lines[] = "\u2022 Uploads this month: **{$stats['uploads_this_month']}**";
 
         // Document status
-        $lines[] = "\n**📄 Document Status**";
-        $lines[] = "• With IMRAD: **{$stats['with_imrad']}**";
-        $lines[] = "• Without IMRAD: **{$stats['without_imrad']}**";
+        $lines[] = "\n**\ud83d\udcc4 Document Status**";
+        $lines[] = "\u2022 With IMRAD: **{$stats['with_imrad']}**";
+        $lines[] = "\u2022 Without IMRAD: **{$stats['without_imrad']}**";
 
         // Engagement totals
-        $lines[] = "\n**👁️ Engagement (all time)**";
-        $lines[] = "• Total Views: **" . number_format($stats['total_views']) . "**";
-        $lines[] = "• Total Downloads: **" . number_format($stats['total_downloads']) . "**";
-        $lines[] = "• Total Bookmarks: **" . number_format($stats['total_bookmarks']) . "**";
+        $lines[] = "\n**\ud83d\udc41\ufe0f Engagement (all time)**";
+        $lines[] = "\u2022 Total Views: **" . number_format($stats['total_views']) . "**";
+        $lines[] = "\u2022 Total Downloads: **" . number_format($stats['total_downloads']) . "**";
+        $lines[] = "\u2022 Total Bookmarks: **" . number_format($stats['total_bookmarks']) . "**";
 
         // User breakdown (only if requested/available)
         if ($userStats) {
-            $lines[] = "\n**👥 Registered Users**";
-            $lines[] = "• Total: **{$userStats['total']}**";
-            if ($userStats['admin'])   $lines[] = "• Admins: **{$userStats['admin']}**";
-            if ($userStats['faculty']) $lines[] = "• Faculty: **{$userStats['faculty']}**";
-            if ($userStats['student']) $lines[] = "• Students: **{$userStats['student']}**";
-            if ($userStats['visitor']) $lines[] = "• Visitors: **{$userStats['visitor']}**";
+            $total    = $userStats['total'];
+            $faculty  = $userStats['faculty']  ?? 0;
+            $students = $userStats['student']  ?? 0;
+            $visitors = $userStats['visitor']  ?? 0;
+
+            $lines[] = "\nThere are **{$total}** users in total.";
+            $lines[] = "";
+            $lines[] = "\u2022 **{$faculty}** facult" . ($faculty === 1 ? 'y' : 'ies') . ".";
+            $lines[] = "\u2022 **{$students}** student" . ($students === 1 ? '' : 's') . ".";
+            $lines[] = "\u2022 **{$visitors}** visitor" . ($visitors === 1 ? '' : 's') . ".";
         }
 
         // Category breakdown
         if ($categories && $categories->isNotEmpty()) {
-            $lines[] = "\n**📂 Category Distribution**";
+            $lines[] = "\n**\ud83d\udcc2 Category Distribution**";
             foreach ($categories as $r) {
-                $lines[] = "• {$r->category}: **{$r->count}**";
+                $lines[] = "\u2022 {$r->category}: **{$r->count}**";
             }
         }
 
         // Downloads
         if ($downloadStats) {
-            $lines[] = "\n**⬇️ Downloads**";
-            $lines[] = "• Total: **{$downloadStats['total']}**";
-            $lines[] = "• This Month: **{$downloadStats['this_month']}**";
-            $lines[] = "• This Year: **{$downloadStats['this_year']}**";
+            $lines[] = "\n**\u2b07\ufe0f Downloads**";
+            $lines[] = "\u2022 Total: **{$downloadStats['total']}**";
+            $lines[] = "\u2022 This Month: **{$downloadStats['this_month']}**";
+            $lines[] = "\u2022 This Year: **{$downloadStats['this_year']}**";
         }
 
         // Copyright
         if ($copyrightStats && $copyrightStats->isNotEmpty()) {
-            $lines[] = "\n**©️ Copyright Distribution**";
+            $lines[] = "\n**\u00a9\ufe0f Copyright Distribution**";
             foreach ($copyrightStats as $r) {
                 $status = ucfirst($r->status ?? 'None');
-                $lines[] = "• {$status}: **{$r->count}**";
+                $lines[] = "\u2022 {$status}: **{$r->count}**";
             }
         }
 
@@ -288,7 +326,7 @@ class ChatbotResponseService
      */
     public function formatLogs(array $data): array
     {
-        $lines   = ["🔍 **System Activity Logs**\n*From AcadeX activity records*\n"];
+        $lines   = ["🔒 **Recent Login Activity**\n*From AcadeX login records*\n"];
         $hasData = false;
 
         if (!empty($data['activity'])) {
@@ -297,17 +335,25 @@ class ChatbotResponseService
             foreach ($data['activity'] as $i => $a) {
                 $user = $a['user'] ?? 'System';
                 $desc = $a['description'] ? ": {$a['description']}" : '';
-                $lines[] = ($i + 1) . ". **{$user}** — {$a['action']}{$desc} *(at {$a['created_at']})*";
+                $time = $a['created_at'] ? date('M d, Y h:i A', strtotime($a['created_at'])) : 'Unknown';
+                $lines[] = ($i + 1) . ". **{$user}** — {$a['action']}{$desc} *({$time})*";
             }
             $lines[] = '';
         }
 
-        if (!empty($data['logins'])) {
+        if (isset($data['logins'])) {
             $hasData = true;
-            $lines[] = "**Recent Login Activity:**";
-            foreach ($data['logins'] as $i => $l) {
-                $status  = strtoupper($l['status'] ?? 'unknown');
-                $lines[] = ($i + 1) . ". **{$l['email']}** — {$status} at {$l['attempted_at']} *(IP: {$l['ip_address']})*";
+            if (empty($data['logins'])) {
+                $lines[] = "**Recent Login Activity:** No recent login attempts found.";
+            } else {
+                $lines[] = "**Recent Login Attempts:**";
+                foreach ($data['logins'] as $i => $l) {
+                    $status  = strtoupper($l['status'] ?? 'unknown');
+                    $icon    = ($status === 'SUCCESS') ? '✅' : '❌';
+                    $time    = $l['attempted_at'] ? date('M d, Y h:i A', strtotime($l['attempted_at'])) : 'Unknown';
+                    $ip      = $l['ip_address'] ?? 'N/A';
+                    $lines[] = ($i + 1) . ". {$icon} **{$l['email']}** — {$status} at {$time} *(IP: {$ip})*";
+                }
             }
             $lines[] = '';
         }
@@ -316,7 +362,7 @@ class ChatbotResponseService
             $hasData = true;
             $lines[] = "**Most Downloaded Capstones:**";
             foreach ($data['top_downloads'] as $i => $c) {
-                $lines[] = ($i + 1) . ". **{$c['title']}** [ID:{$c['id']}] — **{$c['download_count']}** download(s) | {$c['author']} | {$c['year']}";
+                $lines[] = ($i + 1) . ". **{$c['title']}** [LINK:{$c['id']}] — **{$c['download_count']}** download(s) | {$c['author']} | {$c['year']}";
             }
         }
 
@@ -326,6 +372,7 @@ class ChatbotResponseService
 
         return ['reply' => implode("\n", $lines), 'suggested_capstones' => []];
     }
+
 
     // ── Definition / Glossary ─────────────────────────────────────────────────
 
@@ -368,7 +415,7 @@ class ChatbotResponseService
                 'triggers' => ['publication status', 'publication'],
                 'answer'   => "📰 **Publication Status** indicates whether a capstone has been formally published or submitted to an academic conference or journal.\n\n" .
                     "Possible values include:\n- **Published** — formally submitted to a publication\n- **Unpublished** — internal archive only\n\n" .
-                    "This is separate from whether the capstone is *visible* in EduArchive (controlled by `is_published`).",
+                    "This is separate from whether the capstone is *visible* in EduArchive (controlled by `publication_status`).",
             ],
             [
                 'triggers' => ['copyright'],
@@ -379,7 +426,7 @@ class ChatbotResponseService
             [
                 'triggers' => ['archived vs published', 'archived and published', 'difference between archived', 'archived'],
                 'answer'   => "📦 **Archived vs Published:**\n\n" .
-                    "- **Published** (`is_published = true`) — the capstone is visible in the EduArchive library for all users.\n" .
+                    "- **Published** (`publication_status = 'published'`) — the capstone is visible in the EduArchive library for all users.\n" .
                     "- **Archived** (`is_archived = true`) — the capstone has been hidden/removed from public view but is still in the database.\n\n" .
                     "An archived capstone will not appear in search results.",
             ],
@@ -447,20 +494,188 @@ class ChatbotResponseService
             return ['reply' => "I couldn't identify a specific statistic for that question. Try rephrasing, for example: *\"Which program has the most capstone submissions?\"*", 'suggested_capstones' => []];
         }
 
+        // ── Faculty advisory early-return responses ───────────────────────────────
+
+        // 1. Most viewed among advised
+        if (array_key_exists('advisory_most_viewed', $data)) {
+            $cap = $data['advisory_most_viewed'];
+            if (!$cap) {
+                return ['reply' => "You have no advised capstones with any views yet.", 'suggested_capstones' => []];
+            }
+            $reply = "The most viewed capstone among you advised is **{$cap['title']}** [LINK:{$cap['id']}]\n"
+                   . "Total views: **{$cap['view_count']}**";
+            return ['reply' => $reply, 'suggested_capstones' => []];
+        }
+
+        // 2. Overdone topics in advisory
+        if (array_key_exists('advisory_overdone', $data)) {
+            if (empty($data['advisory_overdone'])) {
+                return ['reply' => "✅ No overdone topics found among the capstones you have advised. Every category is unique!", 'suggested_capstones' => []];
+            }
+            $lines = ["These are the topics that has been overdone:"];
+            foreach ($data['advisory_overdone'] as $i => $row) {
+                $lines[] = ($i + 1) . ". **{$row['category']}** — {$row['total']} capstones";
+            }
+            return ['reply' => implode("\n", $lines), 'suggested_capstones' => []];
+        }
+
+        // 3. Total capstones advised across all years
+        if (array_key_exists('advisory_total_count', $data)) {
+            $count = $data['advisory_total_count'];
+            $reply = "You have advised **{$count}** capstone" . ($count === 1 ? '' : 's') . " across all years.";
+            return ['reply' => $reply, 'suggested_capstones' => []];
+        }
+
+        // 4. Published capstones in advisory
+        if (array_key_exists('advisory_published_count', $data)) {
+            $count = $data['advisory_published_count'];
+            if ($count === 0) {
+                return ['reply' => "You have advised **0** published capstones across all years.", 'suggested_capstones' => []];
+            }
+            $lines = ["You have advised **{$count}** published capstone" . ($count === 1 ? '' : 's') . " across all years."];
+            foreach ($data['advisory_published_list'] as $i => $c) {
+                $lines[] = ($i + 1) . ". {$c['title']} [LINK:{$c['id']}]";
+            }
+            return ['reply' => implode("\n", $lines), 'suggested_capstones' => []];
+        }
+
+        // 5. Copyrighted capstones in advisory
+        if (array_key_exists('advisory_copyrighted_count', $data)) {
+            $count = $data['advisory_copyrighted_count'];
+            if ($count === 0) {
+                return ['reply' => "You have advised **0** copyrighted capstones across all years.", 'suggested_capstones' => []];
+            }
+            $lines = ["You have advised **{$count}** copyrighted capstone" . ($count === 1 ? '' : 's') . " across all years."];
+            foreach ($data['advisory_copyrighted_list'] as $i => $c) {
+                $lines[] = ($i + 1) . ". {$c['title']} [LINK:{$c['id']}]";
+            }
+            return ['reply' => implode("\n", $lines), 'suggested_capstones' => []];
+        }
+
+        // 6. Past N years capstones
+        if (array_key_exists('advisory_past_years_list', $data)) {
+            $from = $data['advisory_past_years_from'];
+            $to   = $data['advisory_past_years_to'];
+            if (empty($data['advisory_past_years_list'])) {
+                return ['reply' => "You have no advised capstones from **{$from}** to **{$to}**.", 'suggested_capstones' => []];
+            }
+            $lines = ["These are the capstone that you have advised for the past 3 years:"];
+            foreach ($data['advisory_past_years_list'] as $i => $c) {
+                $lines[] = ($i + 1) . ". {$c['title']} ({$c['year']}) [LINK:{$c['id']}]";
+            }
+            return ['reply' => implode("\n", $lines), 'suggested_capstones' => []];
+        }
+
+
+        // ── Early-return for clean single-fact responses (no generic header) ──────
+
+        if (isset($data['archived_total_count']) && count($data) === 1) {
+            $count = $data['archived_total_count'];
+            $reply = "There are **{$count}** capstone" . ($count === 1 ? '' : 's') . " in the archive right now.";
+            return ['reply' => $reply, 'suggested_capstones' => []];
+        }
+
+        if (isset($data['no_imrad_count']) && count($data) === 2) {
+            $count = $data['no_imrad_count'];
+            if ($count === 0) {
+                return ['reply' => "✅ All capstones have an IMRAD document attached.", 'suggested_capstones' => []];
+            }
+            $lines = ["There **{$count}** capstone/s that has no IMRAD attached.", "", "**List:**"];
+            foreach ($data['no_imrad_list'] as $c) {
+                $lines[] = "– {$c['title']} [LINK:{$c['id']}]";
+            }
+            return ['reply' => implode("\n", $lines), 'suggested_capstones' => []];
+        }
+
+        if (isset($data['publication_published_count']) && count($data) === 2) {
+            $count = $data['publication_published_count'];
+            if ($count === 0) {
+                return ['reply' => "There are **0** published capstone/s.", 'suggested_capstones' => []];
+            }
+            $lines = ["There **{$count}** published capstone/s.", "", "**List:**"];
+            foreach ($data['publication_published_list'] as $c) {
+                $lines[] = "– {$c['title']} [LINK:{$c['id']}]";
+            }
+            return ['reply' => implode("\n", $lines), 'suggested_capstones' => []];
+        }
+
+        if (isset($data['copyrighted_count']) && count($data) === 2) {
+            $count = $data['copyrighted_count'];
+            if ($count === 0) {
+                return ['reply' => "There are **0** copyrighted capstone/s.", 'suggested_capstones' => []];
+            }
+            $lines = ["There **{$count}** copyrighted capstone/s.", "", "**List:**"];
+            foreach ($data['copyrighted_list'] as $c) {
+                $lines[] = "– {$c['title']} [LINK:{$c['id']}]";
+            }
+            return ['reply' => implode("\n", $lines), 'suggested_capstones' => []];
+        }
+
+        if (isset($data['never_logged_in_count']) && count(array_keys($data)) <= 2) {
+            $count = $data['never_logged_in_count'];
+            if ($count === 0) {
+                return ['reply' => "✅ All registered users have logged in at least once.", 'suggested_capstones' => []];
+            }
+            $lines = ["**🔐 Users Who Have Never Logged In Since Registering:** **{$count}** user(s)", ""];
+            foreach ($data['never_logged_in_list'] ?? [] as $u) {
+                $name  = $u['name']  ?? '';
+                $email = $u['email'] ?? '';
+                $lines[] = "– **{$name}** ({$email})";
+            }
+            return ['reply' => implode("\n", $lines), 'suggested_capstones' => []];
+        }
+
+        if (array_key_exists('active_users', $data) && count(array_keys($data)) === 1) {
+            $thisMonth = now()->format('F Y');
+            if (empty($data['active_users'])) {
+                return ['reply' => "**🔥 Most Active Users This Month ({$thisMonth}):** No activity recorded yet.", 'suggested_capstones' => []];
+            }
+            $lines = ["**🔥 Most Active Users This Month ({$thisMonth}):**", ""];
+            foreach ($data['active_users'] as $i => $u) {
+                $lastActive = $u['last_active_at'] ? date('M d, Y h:i A', strtotime($u['last_active_at'])) : 'N/A';
+                $lines[] = ($i + 1) . ". **{$u['name']}** — last active: {$lastActive}";
+            }
+            return ['reply' => implode("\n", $lines), 'suggested_capstones' => []];
+        }
+
+        // ─────────────────────────────────────────────────────────────────────────
+
         $lines = ["📊 **EduArchive Archive Analytics**\n*Live from the database*\n"];
 
         if (!empty($data['year_counts'])) {
-            $lines[] = "**📅 Top Years by Capstone Submissions:**";
-            foreach ($data['year_counts'] as $i => $row) {
-                $lines[] = ($i + 1) . ". **{$row['year']}** — {$row['total']} capstone(s)";
+            if (count($data['year_counts']) === 1) {
+                $row = $data['year_counts'][0];
+                // Remove generic header and use clean format matching the requested output
+                $lines = [
+                    "**📅 Year with the Most Capstone Submissions:**",
+                    "",
+                    "🏆 **{$row['year']}** — **{$row['total']}** capstone(s) submitted",
+                ];
+                return ['reply' => implode("\n", $lines), 'suggested_capstones' => []];
+            } else {
+                $lines[] = "**📅 Top Years by Capstone Submissions:**";
+                foreach ($data['year_counts'] as $i => $row) {
+                    $lines[] = ($i + 1) . ". **{$row['year']}** — {$row['total']} capstone(s)";
+                }
             }
             $lines[] = '';
         }
 
         if (!empty($data['program_counts'])) {
-            $lines[] = "**🎓 Programs by Capstone Count:**";
-            foreach ($data['program_counts'] as $i => $row) {
-                $lines[] = ($i + 1) . ". **{$row['program']}** — {$row['total']} capstone(s)";
+            if (count($data['program_counts']) === 1) {
+                $row = $data['program_counts'][0];
+                // Clean format matching the requested output — early return, no extra header
+                $lines = [
+                    "**🎓 Program with the Most Capstone Submissions:**",
+                    "",
+                    "🏆 **{$row['program']}** — **{$row['total']}** capstone(s) submitted",
+                ];
+                return ['reply' => implode("\n", $lines), 'suggested_capstones' => []];
+            } else {
+                $lines[] = "**🎓 Programs by Capstone Count:**";
+                foreach ($data['program_counts'] as $i => $row) {
+                    $lines[] = ($i + 1) . ". **{$row['program']}** — {$row['total']} capstone(s)";
+                }
             }
             $lines[] = '';
         }
@@ -482,7 +697,7 @@ class ChatbotResponseService
         }
 
         if (!empty($data['top_uploaders'])) {
-            $lines[] = "**📤 Top Uploaders:**";
+            $lines[] = "**📤 Top Uploaders (by capstones uploaded):**";
             foreach ($data['top_uploaders'] as $i => $row) {
                 $lines[] = ($i + 1) . ". **{$row['name']}** — {$row['total']} capstone(s) uploaded";
             }
@@ -491,46 +706,94 @@ class ChatbotResponseService
 
         if (isset($data['unviewed_count'])) {
             $lines[] = "**👻 Capstones Never Viewed Since Publishing:**";
-            $lines[] = "• Total: **{$data['unviewed_count']}** capstone(s) with 0 views";
-            if (!empty($data['unviewed_examples'])) {
-                foreach ($data['unviewed_examples'] as $c) {
-                    $lines[] = "  – {$c['title']} ({$c['year']}, {$c['program']})";
+            if ($data['unviewed_count'] === 0) {
+                $lines[] = "• ✅ All published capstones have been viewed at least once.";
+            } else {
+                $lines[] = "• **{$data['unviewed_count']}** capstone(s) with 0 views since publishing";
+                if (!empty($data['unviewed_examples'])) {
+                    $lines[] = "  Examples:";
+                    foreach ($data['unviewed_examples'] as $c) {
+                        $yr  = $c['year']    ?? '';
+                        $prg = $c['program'] ?? '';
+                        // [LINK:{id}] marker so frontend can render as clickable
+                        $lines[] = "  – **{$c['title']}** [LINK:{$c['id']}] ({$yr}, {$prg})";
+                    }
                 }
             }
             $lines[] = '';
         }
 
         if (isset($data['no_pdf_count'])) {
-            $lines[] = "**📭 Capstones with No PDF Attached:** **{$data['no_pdf_count']}**";
-        }
-
-        if (isset($data['no_keywords_count'])) {
-            $lines[] = "**🏷️ Published Capstones with No Keywords Tagged:** **{$data['no_keywords_count']}**";
-        }
-
-        if (isset($data['never_logged_in'])) {
-            $lines[] = "**🔐 Users Who Have Never Logged In:** **{$data['never_logged_in']}**";
-        }
-
-        if (!empty($data['active_users'])) {
-            $lines[] = "**🔥 Most Active Users This Month:**";
-            foreach ($data['active_users'] as $i => $u) {
-                $lines[] = ($i + 1) . ". **{$u['name']}** — last active: {$u['last_active_at']}";
+            if ($data['no_pdf_count'] === 0) {
+                $lines[] = "**📭 Capstones with No PDF Attached:** ✅ All capstones have a PDF attached.";
+            } else {
+                $lines[] = "**📭 Capstones with No PDF Attached:** **{$data['no_pdf_count']}** capstone(s) are missing a PDF.";
             }
             $lines[] = '';
         }
 
-        if (isset($data['archived_count'])) {
-            $lines[] = "**📊 Archived vs Published:**";
-            $lines[] = "• Published (visible): **{$data['published_count']}**";
-            $lines[] = "• Archived (hidden): **{$data['archived_count']}**";
+        if (isset($data['no_keywords_count'])) {
+            if ($data['no_keywords_count'] === 0) {
+                $lines[] = "**🏷️ Published Capstones with No Keywords Tagged:** ✅ All published capstones have keywords.";
+            } else {
+                $lines[] = "**🏷️ Published Capstones with No Keywords Tagged:** **{$data['no_keywords_count']}** capstone(s) have no keywords.";
+            }
             $lines[] = '';
         }
 
-        if (!empty($data['duplicate_titles'])) {
-            $lines[] = "**🔁 Capstone Titles Appearing More Than Once:**";
-            foreach ($data['duplicate_titles'] as $i => $row) {
-                $lines[] = ($i + 1) . ". \"{$row['title']}\" — appears **{$row['total']}** times";
+        if (isset($data['never_logged_in_count'])) {
+            if ($data['never_logged_in_count'] === 0) {
+                $lines[] = "**🔐 Users Who Have Never Logged In:** ✅ All registered users have logged in at least once.";
+            } else {
+                $lines[] = "**🔐 Users Who Have Never Logged In Since Registering:** **{$data['never_logged_in_count']}** user(s)";
+                if (!empty($data['never_logged_in_list'])) {
+                    foreach ($data['never_logged_in_list'] as $u) {
+                        $name  = $u['name']  ?? '';
+                        $email = $u['email'] ?? '';
+                        $lines[] = "  – **{$name}** ({$email})";
+                    }
+                }
+            }
+            $lines[] = '';
+        } elseif (isset($data['never_logged_in'])) {
+            // Legacy fallback (count-only)
+            if ($data['never_logged_in'] === 0) {
+                $lines[] = "**🔐 Users Who Have Never Logged In:** ✅ All registered users have logged in at least once.";
+            } else {
+                $lines[] = "**🔐 Users Who Have Never Logged In Since Registering:** **{$data['never_logged_in']}** user(s)";
+            }
+            $lines[] = '';
+        }
+
+        if (!empty($data['active_users'])) {
+            $thisMonth = now()->format('F Y');
+            $lines[] = "**🔥 Most Active Users This Month ({$thisMonth}):**";
+            foreach ($data['active_users'] as $i => $u) {
+                $lastActive = $u['last_active_at'] ? date('M d, Y h:i A', strtotime($u['last_active_at'])) : 'N/A';
+                $lines[] = ($i + 1) . ". **{$u['name']}** — last active: {$lastActive}";
+            }
+            $lines[] = '';
+        } elseif (array_key_exists('active_users', $data)) {
+            $thisMonth = now()->format('F Y');
+            $lines[] = "**🔥 Most Active Users This Month ({$thisMonth}):** No activity recorded yet.";
+            $lines[] = '';
+        }
+
+        if (isset($data['archived_count'])) {
+            $lines[] = "**📊 Capstones: Archived vs Published:**";
+            $lines[] = "• Published (publicly visible): **{$data['published_count']}**";
+            $lines[] = "• Archived (hidden from public): **{$data['archived_count']}**";
+            $lines[] = '';
+        }
+
+        if (isset($data['duplicate_titles'])) {
+            if (empty($data['duplicate_titles'])) {
+                $lines[] = "**🔁 Duplicate Capstone Titles:** ✅ No duplicate titles found in the archive.";
+            } else {
+                $lines[] = "**🔁 Capstone Titles Appearing More Than Once:**";
+                foreach ($data['duplicate_titles'] as $i => $row) {
+                    $lines[] = ($i + 1) . ". \"{$row['title']}\" — appears **{$row['total']}** times";
+                }
             }
             $lines[] = '';
         }
@@ -543,10 +806,52 @@ class ChatbotResponseService
             $lines[] = '';
         }
 
-        if (isset($data['total_capstones'])) {
-            $lines[] = "**📚 Archive Size:**";
-            $lines[] = "• Total capstones in archive: **{$data['total_capstones']}**";
-            $lines[] = "• Published and visible: **{$data['published_capstones']}**";
+        if (isset($data['archived_total_count'])) {
+            $count = $data['archived_total_count'];
+            $lines[] = "There are **{$count}** capstone" . ($count === 1 ? '' : 's') . " in the archive right now.";
+            $lines[] = '';
+        }
+
+        if (isset($data['no_imrad_count'])) {
+            $count = $data['no_imrad_count'];
+            if ($count === 0) {
+                $lines[] = "**📭 No IMRAD Attached:** ✅ All capstones have an IMRAD document attached.";
+            } else {
+                $lines[] = "There **{$count}** capstone/s that has no IMRAD attached.";
+                $lines[] = "**List:**";
+                foreach ($data['no_imrad_list'] as $c) {
+                    $lines[] = "– {$c['title']} [LINK:{$c['id']}]";
+                }
+            }
+            $lines[] = '';
+        }
+
+        if (isset($data['publication_published_count'])) {
+            $count = $data['publication_published_count'];
+            if ($count === 0) {
+                $lines[] = "There are **0** published capstone/s.";
+            } else {
+                $lines[] = "There **{$count}** published capstone/s.";
+                $lines[] = "**List:**";
+                foreach ($data['publication_published_list'] as $c) {
+                    $lines[] = "– {$c['title']} [LINK:{$c['id']}]";
+                }
+            }
+            $lines[] = '';
+        }
+
+        if (isset($data['copyrighted_count'])) {
+            $count = $data['copyrighted_count'];
+            if ($count === 0) {
+                $lines[] = "There are **0** copyrighted capstone/s.";
+            } else {
+                $lines[] = "There **{$count}** copyrighted capstone/s.";
+                $lines[] = "**List:**";
+                foreach ($data['copyrighted_list'] as $c) {
+                    $lines[] = "– {$c['title']} [LINK:{$c['id']}]";
+                }
+            }
+            $lines[] = '';
         }
 
         return ['reply' => implode("\n", $lines), 'suggested_capstones' => []];
@@ -634,6 +939,210 @@ class ChatbotResponseService
                 "• *\"Find {$kw2} capstones from {$prevYear}\"*\n" .
                 "• *\"What are the top 3 most viewed capstones?\"*",
             'suggested_capstones' => [],
+        ];
+    }
+
+    // ── Student Research Section ──────────────────────────────────────────────
+
+    /**
+     * Format faculty list for adviser selection (clickable).
+     *
+     * @return array{reply: string, suggested_capstones: array, faculty_list: array}
+     */
+    public function formatFacultySelection(\Illuminate\Database\Eloquent\Collection $faculty): array
+    {
+        if ($faculty->isEmpty()) {
+            return [
+                'reply' => "No faculty members are currently available in the system.",
+                'suggested_capstones' => [],
+                'faculty_list' => [],
+            ];
+        }
+
+        $lines = [
+            "Please select your adviser:",
+            "",
+        ];
+
+        $facultyList = [];
+        foreach ($faculty as $f) {
+            $lines[] = "• **{$f->name}**";
+            $facultyList[] = [
+                'id'   => $f->id,
+                'name' => $f->name,
+            ];
+        }
+
+        return [
+            'reply'               => implode("\n", $lines),
+            'suggested_capstones' => [],
+            'faculty_list'        => $facultyList,
+        ];
+    }
+
+    /**
+     * Format capstones supervised by a specific adviser.
+     *
+     * @param \Illuminate\Database\Eloquent\Collection $capstones
+     * @param string $adviserName
+     * @return array{reply: string, suggested_capstones: array}
+     */
+    public function formatAdviserCapstones(\Illuminate\Database\Eloquent\Collection $capstones, string $adviserName): array
+    {
+        if ($capstones->isEmpty()) {
+            return [
+                'reply'               => "**{$adviserName}** has not supervised any capstones yet.",
+                'suggested_capstones' => [],
+            ];
+        }
+
+
+        // Determine the title based on gender prefix (Mr./Ms.)
+        $prefix = 'Mr./Ms.';
+        
+        $lines = [
+            "These are the capstones that **{$prefix} {$adviserName}** has advised:",
+            "",
+        ];
+
+        foreach ($capstones->values() as $i => $c) {
+            $num = $i + 1;
+            $lines[] = "{$num}. **{$c->title}** [LINK:{$c->id}]";
+            $lines[] = "   📅 Year: {$c->year} | 👤 Author: {$c->author}";
+            $lines[] = "";
+        }
+
+        return [
+            'reply' => implode("\n", $lines),
+            'suggested_capstones' => $capstones->map(fn($c) => [
+                'id' => $c->id,
+                'title' => $c->title,
+                'author' => $c->author,
+                'year' => $c->year,
+                'program' => $c->program ?? '',
+            ])->values()->toArray(),
+        ];
+    }
+
+    /**
+     * Format the most popular research topic.
+     *
+     * @param array|null $topicData
+     * @return array{reply: string, suggested_capstones: array}
+     */
+    public function formatMostPopularTopic(?array $topicData): array
+    {
+        if (!$topicData) {
+            return [
+                'reply' => "No category data is available yet in the repository.",
+                'suggested_capstones' => [],
+            ];
+        }
+
+        $reply = "Currently the most popular topic is **{$topicData['category']}**.";
+
+        return [
+            'reply' => $reply,
+            'suggested_capstones' => [],
+        ];
+    }
+
+    /**
+     * Format capstone submissions per year.
+     *
+     * @param Collection $submissions
+     * @return array{reply: string, suggested_capstones: array}
+     */
+    public function formatSubmissionsPerYear(Collection $submissions): array
+    {
+        if ($submissions->isEmpty()) {
+            return [
+                'reply' => "No submission data is available yet.",
+                'suggested_capstones' => [],
+            ];
+        }
+
+        $lines = [
+            "**Capstone submissions per year:**",
+            "",
+        ];
+
+        foreach ($submissions as $row) {
+            $plural = $row->total === 1 ? 'capstone' : 'capstones';
+            $lines[] = "**{$row->year}** - {$row->total} {$plural}";
+        }
+
+        return [
+            'reply' => implode("\n", $lines),
+            'suggested_capstones' => [],
+        ];
+    }
+
+    /**
+     * Format advisers who handle the most research projects.
+     *
+     * @param Collection $advisers
+     * @return array{reply: string, suggested_capstones: array}
+     */
+    public function formatTopAdvisers(Collection $advisers): array
+    {
+        if ($advisers->isEmpty()) {
+            return [
+                'reply' => "No adviser data is available yet.",
+                'suggested_capstones' => [],
+            ];
+        }
+
+        $lines = [
+            "**Advisers who handle the most research projects:**",
+            "",
+        ];
+
+        foreach ($advisers->values() as $i => $a) {
+            $num = $i + 1;
+            $plural = $a->total === 1 ? 'project' : 'projects';
+            $lines[] = "{$num}. **{$a->name}** - {$a->total} {$plural}";
+        }
+
+        return [
+            'reply' => implode("\n", $lines),
+            'suggested_capstones' => [],
+        ];
+    }
+
+    /**
+     * Format the most referenced capstone.
+     *
+     * @param array|null $data
+     * @return array{reply: string, suggested_capstones: array}
+     */
+    public function formatMostReferencedCapstone(?array $data): array
+    {
+        if (!$data) {
+            return [
+                'reply' => "No reference data is available yet in the repository.",
+                'suggested_capstones' => [],
+            ];
+        }
+
+        $capstone = $data['capstone'];
+        $count = $data['count'];
+
+        $lines = [
+            "**Most Referenced Capstone is:** {$capstone['title']} [LINK:{$capstone['id']}]",
+            "",
+            "**Total Referenced:** {$count}",
+        ];
+
+        return [
+            'reply' => implode("\n", $lines),
+            'suggested_capstones' => [[
+                'id' => $capstone['id'],
+                'title' => $capstone['title'],
+                'author' => $capstone['author'],
+                'year' => $capstone['year'],
+                'program' => $capstone['program'] ?? '',
+            ]],
         ];
     }
 }
