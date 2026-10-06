@@ -424,6 +424,7 @@ export default function AdminCapstoneAdditionalInfoPage() {
                                 <div className="relative">
                                     <HiOutlineSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none" style={{ color: 'var(--color-text-muted)' }} />
                                     <input type="text" value={refSearch}
+                                        id="admin-ref-search-input"
                                         onChange={(e) => { setRefSearch(e.target.value); setRefDropdownOpen(true); }}
                                         onFocus={() => setRefDropdownOpen(true)}
                                         placeholder="Search capstone titles to cite…"
@@ -431,8 +432,14 @@ export default function AdminCapstoneAdditionalInfoPage() {
                                     {refLoading && <span className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 border-2 rounded-full animate-spin" style={{ borderColor: 'var(--color-primary)', borderTopColor: 'transparent' }} />}
                                 </div>
                                 {refDropdownOpen && (refResults.length > 0 || refSearch.trim()) && (
-                                    <div className="absolute top-full left-0 right-0 z-30 mt-1 rounded-xl border shadow-xl"
-                                        style={{ background: 'var(--color-surface-elevated)', borderColor: 'var(--color-border-strong)' }}>
+                                    <div className="fixed z-[9999] mt-1 rounded-xl border shadow-2xl overflow-hidden"
+                                        style={{
+                                            background: 'var(--color-surface-elevated, #ffffff)',
+                                            borderColor: 'var(--color-border-strong)',
+                                            top: (() => { const el = document.getElementById('admin-ref-search-input'); return el ? el.getBoundingClientRect().bottom + 4 + 'px' : 'auto'; })(),
+                                            left: (() => { const el = document.getElementById('admin-ref-search-input'); return el ? el.getBoundingClientRect().left + 'px' : '0'; })(),
+                                            width: (() => { const el = document.getElementById('admin-ref-search-input'); return el ? el.getBoundingClientRect().width + 'px' : '300px'; })(),
+                                        }}>
                                         {refResults.length === 0 ? (
                                             <div className="px-4 py-3 text-xs text-center" style={{ color: 'var(--color-text-muted)' }}>{refLoading ? 'Searching…' : 'No capstones found'}</div>
                                         ) : (
@@ -451,7 +458,7 @@ export default function AdminCapstoneAdditionalInfoPage() {
                                         )}
                                     </div>
                                 )}
-                                {refDropdownOpen && <div className="fixed inset-0 z-20" onClick={() => setRefDropdownOpen(false)} />}
+                                {refDropdownOpen && <div className="fixed inset-0 z-[9998]" onClick={() => setRefDropdownOpen(false)} />}
                             </div>
                         </SectionCard>
                     </div>

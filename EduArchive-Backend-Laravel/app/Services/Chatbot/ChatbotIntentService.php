@@ -172,6 +172,10 @@ class ChatbotIntentService
         // Definition/glossary questions — answered without DB queries
         foreach (self::DEFINITION_PATTERNS    as $p) { if (preg_match($p, $message)) return self::INTENT_DEFINITION; }
 
+        // ── Student research section — checked FIRST so "capstone submissions changed over the years"
+        //    does NOT get caught by the generic ADMIN_TRENDS "capstones per year" pattern
+        foreach (self::STUDENT_RESEARCH_PATTERNS as $p) { if (preg_match($p, $message)) return self::INTENT_STUDENT_RESEARCH; }
+
         // Admin intents must be checked next (most specific DB queries)
         foreach (self::ADMIN_LOGS_PATTERNS    as $p) { if (preg_match($p, $message)) return self::INTENT_ADMIN_LOGS; }
         foreach (self::ADMIN_TRENDS_PATTERNS  as $p) { if (preg_match($p, $message)) return self::INTENT_ADMIN_TRENDS; }
@@ -186,7 +190,6 @@ class ChatbotIntentService
         foreach (self::POPULAR_PATTERNS       as $p) { if (preg_match($p, $message)) return self::INTENT_POPULAR; }
         foreach (self::CAPSTONE_DETAILS_PATTERNS as $p) { if (preg_match($p, $message)) return self::INTENT_CAPSTONE_DETAILS; }
         foreach (self::CATEGORY_INFO_PATTERNS as $p) { if (preg_match($p, $message)) return self::INTENT_CATEGORY_INFO; }
-        foreach (self::STUDENT_RESEARCH_PATTERNS as $p) { if (preg_match($p, $message)) return self::INTENT_STUDENT_RESEARCH; }
         foreach (self::RECOMMEND_PATTERNS     as $p) { if (preg_match($p, $message)) return self::INTENT_RECOMMEND; }
 
         // Default to SEARCH only if message contains capstone-related keywords

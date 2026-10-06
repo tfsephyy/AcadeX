@@ -223,7 +223,9 @@ export default function FacultyUploadedCapstones() {
                     </div>
                 ))}
             </div>
-            <PaginationComponent />
+            <div className="mt-8">
+                <PaginationComponent />
+            </div>
         </>
     );
 
@@ -266,7 +268,9 @@ export default function FacultyUploadedCapstones() {
                     </table>
                 </div>
             </div>
-            <PaginationComponent />
+            <div className="mt-6">
+                <PaginationComponent />
+            </div>
         </>
     );
 

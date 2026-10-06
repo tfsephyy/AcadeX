@@ -321,7 +321,7 @@ class ChatbotController extends Controller
 
         // 4. "Which advisers handle the most research projects?"
         if (str_contains($msg, 'advisers') && str_contains($msg, 'handle') && str_contains($msg, 'most')) {
-            $advisers = $this->analyticsSvc->getTopAdvisers(10);
+            $advisers = $this->analyticsSvc->getTopAdvisers(1);
             return $this->responseSvc->formatTopAdvisers($advisers);
         }
 

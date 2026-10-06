@@ -92,16 +92,28 @@ class AdminDashboardController extends Controller
     }
 
     /**
-     * Get the top 5 most-viewed capstones (unique views per user).
+     * Get the most-viewed capstone(s).
+     * Returns the single capstone with the highest unique views.
+     * If multiple capstones share the same top view count (a tie), all of them are returned.
      */
     public function mostViewed(): JsonResponse
     {
+        // Step 1: Find the highest unique view count
+        $maxViews = Capstone::withCount(['views as unique_views' => function ($q) {
+                $q->whereNotNull('user_id');
+            }])
+            ->orderByDesc('unique_views')
+            ->limit(1)
+            ->get()
+            ->max('unique_views') ?? 0;
+
+        // Step 2: Return all capstones that share that exact top count
         $data = Capstone::with(['uploader:id,name'])
             ->withCount(['views as unique_views' => function ($q) {
                 $q->whereNotNull('user_id');
             }])
+            ->having('unique_views', '=', $maxViews)
             ->orderByDesc('unique_views')
-            ->limit(5)
             ->get()
             ->map(fn($c) => [
                 'id'           => $c->id,

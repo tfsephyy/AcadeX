@@ -142,9 +142,6 @@ const FAQ_STUDENT = [
     { q: 'How has the number of capstone submissions changed over the years?', icon: '📅' },
     { q: 'Which advisers handle the most research projects?', icon: '🏆' },
     { q: 'What is the most referenced capstone?', icon: '🔗' },
-    { q: 'Find capstones about machine learning', icon: '🤖' },
-    { q: 'Recommend a capstone topic related to healthcare', icon: '🏥' },
-    { q: 'Find capstones about IoT or embedded systems', icon: '📡' },
 ];
 
 const FAQ_FACULTY = [

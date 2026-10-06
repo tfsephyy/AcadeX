@@ -185,7 +185,7 @@ export default function UploadedCapstones() {
 
     // ── Pagination component usage ───────────────────────────────────────────────
     const PaginationComponent = () => (
-        <Pagination 
+        <Pagination
             paginationData={pagination}
             page={page}
             onPageChange={setPage}
@@ -226,7 +226,9 @@ export default function UploadedCapstones() {
                     </div>
                 ))}
             </div>
-            <PaginationComponent />
+            <div className="mt-8">
+                <PaginationComponent />
+            </div>
         </>
     );
 
@@ -269,7 +271,9 @@ export default function UploadedCapstones() {
                     </table>
                 </div>
             </div>
-            <PaginationComponent />
+            <div className="mt-6">
+                <PaginationComponent />
+            </div>
         </>
     );
 
@@ -404,28 +408,25 @@ export default function UploadedCapstones() {
                     <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3 px-2">Category</p>
                     <button
                         onClick={() => handleCategoryTab('')}
-                        className={`w-full text-left flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium mb-1 transition-colors border-l-2 ${
-                            selectedCategory === ''
-                                ? 'border-[#1B5E20] bg-green-50 text-[#1B5E20]'
-                                : 'border-transparent text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                        }`}>
+                        className={`w-full text-left flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium mb-1 transition-colors border-l-2 ${selectedCategory === ''
+                            ? 'border-[#1B5E20] bg-green-50 text-[#1B5E20]'
+                            : 'border-transparent text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                            }`}>
                         <span>All Categories</span>
                     </button>
                     {categories.map((cat) => (
                         <button
                             key={cat.name}
                             onClick={() => handleCategoryTab(cat.name)}
-                            className={`w-full text-left flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium mb-1 transition-colors border-l-2 ${
-                                selectedCategory === cat.name
-                                    ? 'border-[#1B5E20] bg-green-50 text-[#1B5E20]'
-                                    : 'border-transparent text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                            }`}>
+                            className={`w-full text-left flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium mb-1 transition-colors border-l-2 ${selectedCategory === cat.name
+                                ? 'border-[#1B5E20] bg-green-50 text-[#1B5E20]'
+                                : 'border-transparent text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                                }`}>
                             <span className="truncate">{cat.name}</span>
-                            <span className={`ml-1 flex-shrink-0 text-xs font-semibold px-1.5 py-0.5 rounded-full ${
-                                selectedCategory === cat.name
-                                    ? 'bg-green-200 text-green-800'
-                                    : 'bg-gray-100 text-gray-500'
-                            }`}>{cat.count}</span>
+                            <span className={`ml-1 flex-shrink-0 text-xs font-semibold px-1.5 py-0.5 rounded-full ${selectedCategory === cat.name
+                                ? 'bg-green-200 text-green-800'
+                                : 'bg-gray-100 text-gray-500'
+                                }`}>{cat.count}</span>
                         </button>
                     ))}
                 </aside>

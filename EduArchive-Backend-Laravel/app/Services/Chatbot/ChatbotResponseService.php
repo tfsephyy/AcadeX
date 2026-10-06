@@ -1063,13 +1063,12 @@ class ChatbotResponseService
         }
 
         $lines = [
-            "**Capstone submissions per year:**",
+            "**Capstone submission per year:**",
             "",
         ];
 
         foreach ($submissions as $row) {
-            $plural = $row->total === 1 ? 'capstone' : 'capstones';
-            $lines[] = "**{$row->year}** - {$row->total} {$plural}";
+            $lines[] = "{$row->year} - {$row->total} capstones";
         }
 
         return [
@@ -1093,16 +1092,14 @@ class ChatbotResponseService
             ];
         }
 
-        $lines = [
-            "**Advisers who handle the most research projects:**",
-            "",
-        ];
+        $top = $advisers->first();
+        $plural = $top->total === 1 ? 'project' : 'projects';
 
-        foreach ($advisers->values() as $i => $a) {
-            $num = $i + 1;
-            $plural = $a->total === 1 ? 'project' : 'projects';
-            $lines[] = "{$num}. **{$a->name}** - {$a->total} {$plural}";
-        }
+        $lines = [
+            "**Adviser who handles the most research projects:**",
+            "",
+            "**{$top->name}** - {$top->total} {$plural}",
+        ];
 
         return [
             'reply' => implode("\n", $lines),
@@ -1129,9 +1126,9 @@ class ChatbotResponseService
         $count = $data['count'];
 
         $lines = [
-            "**Most Referenced Capstone is:** {$capstone['title']} [LINK:{$capstone['id']}]",
+            "Most Referenced Capstone is **{$capstone['title']}** [LINK:{$capstone['id']}]",
             "",
-            "**Total Referenced:** {$count}",
+            "Total Referenced: {$count}",
         ];
 
         return [

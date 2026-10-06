@@ -227,7 +227,9 @@ export default function StudentUploadedCapstones() {
                     </div>
                 ))}
             </div>
-            {paginationJsx}
+            <div className="mt-8">
+                {paginationJsx}
+            </div>
         </>
     );
 
@@ -270,7 +272,9 @@ export default function StudentUploadedCapstones() {
                     </table>
                 </div>
             </div>
-            {paginationJsx}
+            <div className="mt-6">
+                {paginationJsx}
+            </div>
         </>
     );
 

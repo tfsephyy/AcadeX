@@ -225,8 +225,10 @@ export default function AdminDashboard() {
                             <HiOutlineEye className="w-4 h-4 text-blue-500" />
                         </div>
                         <div>
-                            <h3 className="text-sm font-semibold text-gray-700">Most Viewed Capstones</h3>
-                            <p className="text-xs text-gray-400">Unique views per account</p>
+                            <h3 className="text-sm font-semibold text-gray-700">Most Viewed Capstone</h3>
+                            <p className="text-xs text-gray-400">
+                                {mostViewed.length > 1 ? `${mostViewed.length} capstones tied at top` : 'Unique views per account'}
+                            </p>
                         </div>
                     </div>
 
@@ -234,11 +236,11 @@ export default function AdminDashboard() {
                         <p className="text-sm text-gray-400 text-center py-8">No view data yet.</p>
                     ) : (
                         <div className="space-y-3">
-                            {mostViewed.map((cap, idx) => (
+                            {mostViewed.map((cap) => (
                                 <div key={cap.id}
                                     onClick={() => setSelectedCapstone(cap)}
                                     className="flex items-start gap-3 p-2.5 rounded-lg hover:bg-blue-50/50 cursor-pointer transition-colors group">
-                                    <RankBadge rank={idx + 1} />
+                                    <RankBadge rank={1} />
                                     <div className="flex-1 min-w-0">
                                         <p className="text-sm font-medium text-gray-800 truncate group-hover:text-blue-700 transition-colors">{cap.title}</p>
                                         <p className="text-xs text-gray-400 truncate">{cap.author}{cap.year ? ` · ${cap.year}` : ''}{cap.program ? ` · ${cap.program}` : ''}</p>

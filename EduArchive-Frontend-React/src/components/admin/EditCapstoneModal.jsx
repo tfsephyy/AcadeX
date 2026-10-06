@@ -26,7 +26,7 @@ const COPYRIGHT_OPTIONS = [
     { value: 'unprotected', label: 'Unprotected', desc: 'No copyright recorded.',   accent: '#6b7280', bg: 'rgba(107,114,128,0.1)', border: 'rgba(107,114,128,0.35)' },
 ];
 
-/* ─── Shared input class using theme vars ────────────────────── */
+/* ─── Shared input class — theme-aware, always opaque ───────── */
 const inputCls = [
     'w-full px-3 py-2.5 rounded-lg text-sm outline-none transition border',
     'bg-[var(--input-bg)] border-[var(--input-border)]',
@@ -40,8 +40,8 @@ function OptionCard({ isSelected, accent, bg, border, children, onClick }) {
         <button onClick={onClick}
             className="relative text-left p-3 rounded-xl border-2 transition-all w-full"
             style={{
-                background: isSelected ? bg : 'var(--color-bg-secondary)',
-                borderColor: isSelected ? border : 'var(--color-border)',
+                background: isSelected ? bg : 'var(--color-bg-tertiary)',
+                borderColor: isSelected ? border : 'var(--color-border-strong)',
             }}>
             {isSelected && (
                 <div className="absolute top-2 right-2 w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0"
@@ -248,27 +248,27 @@ export default function EditCapstoneModal({ capstone, onClose, onSuccess, update
     return (
         <div className="fixed inset-0 bg-black/60 flex items-end sm:items-center justify-center z-50 p-0 sm:p-4">
             {saving && <LoadingOverlay text="Saving changes…" />}
-            <div className="w-full sm:max-w-3xl rounded-t-2xl sm:rounded-2xl shadow-2xl flex flex-col max-h-[92vh]"
-                style={{ background: 'var(--color-surface)', borderColor: 'var(--color-border)' }}>
+            <div className="w-full sm:max-w-3xl rounded-t-2xl sm:rounded-2xl shadow-2xl flex flex-col max-h-[92vh] border"
+                style={{ background: 'var(--color-bg-secondary)', borderColor: 'var(--color-border-strong)', isolation: 'isolate', boxShadow: 'var(--shadow-lg)' }}>
 
                 {/* ── Header ── */}
                 <div className="flex items-center justify-between gap-3 px-6 py-4 border-b flex-shrink-0"
-                    style={{ borderColor: 'var(--color-border)' }}>
-                    <div>
+                    style={{ borderColor: 'var(--color-border-strong)', background: 'var(--color-bg-tertiary)' }}>
+                    <div className="min-w-0 flex-1">
                         <h2 className="text-lg font-bold" style={{ color: 'var(--color-text)' }}>Edit Capstone</h2>
-                        <p className="text-xs mt-0.5 line-clamp-1" style={{ color: 'var(--color-text-muted)' }}>{capstone?.title}</p>
+                        <p className="text-xs mt-0.5 truncate" style={{ color: 'var(--color-text-muted)' }} title={capstone?.title}>{capstone?.title}</p>
                     </div>
                     <button onClick={onClose}
-                        className="p-2 rounded-lg transition-colors"
+                        className="p-2 rounded-lg transition-colors flex-shrink-0"
                         style={{ color: 'var(--color-text-muted)' }}
-                        onMouseEnter={e => e.currentTarget.style.background = 'var(--color-bg-tertiary)'}
+                        onMouseEnter={e => e.currentTarget.style.background = 'var(--color-bg-secondary)'}
                         onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
                         <HiOutlineX className="w-5 h-5" />
                     </button>
                 </div>
 
                 {/* ── Tabs ── */}
-                <div className="flex border-b flex-shrink-0 px-6" style={{ borderColor: 'var(--color-border)' }}>
+                <div className="flex border-b flex-shrink-0 px-6" style={{ borderColor: 'var(--color-border-strong)', background: 'var(--color-bg-secondary)' }}>
                     {tabs.map(tab => (
                         <button key={tab.id} onClick={() => setActiveTab(tab.id)}
                             className="py-3 px-4 text-sm font-medium border-b-2 transition-colors mr-2 -mb-px"
@@ -281,7 +281,7 @@ export default function EditCapstoneModal({ capstone, onClose, onSuccess, update
                 </div>
 
                 {/* ── Body ── */}
-                <div className="flex-1 overflow-y-auto admin-scroll">
+                <div className="flex-1 overflow-y-auto admin-scroll" style={{ background: 'var(--color-bg-secondary)' }}>
 
                     {/* ─── BASIC INFO ─── */}
                     {activeTab === 'basic' && (
@@ -499,7 +499,7 @@ export default function EditCapstoneModal({ capstone, onClose, onSuccess, update
 
                     {/* ─── ADDITIONAL INFO ─── */}
                     {activeTab === 'additional' && (
-                        <div className="p-6 space-y-6">
+                        <div className="p-6 space-y-6 pb-64">
 
                             {/* Publication Status */}
                             <div>
@@ -613,7 +613,7 @@ export default function EditCapstoneModal({ capstone, onClose, onSuccess, update
                                         </div>
                                         {adviserDropdownOpen && (
                                             <div className="absolute top-full left-0 right-0 z-30 mt-1 rounded-xl border shadow-lg overflow-hidden"
-                                                style={{ background: 'var(--color-surface-elevated)', borderColor: 'var(--color-border-strong)' }}>
+                                                style={{ background: 'var(--color-bg-secondary)', borderColor: 'var(--color-border-strong)' }}>
                                                 {adviserResults.length === 0 ? (
                                                     <div className="px-4 py-3 text-xs text-center"
                                                         style={{ color: 'var(--color-text-muted)' }}>
@@ -748,25 +748,27 @@ export default function EditCapstoneModal({ capstone, onClose, onSuccess, update
                                         )}
                                     </div>
                                     {refDropdownOpen && (refResults.length > 0 || refSearch.trim()) && (
-                                        <div className="absolute top-full left-0 right-0 z-30 mt-1 rounded-xl border shadow-lg overflow-hidden"
-                                            style={{ background: 'var(--color-surface-elevated)', borderColor: 'var(--color-border-strong)' }}>
+                                        <div className="absolute top-full left-0 right-0 z-[200] mt-1 rounded-xl border shadow-2xl overflow-hidden"
+                                            style={{
+                                                background: 'var(--color-bg-secondary)',
+                                                borderColor: 'var(--color-border-strong)',
+                                            }}>
                                             {refResults.length === 0 ? (
-                                                <div className="px-4 py-3 text-xs text-center"
-                                                    style={{ color: 'var(--color-text-muted)' }}>
+                                                <div className="px-4 py-3 text-xs text-center" style={{ color: 'var(--color-text-muted)' }}>
                                                     {refLoading ? 'Searching…' : 'No results'}
                                                 </div>
                                             ) : (
-                                                <div className="max-h-40 overflow-y-auto admin-scroll divide-y"
-                                                    style={{ borderColor: 'var(--color-border)' }}>
+                                                <div className="max-h-48 overflow-y-auto admin-scroll divide-y" style={{ borderColor: 'var(--color-border)' }}>
                                                     {refResults.map(cap => (
                                                         <button key={cap.id}
+                                                            onMouseDown={e => e.preventDefault()}
                                                             onClick={() => { setReferences(p => [...p, { id: cap.id, title: cap.title, author: cap.author, year: cap.year }]); setRefSearch(''); setRefDropdownOpen(false); }}
                                                             className="w-full text-left px-4 py-2.5 transition-colors"
                                                             style={{ color: 'var(--color-text)' }}
                                                             onMouseEnter={e => e.currentTarget.style.background = 'var(--color-bg-tertiary)'}
                                                             onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-                                                            <p className="text-xs font-medium line-clamp-1">{cap.title}</p>
-                                                            <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
+                                                            <p className="text-xs font-medium line-clamp-2">{cap.title}</p>
+                                                            <p className="text-xs mt-0.5" style={{ color: 'var(--color-text-muted)' }}>
                                                                 {cap.author}{cap.year && <span className="mx-1">·</span>}{cap.year}
                                                             </p>
                                                         </button>
@@ -775,7 +777,7 @@ export default function EditCapstoneModal({ capstone, onClose, onSuccess, update
                                             )}
                                         </div>
                                     )}
-                                    {refDropdownOpen && <div className="fixed inset-0 z-20" onClick={() => setRefDropdownOpen(false)} />}
+                                    {refDropdownOpen && <div className="fixed inset-0 z-[199]" onClick={() => setRefDropdownOpen(false)} />}
                                 </div>
                             </div>
                         </div>
@@ -784,10 +786,12 @@ export default function EditCapstoneModal({ capstone, onClose, onSuccess, update
 
                 {/* ── Footer ── */}
                 <div className="flex items-center justify-end gap-3 px-6 py-4 border-t flex-shrink-0 rounded-b-2xl"
-                    style={{ borderColor: 'var(--color-border)', background: 'var(--color-bg-secondary)' }}>
+                    style={{ borderColor: 'var(--color-border-strong)', background: 'var(--color-bg-tertiary)' }}>
                     <button onClick={onClose}
                         className="px-4 py-2 text-sm font-medium rounded-lg border transition-colors"
-                        style={{ color: 'var(--color-text-secondary)', borderColor: 'var(--color-border-strong)', background: 'var(--color-bg-secondary)' }}>
+                        style={{ color: 'var(--color-text-secondary)', borderColor: 'var(--color-border-strong)', background: 'var(--color-bg-secondary)' }}
+                        onMouseEnter={e => e.currentTarget.style.background = 'var(--color-bg-tertiary)'}
+                        onMouseLeave={e => e.currentTarget.style.background = 'var(--color-bg-secondary)'}>
                         Cancel
                     </button>
                     <button onClick={handleSave} disabled={saving}
