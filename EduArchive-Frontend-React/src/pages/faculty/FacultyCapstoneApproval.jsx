@@ -92,12 +92,12 @@ export default function FacultyCapstoneApproval() {
         setConfirm({
             open: true,
             title: 'Approve Capstone',
-            message: `Are you sure you want to approve "${capstone.title}"? It will be published and visible to everyone.`,
+            message: `Approve "${capstone.title}"? It will become visible to all users in the library.`,
             variant: 'success',
             action: async () => {
                 try {
                     await approveFacultyCapstone(capstone.id);
-                    notify.success('Capstone approved successfully!');
+                    notify.success('Capstone approved and is now visible in the library.');
                     fetchPendingCapstones();
                 } catch (err) {
                     notify.error(err.response?.data?.message || 'Failed to approve capstone.');
@@ -106,6 +106,7 @@ export default function FacultyCapstoneApproval() {
             },
         });
     };
+
 
     const handleReject = (capstone) => {
         setConfirm({
@@ -279,17 +280,19 @@ export default function FacultyCapstoneApproval() {
                                     </button>
                                     <button
                                         onClick={() => handleApprove(cap)}
-                                        className="p-1.5 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors"
                                         title="Approve"
                                     >
-                                        <HiOutlineCheck className="w-4 h-4" />
+                                        <HiOutlineCheck className="w-3.5 h-3.5" />
+                                        Approve
                                     </button>
                                     <button
                                         onClick={() => handleReject(cap)}
-                                        className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors"
                                         title="Reject"
                                     >
-                                        <HiOutlineX className="w-4 h-4" />
+                                        <HiOutlineX className="w-3.5 h-3.5" />
+                                        Reject
                                     </button>
                                 </div>
                             </div>

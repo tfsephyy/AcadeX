@@ -94,7 +94,8 @@ class CapstoneController extends Controller
     public function browse(Request $request): JsonResponse
     {
         $query = Capstone::with(['keywords', 'uploader:id,name', 'approver:id,name', 'adviser:id,name'])
-            ->where('is_archived', false);
+            ->where('is_archived', false)
+            ->where('approval_status', 'approved'); // Only show approved capstones in the browse/uploaded view
 
         // NLP-enhanced search: synonym/abbreviation expansion + FULLTEXT + keyword table
         if ($request->has('search') && $request->search) {
@@ -133,7 +134,8 @@ class CapstoneController extends Controller
      */
     public function browseFilterOptions(): JsonResponse
     {
-        $base = Capstone::where('is_archived', false);
+        $base = Capstone::where('is_archived', false)
+                        ->where('approval_status', 'approved');
 
         $years = (clone $base)->whereNotNull('year')->distinct()->orderByDesc('year')->pluck('year');
         $programs = (clone $base)->whereNotNull('program')->where('program', '!=', '')->distinct()->orderBy('program')->pluck('program');
@@ -350,16 +352,20 @@ class CapstoneController extends Controller
             return $this->errorResponse('Validation failed.', 422, $validator->errors());
         }
 
-        $publicationStatus = $request->input('publication_status', 'published');
-        
         // Determine approval status based on user role:
-        // - Admin/Faculty: Auto-approved (status='approved', publication_status='published')
-        // - Student: Requires approval (status='pending', approval_status='pending', publication_status='unpublished')
+        // - Admin/Faculty: Auto-approved (approval_status='approved')
+        //   publication_status is set from request (admin/faculty control it)
+        // - Student: Requires approval (approval_status='pending')
+        //   publication_status stays 'unpublished' until admin explicitly publishes
+        // NOTE: approval_status and publication_status are SEPARATE concerns:
+        //   approval_status = review gate (pending/approved/rejected)
+        //   publication_status = library visibility (published/unpublished/in_progress)
         $user = $request->user();
         $isStudent = $user->hasRole('student');
 
         $status = $isStudent ? 'pending' : 'approved';
         $approvalStatus = $isStudent ? 'pending' : 'approved';
+        // Students always start unpublished; admin/faculty use whatever they submitted
         $publicationStatus = $isStudent ? 'unpublished' : $request->input('publication_status', 'published');
 
         $capstone = Capstone::create([
@@ -600,13 +606,15 @@ class CapstoneController extends Controller
 
         $oldStatus = $capstone->status;
 
+        // Only update the approval gate — publication_status is a SEPARATE admin decision.
+        // Approving a capstone means the submission has been reviewed and accepted,
+        // NOT that it is immediately published to the library.
         $capstone->update([
-            'status'             => 'approved',
-            'approval_status'    => 'approved',
-            'publication_status' => 'published',
-            'is_archived'        => false,
-            'approved_by'        => $request->user()->id,
-            'approved_at'        => now(),
+            'status'          => 'approved',
+            'approval_status' => 'approved',
+            'is_archived'     => false,
+            'approved_by'     => $request->user()->id,
+            'approved_at'     => now(),
         ]);
 
         AuditLog::log(
@@ -618,15 +626,20 @@ class CapstoneController extends Controller
             ['status' => 'approved']
         );
 
-        // TODO: Send notification to student
-        // Notification::create([
-        //     'user_id' => $capstone->uploaded_by,
-        //     'title' => 'Capstone Approved',
-        //     'message' => "Your capstone '{$capstone->title}' has been approved by {$request->user()->name}",
-        //     'type' => 'approval',
-        // ]);
+        // Notify the student whose capstone was approved
+        if ($capstone->uploaded_by) {
+            Notification::create([
+                'admin_id'            => $capstone->uploaded_by,
+                'type'                => 'capstone_approved',
+                'title'               => 'Capstone Approved',
+                'message'             => "Your capstone '{$capstone->title}' has been approved by {$request->user()->name}",
+                'related_user_id'     => $request->user()->id,
+                'related_capstone_id' => $capstone->id,
+                'is_read'             => false,
+            ]);
+        }
 
-        return $this->successResponse($capstone, 'Capstone approved and published.');
+        return $this->successResponse($capstone, 'Capstone approved successfully.');
     }
 
     /**
@@ -644,14 +657,17 @@ class CapstoneController extends Controller
         }
 
         $oldStatus = $capstone->status;
+        $rejectionReason = $request->input('rejection_reason');
 
+        // Only update the approval gate — publication_status is a SEPARATE admin decision.
+        // Rejected capstones are archived (hidden from all views) but publication_status is untouched.
         $capstone->update([
-            'status'          => 'rejected',
-            'approval_status' => 'rejected',
-            'publication_status' => 'unpublished',
-            'is_archived'     => true,  // Auto-archive rejected capstones
-            'approved_by'     => $request->user()->id,
-            'approved_at'     => now(),
+            'status'           => 'rejected',
+            'approval_status'  => 'rejected',
+            'rejection_reason' => $rejectionReason,
+            'is_archived'      => true,  // Auto-archive rejected capstones
+            'approved_by'      => $request->user()->id,
+            'approved_at'      => now(),
         ]);
 
         AuditLog::log(
@@ -662,6 +678,19 @@ class CapstoneController extends Controller
             ['status' => $oldStatus],
             ['status' => 'rejected']
         );
+
+        // Notify the student whose capstone was rejected
+        if ($capstone->uploaded_by) {
+            Notification::create([
+                'admin_id'            => $capstone->uploaded_by,
+                'type'                => 'capstone_rejected',
+                'title'               => 'Capstone Rejected',
+                'message'             => "Your capstone '{$capstone->title}' has been rejected" . ($rejectionReason ? ": {$rejectionReason}" : '.'),
+                'related_user_id'     => $request->user()->id,
+                'related_capstone_id' => $capstone->id,
+                'is_read'             => false,
+            ]);
+        }
 
         return $this->successResponse($capstone, 'Capstone rejected and archived.');
     }
@@ -739,9 +768,9 @@ class CapstoneController extends Controller
         }
 
         $capstone->update([
-            'status'             => 'approved',
-            'is_archived'        => false,
-            'publication_status' => 'published',
+            'status'      => 'approved',
+            'is_archived' => false,
+            // Do NOT touch publication_status — admin sets that separately
         ]);
 
         AuditLog::log('unarchive_capstone', $request->user()->id, Capstone::class, $capstone->id);
@@ -750,21 +779,53 @@ class CapstoneController extends Controller
     }
 
     /**
-     * Unpublish a capstone (move approved back to pending).
+     * Publish an approved capstone (set publication_status = 'published').
+     * This is SEPARATE from approval — the admin explicitly decides when to publish.
+     * Requires: approval_status = 'approved'.
+     */
+    public function publish(Request $request, Capstone $capstone): JsonResponse
+    {
+        if ($capstone->approval_status !== 'approved') {
+            return $this->errorResponse('Only approved capstones can be published.', 400);
+        }
+
+        if ($capstone->publication_status === 'published') {
+            return $this->errorResponse('Capstone is already published.', 400);
+        }
+
+        $oldStatus = $capstone->publication_status;
+
+        $capstone->update([
+            'publication_status' => 'published',
+        ]);
+
+        AuditLog::log(
+            'publish_capstone',
+            $request->user()->id,
+            Capstone::class,
+            $capstone->id,
+            ['publication_status' => $oldStatus],
+            ['publication_status' => 'published']
+        );
+
+        return $this->successResponse($capstone, 'Capstone published successfully.');
+    }
+
+    /**
+     * Unpublish a capstone (set publication_status = 'unpublished').
+     * Does NOT affect approval_status — the capstone remains approved.
      */
     public function unpublish(Request $request, Capstone $capstone): JsonResponse
     {
-        if ($capstone->status !== 'approved') {
-            return $this->errorResponse('Only approved capstones can be unpublished.', 400);
+        if ($capstone->publication_status !== 'published') {
+            return $this->errorResponse('Capstone is not currently published.', 400);
         }
 
-        $oldStatus = $capstone->status;
+        $oldStatus = $capstone->publication_status;
 
+        // Only change the publication gate — approval_status is SEPARATE and unchanged.
         $capstone->update([
-            'status'             => 'pending',
             'publication_status' => 'unpublished',
-            'approved_by'        => null,
-            'approved_at'        => null,
         ]);
 
         AuditLog::log(
@@ -772,11 +833,11 @@ class CapstoneController extends Controller
             $request->user()->id,
             Capstone::class,
             $capstone->id,
-            ['status' => $oldStatus],
-            ['status' => 'pending']
+            ['publication_status' => $oldStatus],
+            ['publication_status' => 'unpublished']
         );
 
-        return $this->successResponse($capstone, 'Capstone unpublished and moved to pending.');
+        return $this->successResponse($capstone, 'Capstone unpublished.');
     }
 
     /**

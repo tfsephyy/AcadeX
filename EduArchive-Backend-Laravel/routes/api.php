@@ -105,6 +105,7 @@ Route::prefix('v1')->group(function () {
             Route::get('/capstones/bookmarked',            [CapstoneController::class, 'adminBookmarks']);
             Route::post('/capstones/{capstone}/approve',   [CapstoneController::class, 'approve']);
             Route::post('/capstones/{capstone}/reject',    [CapstoneController::class, 'reject']);
+            Route::post('/capstones/{capstone}/publish',   [CapstoneController::class, 'publish']);
             Route::post('/capstones/{capstone}/archive',   [CapstoneController::class, 'archive']);
             Route::post('/capstones/{capstone}/unarchive', [CapstoneController::class, 'unarchive']);
             Route::post('/capstones/{capstone}/unpublish', [CapstoneController::class, 'unpublish']);
@@ -150,6 +151,7 @@ Route::prefix('v1')->group(function () {
             Route::get('/capstones/archived',                [CapstoneController::class, 'archived']);
             Route::post('/capstones/{capstone}/approve',     [CapstoneController::class, 'approve']);
             Route::post('/capstones/{capstone}/reject',      [CapstoneController::class, 'reject']);
+            Route::post('/capstones/{capstone}/publish',     [CapstoneController::class, 'publish']);
             Route::post('/capstones/{capstone}/archive',     [CapstoneController::class, 'archive']);
             Route::post('/capstones/{capstone}/unarchive',   [CapstoneController::class, 'unarchive']);
             Route::put('/capstones/{capstone}',              [CapstoneController::class, 'update']);

@@ -32,13 +32,22 @@ class VisitorCapstoneController extends Controller
 
     /**
      * Base query: capstones visible to visitors.
-     * Capstone must be published, copyrighted, or have an IMRAD.
+     *
+     * Three-tier visibility (all require approval_status = 'approved'):
+     *   1. publication_status = 'published'  → full capstone + PDF + resources
+     *   2. copyright_status   = 'copyrighted' → full capstone + PDF + resources
+     *   3. has imrad_path but NOT (1) or (2) → IMRAD only; PDF + resources hidden
+     *   4. None of the above                 → NOT shown to visitors at all
+     *
+     * NOTE: approval_status is the INTERNAL review gate (must be 'approved').
+     *       publication_status + copyright_status + imrad_path control VISITOR visibility tiers.
      */
     private function visibleQuery()
     {
         return Capstone::with(['keywords', 'uploader:id,name', 'adviser:id,name'])
             ->where('is_archived', false)
-            ->where(function ($q) {
+            ->where('approval_status', 'approved')   // Must pass internal review first
+            ->where(function ($q) {                   // Then must meet at least one visitor-visibility rule
                 $q->where('publication_status', 'published')
                   ->orWhere('copyright_status', 'copyrighted')
                   ->orWhereNotNull('imrad_path');
@@ -46,11 +55,14 @@ class VisitorCapstoneController extends Controller
     }
 
     /**
-     * Whether the visitor may see the capstone PDF for this record.
+     * Whether the visitor may see the full capstone PDF and resources.
+     * Requires: publication_status = 'published' OR copyright_status = 'copyrighted'.
+     * If neither, visitor sees IMRAD only (if available).
      */
     private function canSeeCapstonePdf(Capstone $capstone): bool
     {
-        return $capstone->publication_status === 'published' || $capstone->copyright_status === 'copyrighted';
+        return $capstone->publication_status === 'published'
+            || $capstone->copyright_status   === 'copyrighted';
     }
 
     // ──────────────────────────────────────────────────────────────
@@ -83,10 +95,11 @@ class VisitorCapstoneController extends Controller
 
         $capstones = $query->paginate($request->get('per_page', 12));
 
-        // Annotate each record with what the visitor can see
+        // Annotate each record with what the visitor can see based on visibility tier
         $capstones->getCollection()->transform(function ($c) {
-            $c->visitor_can_see_pdf   = $this->canSeeCapstonePdf($c);
-            $c->visitor_imrad_only    = !$this->canSeeCapstonePdf($c) && !empty($c->imrad_path);
+            $c->visitor_can_see_pdf = $this->canSeeCapstonePdf($c);
+            // IMRAD-only: has imrad but is NOT published/copyrighted
+            $c->visitor_imrad_only  = !$this->canSeeCapstonePdf($c) && !empty($c->imrad_path);
             return $c;
         });
 
@@ -118,11 +131,13 @@ class VisitorCapstoneController extends Controller
     public function advisers(): JsonResponse
     {
         $advisers = \App\Models\User::whereHas('advisedCapstones', function ($q) {
-            $q->where('is_archived', false)->where(function ($inner) {
-                $inner->where('publication_status', 'published')
-                      ->orWhere('copyright_status', 'copyrighted')
-                      ->orWhereNotNull('imrad_path');
-            });
+            $q->where('is_archived', false)
+              ->where('approval_status', 'approved')
+              ->where(function ($inner) {
+                  $inner->where('publication_status', 'published')
+                        ->orWhere('copyright_status', 'copyrighted')
+                        ->orWhereNotNull('imrad_path');
+              });
         })->select('id', 'name')->orderBy('name')->get();
         return $this->successResponse($advisers, 'Advisers retrieved.');
     }
@@ -158,12 +173,14 @@ class VisitorCapstoneController extends Controller
 
     public function show(Request $request, Capstone $capstone): JsonResponse
     {
-        // Enforce visibility: capstone must be in the visitor-visible set
-        $visible = $capstone->is_archived === false && (
-            $capstone->publication_status === 'published' ||
-            $capstone->copyright_status === 'copyrighted' ||
-            !empty($capstone->imrad_path)
-        );
+        // Enforce visibility: must be approved AND meet at least one visitor-visibility tier
+        $visible = $capstone->is_archived === false
+            && $capstone->approval_status === 'approved'
+            && (
+                $capstone->publication_status === 'published'
+                || $capstone->copyright_status === 'copyrighted'
+                || !empty($capstone->imrad_path)
+            );
 
         if (!$visible) {
             return $this->errorResponse('Capstone not found.', 404);
@@ -171,9 +188,18 @@ class VisitorCapstoneController extends Controller
 
         $capstone->load(['keywords', 'uploader:id,name', 'adviser:id,name', 'resources', 'referencedCapstones:id,title,author,year,program']);
 
+        $canSeePdf    = $this->canSeeCapstonePdf($capstone);
+        $imradOnly    = !$canSeePdf && !empty($capstone->imrad_path);
+
         $data = $capstone->toArray();
-        $data['visitor_can_see_pdf'] = $this->canSeeCapstonePdf($capstone);
-        $data['visitor_imrad_only']  = !$this->canSeeCapstonePdf($capstone) && !empty($capstone->imrad_path);
+        $data['visitor_can_see_pdf'] = $canSeePdf;
+        $data['visitor_imrad_only']  = $imradOnly;
+
+        // If IMRAD-only: strip full PDF path and resources from the response
+        if ($imradOnly) {
+            unset($data['pdf_path'], $data['pdf_original_name']);
+            $data['resources'] = [];
+        }
 
         return $this->successResponse($data, 'Capstone retrieved.');
     }
@@ -183,7 +209,8 @@ class VisitorCapstoneController extends Controller
     // ──────────────────────────────────────────────────────────────
 
     /**
-     * Serve the capstone PDF — only if visitor is permitted.
+     * Serve the capstone PDF — only if visitor is permitted (published or copyrighted).
+     * IMRAD-only capstones are NOT allowed here.
      */
     public function servePdf(Request $request, Capstone $capstone): \Symfony\Component\HttpFoundation\StreamedResponse|JsonResponse
     {
@@ -217,10 +244,25 @@ class VisitorCapstoneController extends Controller
     }
 
     /**
-     * Serve the IMRAD PDF — available whenever imrad_path is set.
+     * Serve the IMRAD PDF.
+     * Available when approved AND (published/copyrighted/has imrad_path).
+     * i.e. available in all three visitor-visibility tiers.
      */
     public function serveImrad(Request $request, Capstone $capstone): \Symfony\Component\HttpFoundation\StreamedResponse|JsonResponse
     {
+        // Must be approved and visitor-visible
+        $canAccessImrad = $capstone->approval_status === 'approved'
+            && !$capstone->is_archived
+            && (
+                $capstone->publication_status === 'published'
+                || $capstone->copyright_status === 'copyrighted'
+                || !empty($capstone->imrad_path)
+            );
+
+        if (!$canAccessImrad) {
+            return $this->errorResponse('You do not have permission to view this file.', 403);
+        }
+
         if (!$capstone->imrad_path || !Storage::disk('local')->exists($capstone->imrad_path)) {
             return $this->errorResponse('IMRAD file not found.', 404);
         }

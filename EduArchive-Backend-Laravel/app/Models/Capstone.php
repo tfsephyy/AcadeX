@@ -51,12 +51,14 @@ class Capstone extends Model
     }
 
     /**
-     * Virtual accessor so existing code that checks $capstone->is_published
-     * continues to work without touching the database column.
+     * Virtual accessor: a capstone is considered "published" on the platform
+     * when it has been approved (approval_status = 'approved') and is not archived.
+     * NOTE: publication_status is a SEPARATE field for external publication tracking
+     * (e.g., published to a journal or external site) and has NO effect on platform visibility.
      */
     public function getIsPublishedAttribute(): bool
     {
-        return $this->publication_status === 'published';
+        return $this->approval_status === 'approved' && !$this->is_archived;
     }
 
     // --- Relationships ---
@@ -123,11 +125,22 @@ class Capstone extends Model
 
     // --- Scopes ---
 
+    /**
+     * Scope: capstones visible on the platform.
+     * Platform visibility is controlled ONLY by approval_status.
+     * NOTE: publication_status is for EXTERNAL publication tracking only
+     * (e.g., published to a journal) and has NO relation to platform visibility.
+     */
     public function scopePublished($query)
     {
-        // A capstone is considered published when publication_status = 'published'
-        // and it is not archived.
-        return $query->where('publication_status', 'published')
+        return $query->where('approval_status', 'approved')
+                     ->where('is_archived', false);
+    }
+
+    /** Alias for scopePublished — use for clarity where intent matters. */
+    public function scopeApproved($query)
+    {
+        return $query->where('approval_status', 'approved')
                      ->where('is_archived', false);
     }
 

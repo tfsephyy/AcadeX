@@ -22,7 +22,7 @@ class PublishedCapstoneController extends Controller
     public function index(Request $request): JsonResponse
     {
         $query = Capstone::with(['keywords', 'uploader:id,name', 'adviser:id,name'])
-            ->published()
+            ->published()  // approval_status='approved' AND is_archived=false
             ->where('is_archived', false);
 
         // NLP-enhanced search
@@ -87,7 +87,6 @@ class PublishedCapstoneController extends Controller
     public function years(): JsonResponse
     {
         $years = Capstone::published()
-            ->where('is_archived', false)
             ->whereNotNull('year')
             ->distinct()
             ->orderByDesc('year')
@@ -102,7 +101,6 @@ class PublishedCapstoneController extends Controller
     public function programs(): JsonResponse
     {
         $programs = Capstone::published()
-            ->where('is_archived', false)
             ->whereNotNull('program')
             ->where('program', '!=', '')
             ->distinct()
@@ -118,7 +116,6 @@ class PublishedCapstoneController extends Controller
     public function advisers(): JsonResponse
     {
         $adviserIds = Capstone::published()
-            ->where('is_archived', false)
             ->whereNotNull('adviser_id')
             ->distinct()
             ->pluck('adviser_id');
@@ -146,7 +143,6 @@ class PublishedCapstoneController extends Controller
     public function categories(): JsonResponse
     {
         $categories = Capstone::published()
-            ->where('is_archived', false)
             ->whereNotNull('category')
             ->where('category', '!=', '')
             ->selectRaw('category as name, COUNT(*) as count')

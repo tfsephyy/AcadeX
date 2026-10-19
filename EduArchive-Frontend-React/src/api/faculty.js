@@ -14,6 +14,7 @@ export const storeFacultyCapstone = (data) => axios.post('/faculty/capstones', d
 export const updateFacultyCapstone = (id, data) => axios.put(`/faculty/capstones/${id}`, data);
 export const approveFacultyCapstone = (id, data = {}) => axios.post(`/faculty/capstones/${id}/approve`, data);
 export const rejectFacultyCapstone = (id, data = {}) => axios.post(`/faculty/capstones/${id}/reject`, data);
+export const publishFacultyCapstone = (id) => axios.post(`/faculty/capstones/${id}/publish`);
 export const deleteFacultyCapstone = (id) => axios.delete(`/faculty/capstones/${id}`);
 export const getArchivedFacultyCapstones = (params = {}) => axios.get('/faculty/capstones/archived', { params });
 export const archiveFacultyCapstone = (id) => axios.post(`/faculty/capstones/${id}/archive`);

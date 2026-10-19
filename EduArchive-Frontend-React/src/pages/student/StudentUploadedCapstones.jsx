@@ -287,7 +287,7 @@ export default function StudentUploadedCapstones() {
                 <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                         <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Uploaded Capstones</h1>
-                        <p className="text-sm text-gray-500 mt-2">Browse all uploaded capstone projects</p>
+                        <p className="text-sm text-gray-500 mt-2">Browse all <span className="font-medium text-green-700">approved</span> capstone projects · Track your pending submissions in <span className="font-medium">My Capstone Library</span></p>
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0">
                         {/* Card / Table toggle */}

@@ -39,6 +39,7 @@ export const deleteCapstone = (id) => axios.delete(`/admin/capstones/${id}`);
 export const getArchivedCapstones = (params = {}) => axios.get('/admin/capstones/archived', { params });
 export const archiveCapstone = (id) => axios.post(`/admin/capstones/${id}/archive`);
 export const unarchiveCapstone = (id) => axios.post(`/admin/capstones/${id}/unarchive`);
+export const publishCapstone = (id) => axios.post(`/admin/capstones/${id}/publish`);
 export const unpublishCapstone = (id) => axios.post(`/admin/capstones/${id}/unpublish`);
 
 // ── Admin Bookmarks ────────────────────────────────

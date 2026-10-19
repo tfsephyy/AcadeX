@@ -10,7 +10,7 @@ import {
     HiOutlineArchiveBoxArrowDown, HiOutlineArchiveBoxXMark,
 } from 'react-icons/hi2';
 import {
-    getCapstones, getCapstone, deleteCapstone, archiveCapstone, unarchiveCapstone, getArchivedCapstones,
+    getCapstones, getCapstone, deleteCapstone, archiveCapstone, unarchiveCapstone, getArchivedCapstones, publishCapstone, unpublishCapstone,
 } from '../../api/admin';
 import { useNotification } from '../../components/Notification';
 import Loading from '../../components/Loading';
@@ -214,15 +214,45 @@ export default function CapstoneLibrary() {
         },
     });
 
+    const handlePublish = (cap) => setConfirm({
+        open: true, title: 'Mark as Externally Published',
+        message: `Mark "${cap.title}" as published on an external site/journal? This is for tracking only and does not affect platform visibility.`,
+        variant: 'success',
+        action: async () => {
+            try { await publishCapstone(cap.id); notify.success('Marked as externally published.'); fetchCapstones(); }
+            catch (err) { notify.error(err.response?.data?.message || 'Failed to update publication status.'); }
+            setConfirm(p => ({ ...p, open: false }));
+        },
+    });
+
+    const handleUnpublish = (cap) => setConfirm({
+        open: true, title: 'Mark as Not Externally Published',
+        message: `Remove the external publication mark from "${cap.title}"? This does not hide it from the platform.`,
+        variant: 'warning',
+        action: async () => {
+            try { await unpublishCapstone(cap.id); notify.success('External publication mark removed.'); fetchCapstones(); }
+            catch (err) { notify.error(err.response?.data?.message || 'Failed to update publication status.'); }
+            setConfirm(p => ({ ...p, open: false }));
+        },
+    });
+
     // ── Shared card actions ───────────────────────────────────────────────────────
     const ActionButtons = ({ cap, size = 'sm' }) => {
         const p = size === 'sm' ? 'p-1.5' : 'p-2';
+        // publication_status tracks external publication only (e.g., journal). NOT platform visibility.
+        const isExternallyPublished = cap.publication_status === 'published';
         return (
             <>
                 <button onClick={(e) => { e.stopPropagation(); handleView(cap); }} title="View" className={`${p} text-blue-600 hover:bg-blue-50 rounded-lg transition-colors`}><HiOutlineEye className="w-4 h-4" /></button>
                 {viewing === 'active' ? (
                     <>
                         <button onClick={(e) => { e.stopPropagation(); handleEdit(cap); }} title="Edit" className={`${p} text-amber-600 hover:bg-amber-50 rounded-lg transition-colors`}><HiOutlinePencil className="w-4 h-4" /></button>
+                        {/* External publication tracking — does NOT affect platform visibility */}
+                        {!isExternallyPublished ? (
+                            <button onClick={(e) => { e.stopPropagation(); handlePublish(cap); }} title="Mark as Externally Published" className={`${p} text-purple-600 hover:bg-purple-50 rounded-lg transition-colors`}><HiOutlineUpload className="w-4 h-4" /></button>
+                        ) : (
+                            <button onClick={(e) => { e.stopPropagation(); handleUnpublish(cap); }} title="Remove External Publication Mark" className={`${p} text-purple-400 hover:bg-purple-50 rounded-lg transition-colors`}><HiOutlineUpload className="w-4 h-4 opacity-50" /></button>
+                        )}
                         <button onClick={(e) => { e.stopPropagation(); handleArchive(cap); }} title="Archive" className={`${p} text-orange-600 hover:bg-orange-50 rounded-lg transition-colors`}><HiOutlineArchiveBoxArrowDown className="w-4 h-4" /></button>
                     </>
                 ) : (
