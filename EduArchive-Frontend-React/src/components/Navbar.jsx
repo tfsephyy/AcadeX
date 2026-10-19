@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Link } from 'react-router-dom'
-import { useTheme } from '../context/ThemeContext'
+import { useTheme } from '../context/useTheme'
 
 const NAV_LINKS = [
   { label: 'Home', href: '#home' },
@@ -38,7 +38,6 @@ function MoonIcon() {
 function LogoMark({ size = 36 }) {
   return (
     <div
-      style={{ width: size, height: size }}
       className="flex items-center justify-center rounded-xl shadow-lg flex-shrink-0"
       style={{
         width: size,

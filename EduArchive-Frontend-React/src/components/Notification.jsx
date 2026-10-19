@@ -1,9 +1,9 @@
-import { useState, useEffect, createContext, useContext, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { HiCheckCircle, HiXCircle, HiInformationCircle, HiX } from 'react-icons/hi';
 
-const NotificationContext = createContext();
+import { NotificationContext } from './useNotification'
 
-export const useNotification = () => useContext(NotificationContext);
+
 
 export function NotificationProvider({ children }) {
     const [notifications, setNotifications] = useState([]);

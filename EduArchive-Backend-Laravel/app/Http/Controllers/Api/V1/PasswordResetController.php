@@ -66,7 +66,7 @@ class PasswordResetController extends Controller
 
         PasswordResetCode::create([
             'email'      => $email,
-            'code'       => $code,
+            'code'       => PasswordResetCode::hashCode($code),
             'type'       => 'password_reset',
             'expires_at' => now()->addMinutes(self::CODE_EXPIRY_MINUTES),
         ]);
@@ -115,7 +115,7 @@ class PasswordResetController extends Controller
         $code = strtoupper(trim($request->code));
 
         $record = PasswordResetCode::where('email', $email)
-            ->where('code', $code)
+            ->where('code', PasswordResetCode::hashCode($code))
             ->where('type', 'password_reset')
             ->where('used', false)
             ->latest()
@@ -165,7 +165,7 @@ class PasswordResetController extends Controller
         }
 
         $record = PasswordResetCode::where('email', $email)
-            ->where('code', $code)
+            ->where('code', PasswordResetCode::hashCode($code))
             ->where('type', 'password_reset')
             ->where('used', false)
             ->latest()
@@ -180,13 +180,16 @@ class PasswordResetController extends Controller
             return $this->errorResponse('User not found.', 404);
         }
 
-        // Update password
+        // Atomically consume the code before changing credentials.
+        if (!PasswordResetCode::whereKey($record->id)->where('used', false)
+            ->where('expires_at', '>', now())->update(['used' => true])) {
+            return $this->errorResponse('Invalid or expired verification code.', 400);
+        }
+
+        // The User lifecycle hook invalidates other sessions and all bearer tokens.
         $user->update([
             'password' => $request->password,
         ]);
-
-        // Mark code as used
-        $record->update(['used' => true]);
 
         // Send confirmation email (non-critical, don't block on failure)
         try {
@@ -228,8 +231,15 @@ class PasswordResetController extends Controller
 
         $email = strtolower($request->email);
 
-        // Check if email already registered
-        if (User::where('email', $email)->exists()) {
+        // Existing unverified accounts can recover through password + emailed
+        // proof. No timestamp is silently grandfathered or supplied by a client.
+        $existing = User::where('email', $email)->first();
+        if ($request->input('purpose') === 'account_verification') {
+            if (!$existing || $existing->is_archived || $existing->email_verified_at ||
+                !Hash::check((string) $request->input('current_password'), $existing->password)) {
+                return $this->errorResponse('Account verification is unavailable.', 400);
+            }
+        } elseif ($existing) {
             return $this->errorResponse('This email is already registered.', 409);
         }
 
@@ -258,7 +268,7 @@ class PasswordResetController extends Controller
 
         PasswordResetCode::create([
             'email'      => $email,
-            'code'       => $code,
+            'code'       => PasswordResetCode::hashCode($code),
             'type'       => 'email_verification',
             'expires_at' => now()->addMinutes(self::CODE_EXPIRY_MINUTES),
         ]);
@@ -306,7 +316,7 @@ class PasswordResetController extends Controller
         $code = strtoupper(trim($request->code));
 
         $record = PasswordResetCode::where('email', $email)
-            ->where('code', $code)
+            ->where('code', PasswordResetCode::hashCode($code))
             ->where('type', 'email_verification')
             ->where('used', false)
             ->latest()
@@ -316,8 +326,19 @@ class PasswordResetController extends Controller
             return $this->errorResponse('Invalid or expired verification code.', 400);
         }
 
-        // Mark as used
-        $record->update(['used' => true]);
+        if (!PasswordResetCode::whereKey($record->id)->where('used', false)
+            ->where('expires_at', '>', now())->update(['used' => true])) {
+            return $this->errorResponse('Invalid or expired verification code.', 400);
+        }
+
+        $existing = User::where('email', $email)->first();
+        if ($existing) {
+            $existing->forceFill(['email_verified_at' => now()])->save();
+        } else {
+            $proofs = $request->session()->get('verified_emails', []);
+            $proofs[$email] = ['id' => $record->id, 'expires_at' => $record->expires_at->timestamp];
+            $request->session()->put('verified_emails', $proofs);
+        }
 
         return $this->successResponse(null, 'Email verified successfully.');
     }
@@ -358,6 +379,8 @@ class PasswordResetController extends Controller
             'password' => $request->password,
         ]);
 
-        return $this->successResponse(null, 'Password changed successfully.');
+        $request->session()->regenerate();
+        $request->session()->put('auth_version', (int) $user->auth_version);
+        return $this->successResponse(['csrf_token' => $request->session()->token()], 'Password changed successfully.');
     }
 }

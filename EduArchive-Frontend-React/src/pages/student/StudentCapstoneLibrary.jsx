@@ -11,7 +11,7 @@ import {
     updateStudentCapstone, archiveStudentCapstone, unarchiveStudentCapstone,
     getPublishedYears, getPublishedPrograms, getPublishedCategories,
 } from '../../api/admin';
-import { useNotification } from '../../components/Notification';
+import { useNotification } from '../../components/useNotification';
 import Loading from '../../components/Loading';
 import EmptyState from '../../components/EmptyState';
 import ConfirmDialog from '../../components/ConfirmDialog';
@@ -78,7 +78,7 @@ export default function StudentCapstoneLibrary() {
             setYears(yR.data.data || []);
             setPrograms(pR.data.data || []);
             setCategories(cR.data.data || []);
-        } catch {}
+        } catch { /* Optional request failed; keep the current view. */ }
     };
 
     const fetchCapstones = useCallback(async () => {

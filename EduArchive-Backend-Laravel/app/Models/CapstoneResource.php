@@ -8,6 +8,13 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class CapstoneResource extends Model
 {
+    protected $hidden = ['file_path'];
+    protected $appends = ['file_reference'];
+
+    public function getFileReferenceAttribute(): string
+    {
+        return 'resource:'.$this->id;
+    }
     use HasFactory;
 
     protected $fillable = [

@@ -21,6 +21,11 @@ use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function () {
 
+    Route::get('/csrf-token', function (\Illuminate\Http\Request $request) {
+        return response()->json(['csrf_token' => $request->session()->token()])
+            ->header('Cache-Control', 'no-store');
+    });
+
     // ── Public routes ────────────────────────────────────
     Route::post('/register', [AuthController::class, 'register'])
         ->middleware('throttle:10,1');
@@ -36,7 +41,7 @@ Route::prefix('v1')->group(function () {
     Route::post('/verify-email-code',      [PasswordResetController::class, 'verifyEmailCode'])->middleware('throttle:10,1');
 
     // ── Protected routes (Sanctum) ───────────────────────
-    Route::middleware(['auth:sanctum', \App\Http\Middleware\TrackLastActive::class])->group(function () {
+    Route::middleware(['auth:sanctum', \App\Http\Middleware\EnsureActiveAccount::class, \App\Http\Middleware\TrackLastActive::class])->group(function () {
 
         Route::post('/logout', [AuthController::class, 'logout']);
         Route::get('/user',    [AuthController::class, 'user']);
@@ -99,8 +104,9 @@ Route::prefix('v1')->group(function () {
             Route::get('/capstones/pending',               [CapstoneController::class, 'getPendingCapstones']);
             Route::get('/capstones',                       [CapstoneController::class, 'index']);
             Route::post('/capstones',                      [CapstoneController::class, 'store']);
-            Route::post('/capstones/upload',               [CapstoneController::class, 'upload']);
-            Route::post('/capstones/upload-resource',      [CapstoneController::class, 'uploadResource']);
+            Route::post('/capstones/upload',               [CapstoneController::class, 'upload'])->middleware('throttle:uploads');
+            Route::post('/capstones/upload-resource',      [CapstoneController::class, 'uploadResource'])->middleware('throttle:uploads');
+            Route::post('/capstones/upload-imrad',         [CapstoneController::class, 'uploadImrad'])->middleware('throttle:uploads');
             Route::get('/capstones/archived',              [CapstoneController::class, 'archived']);
             Route::get('/capstones/bookmarked',            [CapstoneController::class, 'adminBookmarks']);
             Route::post('/capstones/{capstone}/approve',   [CapstoneController::class, 'approve']);
@@ -146,8 +152,9 @@ Route::prefix('v1')->group(function () {
             Route::get('/capstones/pending',                 [CapstoneController::class, 'getPendingCapstones']);
             Route::get('/capstones',                         [CapstoneController::class, 'index']);
             Route::post('/capstones',                        [CapstoneController::class, 'store']);
-            Route::post('/capstones/upload',                 [CapstoneController::class, 'upload']);
-            Route::post('/capstones/upload-resource',        [CapstoneController::class, 'uploadResource']);
+            Route::post('/capstones/upload',                 [CapstoneController::class, 'upload'])->middleware('throttle:uploads');
+            Route::post('/capstones/upload-resource',        [CapstoneController::class, 'uploadResource'])->middleware('throttle:uploads');
+            Route::post('/capstones/upload-imrad',           [CapstoneController::class, 'uploadImrad'])->middleware('throttle:uploads');
             Route::get('/capstones/archived',                [CapstoneController::class, 'archived']);
             Route::post('/capstones/{capstone}/approve',     [CapstoneController::class, 'approve']);
             Route::post('/capstones/{capstone}/reject',      [CapstoneController::class, 'reject']);
@@ -166,9 +173,9 @@ Route::prefix('v1')->group(function () {
             // Students can only see/manage their own uploaded capstones
             Route::get('/capstones',                         [CapstoneController::class, 'index']);
             Route::post('/capstones',                        [CapstoneController::class, 'store']);
-            Route::post('/capstones/upload',                 [CapstoneController::class, 'upload']);
-            Route::post('/capstones/upload-resource',        [CapstoneController::class, 'uploadResource']);
-            Route::post('/capstones/upload-imrad',           [CapstoneController::class, 'uploadImrad']);
+            Route::post('/capstones/upload',                 [CapstoneController::class, 'upload'])->middleware('throttle:uploads');
+            Route::post('/capstones/upload-resource',        [CapstoneController::class, 'uploadResource'])->middleware('throttle:uploads');
+            Route::post('/capstones/upload-imrad',           [CapstoneController::class, 'uploadImrad'])->middleware('throttle:uploads');
             Route::get('/capstones/archived',                [CapstoneController::class, 'archived']);
             Route::put('/capstones/{capstone}',              [CapstoneController::class, 'update']);
             Route::delete('/capstones/{capstone}',           [CapstoneController::class, 'destroy']);

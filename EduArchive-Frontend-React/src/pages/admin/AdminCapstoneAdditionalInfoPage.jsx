@@ -10,7 +10,7 @@ import {
     storeCapstone, uploadAdminResource, uploadAdminImrad,
     getPublishedCapstones, getFacultyList,
 } from '../../api/admin';
-import { useNotification } from '../../components/Notification';
+import { useNotification } from '../../components/useNotification';
 import { LoadingOverlay } from '../../components/Loading';
 
 const STATUS_OPTIONS = [

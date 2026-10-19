@@ -5,7 +5,7 @@ import { getPublishedCategories } from '../api/admin';
  * Category Combobox — a dropdown that shows existing categories
  * but also allows typing a new custom category.
  */
-export default function CategoryCombobox({ value, onChange, className = '', labelClass = '' }) {
+export default function CategoryCombobox({ value, onChange, className = '' }) {
     const [categories, setCategories] = useState([]);
     const [open, setOpen] = useState(false);
     const [filter, setFilter] = useState('');

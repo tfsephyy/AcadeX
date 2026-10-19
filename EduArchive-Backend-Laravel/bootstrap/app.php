@@ -1,6 +1,6 @@
 <?php
 
-use App\Http\Middleware\AttachTokenFromCookie;
+use App\Http\Middleware\VerifyApiCsrfToken;
 use App\Http\Middleware\RoleMiddleware;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -14,9 +14,15 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        // Prepend cookie-to-bearer middleware for every API request
+        $middleware->replace(\Illuminate\Http\Middleware\TrustProxies::class, \App\Http\Middleware\TrustConfiguredProxies::class);
+        // Use Laravel's session and CSRF boundary for every browser API request,
+        // including login/registration. The SPA obtains its CSRF token as JSON
+        // so API cookies can remain host-only on a separate HTTPS hostname.
         $middleware->api(prepend: [
-            AttachTokenFromCookie::class,
+            \Illuminate\Cookie\Middleware\EncryptCookies::class,
+            \Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse::class,
+            \Illuminate\Session\Middleware\StartSession::class,
+            VerifyApiCsrfToken::class,
         ]);
 
         // Register named middleware aliases

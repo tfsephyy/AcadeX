@@ -36,7 +36,7 @@ class FastOcrService
             return null;
         }
 
-        $tmpPdf = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'fast_ocr_' . uniqid() . '.pdf';
+        $tmpPdf = PrivateTemp::file();
 
         try {
             file_put_contents($tmpPdf, $rawBytes);
@@ -110,8 +110,7 @@ class FastOcrService
             return null;
         }
 
-        $tmpDir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'fast_ocr_' . uniqid();
-        @mkdir($tmpDir, 0777, true);
+        $tmpDir = PrivateTemp::directory();
 
         try {
             // Step 1: Render pages to grayscale PNG at 200 DPI (2-3x faster than 300 DPI)
@@ -240,7 +239,9 @@ class FastOcrService
             return file_exists($bin);
         }
 
-        exec("where \"{$bin}\" >nul 2>&1", $out, $code);
+        $cmd = PHP_OS_FAMILY === 'Windows' ? 'where '.escapeshellarg($bin).' >nul 2>&1'
+            : 'command -v '.escapeshellarg($bin).' >/dev/null 2>&1';
+        exec($cmd, $out, $code);
         return $code === 0;
     }
 }

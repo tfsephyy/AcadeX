@@ -6,6 +6,12 @@ use Illuminate\Database\Eloquent\Model;
 
 class PasswordResetCode extends Model
 {
+    protected $hidden = ['code'];
+
+    public static function hashCode(string $code): string
+    {
+        return hash('sha256', strtoupper(trim($code)));
+    }
     protected $fillable = [
         'email',
         'code',

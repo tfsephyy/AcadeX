@@ -1,4 +1,4 @@
-import { createContext, useContext, useState } from 'react'
+import { useState } from 'react'
 
 /**
  * ChatbotContext
@@ -13,7 +13,7 @@ import { createContext, useContext, useState } from 'react'
  *   }, [capstone])
  */
 
-const ChatbotContext = createContext(null)
+import { ChatbotContext } from './useChatbotContext'
 
 export function ChatbotProvider({ children }) {
     const [capstoneContext, setCapstoneContext] = useState(null)
@@ -23,10 +23,4 @@ export function ChatbotProvider({ children }) {
             {children}
         </ChatbotContext.Provider>
     )
-}
-
-export function useChatbotContext() {
-    const ctx = useContext(ChatbotContext)
-    if (!ctx) throw new Error('useChatbotContext must be used within ChatbotProvider')
-    return ctx
 }

@@ -11,7 +11,7 @@ import {
     HiOutlineCalendar,
     HiOutlineAcademicCap,
 } from 'react-icons/hi';
-import { useNotification } from '../../components/Notification';
+import { useNotification } from '../../components/useNotification';
 import Loading from '../../components/Loading';
 import EmptyState from '../../components/EmptyState';
 import ConfirmDialog from '../../components/ConfirmDialog';
@@ -41,8 +41,8 @@ export default function FacultyCapstoneApproval() {
     const [pagination, setPagination] = useState({ current_page: 1, last_page: 1, total: 0, from: 0, to: 0 });
 
     // Filter options
-    const [years, setYears] = useState([]);
-    const [programs, setPrograms] = useState(['BSIT', 'BSCpE']);
+    const [years] = useState([]);
+    const [programs] = useState(['BSIT', 'BSCpE']);
 
     // Confirm dialog
     const [confirm, setConfirm] = useState({ open: false, title: '', message: '', action: null, variant: 'success' });
@@ -81,7 +81,7 @@ export default function FacultyCapstoneApproval() {
                 from: data.from || 0,
                 to: data.to || 0,
             });
-        } catch (err) {
+        } catch {
             notify.error('Failed to load pending capstones.');
         } finally {
             setLoading(false);

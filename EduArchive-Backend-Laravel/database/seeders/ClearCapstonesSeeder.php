@@ -10,6 +10,9 @@ class ClearCapstonesSeeder extends Seeder
 {
     public function run(): void
     {
+        if (!app()->environment('local', 'testing')) {
+            throw new \RuntimeException('Destructive demo cleanup is disabled outside local/testing environments.');
+        }
         Schema::disableForeignKeyConstraints();
 
         DB::table('capstone_views')->truncate();

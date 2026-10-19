@@ -1,8 +1,9 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
-import { useChatbotContext } from '../context/ChatbotContext';
+import { useAuth } from '../context/useAuth';
+import { useChatbotContext } from '../context/useChatbotContext';
 import api from '../api/axios';
+import { inlineMarkdown } from './inlineMarkdown';
 
 // ─── Simple markdown renderer ─────────────────────────────────────────────────
 // Converts **bold**, *italic*, `code`, bullet lists, and numbered lists
@@ -58,7 +59,7 @@ function renderMarkdown(text, linkRenderer) {
     const hasLink = (s) => /\[LINK:\d+\]/.test(s);
 
     lines.forEach((line) => {
-        const ulMatch = line.match(/^[\*\-]\s+(.*)/);
+        const ulMatch = line.match(/^[*-]\s+(.*)/);
         const olMatch = line.match(/^\d+\.\s+(.*)/);
 
         if (ulMatch) {
@@ -98,13 +99,6 @@ function renderMarkdown(text, linkRenderer) {
 
     flushList();
     return elements;
-}
-
-function inlineMarkdown(text) {
-    return text
-        .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-        .replace(/\*(.+?)\*/g,   '<em>$1</em>')
-        .replace(/`(.+?)`/g,     '<code>$1</code>');
 }
 
 // ─── Helper: format timestamp ─────────────────────────────────────────────────
@@ -206,7 +200,7 @@ const ROLE_SUBTITLE = {
 };
 
 // ─── FAQ Panel (replaces old empty state) ────────────────────────────────────
-function FaqPanel({ role, capstoneContext, onAsk, filter }) {
+function FaqPanel({ role, onAsk, filter }) {
     const [activeTab, setActiveTab] = useState('definitions');
 
     const tabs = TABS_BY_ROLE[role] ?? TABS_BY_ROLE.visitor;
@@ -319,7 +313,7 @@ export default function Chatbot() {
                     y: Math.max(minY, Math.min(maxY, pos.y ?? 0)),
                 };
                 setPosition(clamped);
-            } catch (e) {
+            } catch {
                 localStorage.removeItem('chatbot_position');
             }
         }
@@ -385,7 +379,7 @@ export default function Chatbot() {
         });
     };
 
-    const handleFabClick = (e) => {
+    const handleFabClick = () => {
         // Only toggle open/close if user didn't drag
         if (!hasMoved) {
             setOpen((o) => !o);

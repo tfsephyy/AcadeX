@@ -52,12 +52,12 @@ import tempfile
 from typing import Any
 
 import cv2
-import fitz          # PyMuPDF
+import pymupdf as fitz
 import numpy as np
 from paddleocr import PaddleOCR
 from PIL import Image
 
-from validators import MAX_PDF_PAGES
+from validators import MAX_PDF_PAGES, MAX_RENDER_PIXELS, planned_preprocess_size
 
 logger = logging.getLogger(__name__)
 
@@ -70,13 +70,18 @@ def _get_ocr() -> PaddleOCR:
     global _ocr
     if _ocr is None:
         logger.info("Initialising PaddleOCR (PP-OCRv4 server model)…")
+        cache = os.environ.get("OCR_MODEL_CACHE")
+        model_paths = {}
+        if cache:
+            os.makedirs(cache, mode=0o700, exist_ok=True)
+            for kind in ("det", "rec", "cls"):
+                model_paths[f"{kind}_model_dir"] = os.path.join(cache, kind)
         _ocr = PaddleOCR(
             use_angle_cls=False,   # we handle orientation ourselves (faster)
             lang="en",
             use_gpu=False,
             # PP-OCRv4 server model — best accuracy among bundled models
-            det_model_dir=None,    # use PaddleOCR default (PP-OCRv4 det)
-            rec_model_dir=None,    # use PaddleOCR default (PP-OCRv4 rec)
+            **model_paths,
             show_log=False,
             # Detection tuning
             det_db_thresh=0.3,     # lower → catch faint strokes
@@ -174,11 +179,9 @@ def _preprocess(arr: np.ndarray) -> np.ndarray:
 
     # ── 1. Upscale tiny images so features are detectable ──────────────────
     h, w = gray.shape[:2]
-    min_side = min(h, w)
-    if min_side < 600:
-        scale = 1200 / min_side
-        gray = cv2.resize(gray, None, fx=scale, fy=scale,
-                          interpolation=cv2.INTER_CUBIC)
+    target = planned_preprocess_size(w, h)
+    if target != (w, h):
+        gray = cv2.resize(gray, target, interpolation=cv2.INTER_CUBIC)
 
     # ── 2. CLAHE contrast enhancement (adaptive) ───────────────────────────
     score = _contrast_score(gray)
@@ -276,7 +279,10 @@ def extract_text_from_image(raw: bytes) -> dict[str, Any]:
     Returns:
         {"type": "image", "text": "<extracted text>"}
     """
-    img = Image.open(io.BytesIO(raw)).convert("RGB")
+    with Image.open(io.BytesIO(raw)) as source:
+        if source.width * source.height > MAX_RENDER_PIXELS:
+            raise ValueError("Image exceeds the safe rendering pixel limit.")
+        img = source.convert("RGB")
     arr = np.array(img)
 
     preprocessed = _preprocess(arr)
@@ -309,6 +315,7 @@ def extract_text_from_pdf(raw: bytes) -> dict[str, Any]:
         RuntimeError on any unrecoverable processing failure.
     """
     tmp_path = None
+    doc = None
     try:
         # Write to a temp file — fitz.open() streams work best with paths
         with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tmp:
@@ -323,8 +330,6 @@ def extract_text_from_pdf(raw: bytes) -> dict[str, Any]:
             raise ValueError(
                 f"PDF has {total} pages, exceeding the {MAX_PDF_PAGES}-page limit."
             )
-
-        ocr = _get_ocr()
 
         pages_out  = []
         full_parts = []
@@ -344,12 +349,14 @@ def extract_text_from_pdf(raw: bytes) -> dict[str, Any]:
             # 200 DPI renders 2.25× faster than 300 DPI and is sufficient for
             # PaddleOCR's detection model (which works on 640-px feature maps).
             mat = fitz.Matrix(200 / 72, 200 / 72)
+            if page.rect.width * page.rect.height * (200 / 72) ** 2 > MAX_RENDER_PIXELS:
+                raise ValueError("PDF page exceeds the safe rendering pixel limit.")
             pix = page.get_pixmap(matrix=mat, colorspace=fitz.csRGB, alpha=False)
             img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
             arr = np.array(img)
 
             preprocessed = _preprocess(arr)
-            result       = ocr.ocr(preprocessed, cls=False)
+            result       = _get_ocr().ocr(preprocessed, cls=False)
             page_text    = _reconstruct_text(result)
 
             pages_out.append({"page": page_num, "text": page_text})
@@ -366,6 +373,8 @@ def extract_text_from_pdf(raw: bytes) -> dict[str, Any]:
         }
 
     finally:
+        if doc is not None and not doc.is_closed:
+            doc.close()
         if tmp_path and os.path.exists(tmp_path):
             try:
                 os.unlink(tmp_path)

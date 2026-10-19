@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '../../context/useAuth';
 import { updateProfile } from '../../api/admin';
-import { useNotification } from '../../components/Notification';
+import { useNotification } from '../../components/useNotification';
 import ChangePasswordModal from '../../components/ChangePasswordModal';
 import { HiOutlineUser, HiOutlineMail, HiOutlineIdentification, HiOutlineAcademicCap, HiOutlinePencil, HiOutlineKey } from 'react-icons/hi';
 

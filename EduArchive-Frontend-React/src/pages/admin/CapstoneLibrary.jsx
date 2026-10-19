@@ -12,7 +12,7 @@ import {
 import {
     getCapstones, getCapstone, deleteCapstone, archiveCapstone, unarchiveCapstone, getArchivedCapstones, publishCapstone, unpublishCapstone,
 } from '../../api/admin';
-import { useNotification } from '../../components/Notification';
+import { useNotification } from '../../components/useNotification';
 import Loading from '../../components/Loading';
 import EmptyState from '../../components/EmptyState';
 import ConfirmDialog from '../../components/ConfirmDialog';
@@ -55,7 +55,7 @@ export default function CapstoneLibrary() {
 
     // ── Pagination ────────────────────────────────────────────────────────────────
     const [page, setPage] = useState(1);
-    const [lastPage, setLastPage] = useState(1);
+    const [, setLastPage] = useState(1);
     const [pagination, setPagination] = useState({ current_page: 1, last_page: 1, total: 0, from: 0, to: 0 });
 
     // ── Modal / confirm state ─────────────────────────────────────────────────────
@@ -141,7 +141,7 @@ export default function CapstoneLibrary() {
                 from: data?.from || 0,
                 to: data?.to || 0,
             });
-        } catch (err) {
+        } catch {
             notify.error('Failed to load capstones.');
         } finally {
             setLoading(false);

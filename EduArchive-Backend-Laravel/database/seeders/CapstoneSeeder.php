@@ -15,19 +15,22 @@ class CapstoneSeeder extends Seeder
 {
     public function run(): void
     {
+        if (!app()->environment(['local', 'testing'])) {
+            throw new \RuntimeException('Demo seeding is disabled outside local/testing environments.');
+        }
         $admin   = Role::firstOrCreate(['name' => 'admin']);
         $student = Role::firstOrCreate(['name' => 'student']);
         $faculty = Role::firstOrCreate(['name' => 'faculty']);
 
         // ── Admin user ──
         $adminUser = User::firstOrCreate(
-            ['email' => 'eduadmin9@gmail.com'],
+            ['email' => 'demo-admin@example.test'],
             [
-                'name'              => 'System Administrator',
-                'username'          => 'admin',
-                'id_number'         => 'MBC2024-00001',
+                'name'              => 'Demo Administrator',
+                'username'          => 'acadex_demo_admin',
+                'id_number'         => 'DEMO-ADMIN',
                 'role_id'           => $admin->id,
-                'password'          => Hash::make('Admin123'),
+                'password'          => Hash::make(bin2hex(random_bytes(24))),
                 'email_verified_at' => now(),
                 'is_approved'       => true,
             ]
@@ -54,7 +57,7 @@ class CapstoneSeeder extends Seeder
                     'username'          => $s['username'],
                     'id_number'         => $s['id_number'],
                     'role_id'           => $student->id,
-                    'password'          => Hash::make('password123'),
+                    'password'          => Hash::make(bin2hex(random_bytes(24))),
                     'email_verified_at' => now(),
                     'is_approved'       => true,
                 ]
@@ -81,7 +84,7 @@ class CapstoneSeeder extends Seeder
                     'username'          => $f['username'],
                     'id_number'         => $f['id_number'],
                     'role_id'           => $faculty->id,
-                    'password'          => Hash::make('password123'),
+                    'password'          => Hash::make(bin2hex(random_bytes(24))),
                     'email_verified_at' => now(),
                     'is_approved'       => true,
                     'faculty_program'   => $f['faculty_program'],

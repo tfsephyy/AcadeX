@@ -208,6 +208,7 @@ class CapstoneController extends Controller
      */
     public function show(Request $request, Capstone $capstone): JsonResponse
     {
+        $this->authorize('view', $capstone);
         $capstone->load(['keywords', 'uploader:id,name', 'approver:id,name', 'adviser:id,name', 'resources', 'referencedCapstones:id,title,author,year,program']);
 
         $data = $capstone->toArray();
@@ -260,9 +261,10 @@ class CapstoneController extends Controller
         // Encrypt and store
         $encryptor = new PdfEncryptorService();
         $path = $encryptor->encryptAndStore('capstones', $file);
+        $reference = app(\App\Services\DocumentUploads::class)->stage($request->user(), 'pdf', $path);
 
         return $this->successResponse([
-            'pdf_path'          => $path,
+            'pdf_path'          => $reference,
             'pdf_original_name' => $file->getClientOriginalName(),
             'extracted'         => $extracted,
         ], 'PDF uploaded and data extracted.');
@@ -285,9 +287,10 @@ class CapstoneController extends Controller
         $file      = $request->file('file');
         $encryptor = new PdfEncryptorService();
         $path      = $encryptor->encryptAndStore('capstone_resources', $file);
+        $reference = app(\App\Services\DocumentUploads::class)->stage($request->user(), 'resource', $path);
 
         return $this->successResponse([
-            'file_path'          => $path,
+            'file_path'          => $reference,
             'file_original_name' => $file->getClientOriginalName(),
         ], 'Resource file uploaded.');
     }
@@ -308,9 +311,10 @@ class CapstoneController extends Controller
         $file      = $request->file('file');
         $encryptor = new PdfEncryptorService();
         $path      = $encryptor->encryptAndStore('capstone_imrad', $file);
+        $reference = app(\App\Services\DocumentUploads::class)->stage($request->user(), 'imrad', $path);
 
         return $this->successResponse([
-            'file_path'          => $path,
+            'file_path'          => $reference,
             'file_original_name' => $file->getClientOriginalName(),
         ], 'IMRAD file uploaded.');
     }
@@ -321,9 +325,9 @@ class CapstoneController extends Controller
     public function store(Request $request): JsonResponse
     {
         $validator = Validator::make($request->all(), [
-            'title'              => 'required|string|max:500|unique:capstones,title',
+            'title'              => 'required|string|max:255|unique:capstones,title',
             'year'               => 'nullable|integer|min:2000|max:2099',
-            'author'             => 'required|string|max:500',
+            'author'             => 'required|string|max:255',
             'author_details'     => 'nullable|array',
             'author_details.*.name'    => 'required|string|max:255',
             'author_details.*.email'   => 'nullable|string|max:255',
@@ -368,6 +372,26 @@ class CapstoneController extends Controller
         // Students always start unpublished; admin/faculty use whatever they submitted
         $publicationStatus = $isStudent ? 'unpublished' : $request->input('publication_status', 'published');
 
+        $capstone = DB::transaction(function () use ($request, $user, $status, $approvalStatus, $publicationStatus) {
+        $uploads = app(\App\Services\DocumentUploads::class);
+        $resources = $request->input('resources', []);
+        foreach ($resources as &$resource) {
+            $resource['file_path'] = $uploads->resolve($request->user(), $resource['file_path'], 'resource', null);
+        }
+        unset($resource);
+        $imradPath = $request->imrad_path ? $uploads->resolve($request->user(), $request->imrad_path, 'imrad', null) : null;
+        foreach ($request->input('references', []) as $id) {
+            if (!Capstone::find($id)) abort(403, 'Referenced capstone unavailable.');
+        }
+        if ($request->adviser_id && !User::whereKey($request->adviser_id)->where('is_approved', true)
+            ->where('is_archived', false)->whereHas('role', fn ($q) => $q->where('name', 'faculty'))->exists()) {
+            throw \Illuminate\Validation\ValidationException::withMessages(['adviser_id' => 'Select an active faculty adviser.']);
+        }
+        $pdfPath = $uploads->resolve($user, $request->pdf_path, 'pdf');
+        $paths = array_merge([$pdfPath, $imradPath], array_column($resources, 'file_path'));
+        if (count(array_filter($paths)) !== count(array_unique(array_filter($paths)))) {
+            throw \Illuminate\Validation\ValidationException::withMessages(['documents' => 'Duplicate upload references.']);
+        }
         $capstone = Capstone::create([
             'title'              => $request->title,
             'year'               => $request->year,
@@ -376,14 +400,14 @@ class CapstoneController extends Controller
             'program'            => $request->program,
             'category'           => $request->category,
             'abstract'           => $request->abstract,
-            'pdf_path'           => $request->pdf_path,
+            'pdf_path'           => $pdfPath,
             'pdf_original_name'  => $request->pdf_original_name,
             'uploaded_by'        => $user->id,
             'status'             => $status,
             'approval_status'    => $approvalStatus,
             'publication_status' => $publicationStatus,
             'copyright_status'   => $request->copyright_status,
-            'imrad_path'         => $request->imrad_path,
+            'imrad_path'         => $imradPath,
             'imrad_original_name' => $request->imrad_original_name,
             'adviser_id'         => $request->adviser_id,
         ]);
@@ -392,7 +416,7 @@ class CapstoneController extends Controller
         if ($request->has('keywords') && is_array($request->keywords)) {
             $keywordIds = [];
             foreach ($request->keywords as $name) {
-                $keyword = Keyword::firstOrCreate(['name' => strtolower(trim($name))]);
+                $keyword = Keyword::withoutGlobalScope('request_access')->firstOrCreate(['name' => strtolower(trim($name))]);
                 $keywordIds[] = $keyword->id;
             }
             $capstone->keywords()->sync($keywordIds);
@@ -406,7 +430,7 @@ class CapstoneController extends Controller
 
         // Save resource attachments
         if ($request->has('resources') && is_array($request->resources)) {
-            foreach ($request->resources as $resource) {
+            foreach ($resources as $resource) {
                 CapstoneResource::create([
                     'capstone_id'        => $capstone->id,
                     'name'               => $resource['name'],
@@ -418,6 +442,10 @@ class CapstoneController extends Controller
 
         // ── Extract full PDF text and store in DB for chatbot ──────────────
         // Done after creation so a failure never blocks the upload.
+        $uploads->claim($capstone, $paths);
+        return $capstone;
+        });
+
         try {
             $pdfTextService = new PdfTextService();
             $pdfText = $pdfTextService->extractFromEncryptedPath($capstone->pdf_path);
@@ -575,7 +603,7 @@ class CapstoneController extends Controller
                 'abstract' => $capstone->abstract,
                 'approval_status' => $capstone->approval_status,
                 'created_at' => $capstone->created_at,
-                'pdf_path' => $capstone->pdf_path,
+                'pdf_available' => $capstone->pdf_available,
                 'student' => [
                     'id' => $uploader->id ?? null,
                     'name' => $uploader->name ?? 'Unknown',
@@ -595,6 +623,7 @@ class CapstoneController extends Controller
 
     public function approve(Request $request, Capstone $capstone): JsonResponse
     {
+        $this->authorize('review', $capstone);
         if ($capstone->status === 'approved' || $capstone->approval_status === 'approved') {
             return $this->errorResponse('Capstone is already approved.', 400);
         }
@@ -647,6 +676,7 @@ class CapstoneController extends Controller
      */
     public function reject(Request $request, Capstone $capstone): JsonResponse
     {
+        $this->authorize('review', $capstone);
         if ($capstone->status === 'rejected' || $capstone->approval_status === 'rejected') {
             return $this->errorResponse('Capstone is already rejected.', 400);
         }
@@ -700,6 +730,7 @@ class CapstoneController extends Controller
      */
     public function archive(Request $request, Capstone $capstone): JsonResponse
     {
+        $this->authorize('update', $capstone);
         // Students can only archive their own capstones
         if ($request->user()->hasRole('student') && $capstone->uploaded_by !== $request->user()->id) {
             return $this->errorResponse('You can only archive your own capstones.', 403);
@@ -724,7 +755,7 @@ class CapstoneController extends Controller
      */
     public function archived(Request $request): JsonResponse
     {
-        $query = Capstone::with(['keywords', 'uploader:id,name'])
+        $query = Capstone::withoutGlobalScope('request_access')->with(['keywords', 'uploader:id,name'])
             ->archived()
             ->orderByDesc('updated_at');
 
@@ -758,6 +789,7 @@ class CapstoneController extends Controller
      */
     public function unarchive(Request $request, Capstone $capstone): JsonResponse
     {
+        $this->authorize('restore', $capstone);
         // Students can only restore their own capstones
         if ($request->user()->hasRole('student') && $capstone->uploaded_by !== $request->user()->id) {
             return $this->errorResponse('You can only restore your own capstones.', 403);
@@ -767,11 +799,15 @@ class CapstoneController extends Controller
             return $this->errorResponse('Capstone is not archived.', 400);
         }
 
+<<<<<<< HEAD
         $capstone->update([
             'status'      => 'approved',
             'is_archived' => false,
             // Do NOT touch publication_status — admin sets that separately
         ]);
+=======
+        $capstone->update(['is_archived' => false, 'publication_status' => 'unpublished']);
+>>>>>>> ee8974fe9d3c2e424b7f25c29171302cd39d7c56
 
         AuditLog::log('unarchive_capstone', $request->user()->id, Capstone::class, $capstone->id);
 
@@ -817,8 +853,14 @@ class CapstoneController extends Controller
      */
     public function unpublish(Request $request, Capstone $capstone): JsonResponse
     {
+<<<<<<< HEAD
         if ($capstone->publication_status !== 'published') {
             return $this->errorResponse('Capstone is not currently published.', 400);
+=======
+        $this->authorize('update', $capstone);
+        if ($capstone->status !== 'approved') {
+            return $this->errorResponse('Only approved capstones can be unpublished.', 400);
+>>>>>>> ee8974fe9d3c2e424b7f25c29171302cd39d7c56
         }
 
         $oldStatus = $capstone->publication_status;
@@ -826,6 +868,12 @@ class CapstoneController extends Controller
         // Only change the publication gate — approval_status is SEPARATE and unchanged.
         $capstone->update([
             'publication_status' => 'unpublished',
+<<<<<<< HEAD
+=======
+            'approval_status'    => 'pending',
+            'approved_by'        => null,
+            'approved_at'        => null,
+>>>>>>> ee8974fe9d3c2e424b7f25c29171302cd39d7c56
         ]);
 
         AuditLog::log(
@@ -886,6 +934,7 @@ class CapstoneController extends Controller
      */
     public function destroy(Request $request, Capstone $capstone): JsonResponse
     {
+        $this->authorize('delete', $capstone);
         // Students can only delete their own capstones
         if ($request->user()->hasRole('student') && $capstone->uploaded_by !== $request->user()->id) {
             return $this->errorResponse('You can only delete your own capstones.', 403);
@@ -941,6 +990,7 @@ class CapstoneController extends Controller
      */
     public function recordView(Request $request, Capstone $capstone): JsonResponse
     {
+        $this->authorize('view', $capstone);
         $userId = $request->user()?->id;
         $ip     = $request->ip();
 
@@ -980,19 +1030,8 @@ class CapstoneController extends Controller
      */
     public function getPdfToken(Request $request, Capstone $capstone): JsonResponse
     {
+        $this->authorize('view', $capstone);
         $user = $request->user();
-
-        // Non-admins and non-faculty can only access published capstones.
-        // Faculty can access published capstones OR their own uploads.
-        if (!$user->hasRole('admin') && !$user->hasRole('faculty')) {
-            if ($capstone->publication_status !== 'published') {
-                return $this->errorResponse('Capstone not available.', 403);
-            }
-        } elseif ($user->hasRole('faculty') && $capstone->publication_status !== 'published') {
-            if ((int) $capstone->uploader_id !== (int) $user->id) {
-                return $this->errorResponse('Capstone not available.', 403);
-            }
-        }
 
         $encryptor = new PdfEncryptorService();
         $token = $encryptor->generateToken($capstone->id, $user->id, 30); // 30-min TTL
@@ -1005,6 +1044,7 @@ class CapstoneController extends Controller
      */
     public function download(Request $request, Capstone $capstone): \Symfony\Component\HttpFoundation\StreamedResponse|JsonResponse
     {
+        $this->authorize('download', $capstone);
         $user = $request->user();
 
         // Students are not permitted to download capstone PDFs.
@@ -1062,6 +1102,7 @@ class CapstoneController extends Controller
      */
     public function servePdf(Request $request, Capstone $capstone): \Symfony\Component\HttpFoundation\StreamedResponse|JsonResponse
     {
+        $this->authorize('view', $capstone);
         $user = $request->user();
 
         // All authenticated users can view any capstone PDF.
@@ -1100,6 +1141,7 @@ class CapstoneController extends Controller
      */
     public function serveImrad(Request $request, Capstone $capstone): \Symfony\Component\HttpFoundation\StreamedResponse|JsonResponse
     {
+        $this->authorize('view', $capstone);
         if (!$capstone->imrad_path || !Storage::disk('local')->exists($capstone->imrad_path)) {
             return $this->errorResponse('IMRAD file not found.', 404);
         }
@@ -1133,6 +1175,7 @@ class CapstoneController extends Controller
      */
     public function serveResource(Request $request, Capstone $capstone, CapstoneResource $resource): \Symfony\Component\HttpFoundation\StreamedResponse|JsonResponse
     {
+        $this->authorize('view', $capstone);
         // Ensure the resource belongs to this capstone
         if ($resource->capstone_id !== $capstone->id) {
             return $this->errorResponse('Resource not found.', 404);
@@ -1169,6 +1212,11 @@ class CapstoneController extends Controller
         ];
 
         $mimeType = $mimeMap[$extension] ?? 'application/octet-stream';
+        // Office/archive/unknown formats trigger a browser download even with
+        // inline disposition. Do not turn preview into a download-role bypass.
+        if (!in_array($mimeType, ['application/pdf', 'text/plain', 'image/png', 'image/jpeg', 'image/gif'], true)) {
+            $this->authorize('download', $capstone);
+        }
         $size     = strlen($rawBytes);
 
         return response()->stream(
@@ -1190,6 +1238,7 @@ class CapstoneController extends Controller
      */
     public function downloadResource(Request $request, Capstone $capstone, CapstoneResource $resource): \Symfony\Component\HttpFoundation\StreamedResponse|JsonResponse
     {
+        $this->authorize('download', $capstone);
         $user = $request->user();
 
         // Students are not permitted to download resource files
@@ -1244,6 +1293,7 @@ class CapstoneController extends Controller
      */
     public function toggleBookmark(Request $request, Capstone $capstone): JsonResponse
     {
+        $this->authorize('view', $capstone);
         $user = $request->user();
         $existing = $capstone->bookmarks()->where('user_id', $user->id)->first();
 
@@ -1263,15 +1313,16 @@ class CapstoneController extends Controller
      */
     public function update(Request $request, Capstone $capstone): JsonResponse
     {
+        $this->authorize('update', $capstone);
         // Students can only edit their own capstones
         if ($request->user()->hasRole('student') && $capstone->uploaded_by !== $request->user()->id) {
             return $this->errorResponse('You can only edit your own capstones.', 403);
         }
 
         $validator = Validator::make($request->all(), [
-            'title'               => 'sometimes|string|max:500',
+            'title'               => 'sometimes|string|max:255',
             'year'                => 'nullable|integer|min:2000|max:2099',
-            'author'              => 'sometimes|string|max:500',
+            'author'              => 'sometimes|string|max:255',
             'author_details'      => 'nullable|array',
             'author_details.*.name'    => 'required|string|max:255',
             'author_details.*.email'   => 'nullable|string|max:255',
@@ -1298,6 +1349,25 @@ class CapstoneController extends Controller
             return $this->errorResponse('Validation failed.', 422, $validator->errors());
         }
 
+        return DB::transaction(function () use ($request, $capstone) {
+        $uploads = app(\App\Services\DocumentUploads::class);
+        $resources = $request->input('resources', []);
+        foreach ($resources as &$resource) {
+            $resource['file_path'] = $uploads->resolve($request->user(), $resource['file_path'], 'resource', $capstone);
+        }
+        unset($resource);
+        $imradPath = $request->imrad_path ? $uploads->resolve($request->user(), $request->imrad_path, 'imrad', $capstone) : null;
+        foreach ($request->input('references', []) as $id) {
+            if (!Capstone::find($id)) abort(403, 'Referenced capstone unavailable.');
+        }
+        if ($request->adviser_id && !User::whereKey($request->adviser_id)->where('is_approved', true)
+            ->where('is_archived', false)->whereHas('role', fn ($q) => $q->where('name', 'faculty'))->exists()) {
+            throw \Illuminate\Validation\ValidationException::withMessages(['adviser_id' => 'Select an active faculty adviser.']);
+        }
+        $paths = array_merge([$imradPath], array_column($resources, 'file_path'));
+        if (count(array_filter($paths)) !== count(array_unique(array_filter($paths)))) {
+            throw \Illuminate\Validation\ValidationException::withMessages(['documents' => 'Duplicate upload references.']);
+        }
         $oldValues = $capstone->only(['title', 'year', 'author', 'program', 'category', 'abstract', 'publication_status', 'copyright_status', 'adviser_id']);
 
         $updateData = $request->only([
@@ -1307,6 +1377,15 @@ class CapstoneController extends Controller
 
         // publication_status is already in $updateData — no need to sync is_published
 
+        if ($request->has('imrad_path')) $updateData['imrad_path'] = $imradPath;
+        if ($request->user()->hasRole('student')) {
+            unset($updateData['publication_status']);
+            $updateData['status'] = 'pending';
+            $updateData['approval_status'] = 'pending';
+            $updateData['publication_status'] = 'unpublished';
+            $updateData['approved_by'] = null;
+            $updateData['approved_at'] = null;
+        }
         $capstone->update($updateData);
 
         $newValues = $capstone->only(['title', 'year', 'author', 'program', 'category', 'abstract', 'publication_status', 'copyright_status', 'adviser_id']);
@@ -1323,7 +1402,7 @@ class CapstoneController extends Controller
         if ($request->has('keywords')) {
             $keywordIds = [];
             foreach ($request->keywords as $name) {
-                $keyword = Keyword::firstOrCreate(['name' => strtolower(trim($name))]);
+                $keyword = Keyword::withoutGlobalScope('request_access')->firstOrCreate(['name' => strtolower(trim($name))]);
                 $keywordIds[] = $keyword->id;
             }
             $capstone->keywords()->sync($keywordIds);
@@ -1336,7 +1415,7 @@ class CapstoneController extends Controller
 
         if ($request->has('resources')) {
             $capstone->resources()->delete();
-            foreach ($request->resources as $res) {
+            foreach ($resources as $res) {
                 $capstone->resources()->create([
                     'name'               => $res['name'],
                     'file_path'          => $res['file_path'],
@@ -1362,8 +1441,10 @@ class CapstoneController extends Controller
             ]);
         }
 
-        $capstone->load('keywords', 'referencedCapstones', 'resources', 'adviser');
+        $uploads->claim($capstone, $paths);
+        $capstone->load('keywords', 'referencedCapstones', 'resources', 'adviser:id,name');
         return $this->successResponse($capstone, 'Capstone updated.');
+        });
     }
 
     /**
@@ -1373,6 +1454,7 @@ class CapstoneController extends Controller
      */
     public function getAnalytics(Request $request, Capstone $capstone): JsonResponse
     {
+        $this->authorize('view', $capstone);
         $days = 30;
         $start = now()->subDays($days - 1)->startOfDay();
 

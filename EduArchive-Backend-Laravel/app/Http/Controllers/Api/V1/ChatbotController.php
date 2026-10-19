@@ -65,6 +65,10 @@ class ChatbotController extends Controller
         $user = $request->user();
         $role = $this->resolveRole($user);
         $msg  = trim($validated['message']);
+        if ($role !== 'admin' && preg_match('/never\s+logged\s+in|most\s+active\s+users?/i', $msg)) {
+            return $this->buildResponse($this->responseSvc->accessDenied('Account activity is administrator-only.'), 'access_denied');
+        }
+
 
         // ── 3. Intent detection (pure PHP, no AI) ───────────────────────────────
         $intent  = $this->intentSvc->detect($msg);
@@ -218,6 +222,7 @@ class ChatbotController extends Controller
         try {
             $hints['keywords'] = \Illuminate\Support\Facades\DB::table('keywords')
                 ->join('capstone_keyword', 'keywords.id', '=', 'capstone_keyword.keyword_id')
+                ->whereIn('capstone_keyword.capstone_id', \App\Models\Capstone::query()->select('capstones.id'))
                 ->selectRaw('keywords.name, COUNT(*) as total')
                 ->groupBy('keywords.name')->orderByDesc('total')
                 ->limit(3)->pluck('name')->toArray();
@@ -293,7 +298,7 @@ class ChatbotController extends Controller
         if ($isAdviserQuery || $selectedAdviserId) {
             // If adviser is already selected via button, skip the faculty list step
             if ($selectedAdviserId) {
-                $adviser = \App\Models\User::find($selectedAdviserId);
+                $adviser = \App\Models\User::whereKey($selectedAdviserId)->where('is_approved', true)->where('is_archived', false)->whereHas('role', fn ($q) => $q->where('name', 'faculty'))->first();
                 if (!$adviser) {
                     return ['reply' => "The selected adviser could not be found.", 'suggested_capstones' => []];
                 }

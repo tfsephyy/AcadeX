@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { HiOutlineAcademicCap, HiOutlineUserGroup, HiOutlineDocumentAdd, HiOutlineEye, HiOutlineBookOpen, HiOutlineGlobe, HiOutlineShieldCheck, HiOutlineShare } from 'react-icons/hi';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend, LineChart, Line } from 'recharts';
 import {
@@ -44,7 +43,6 @@ function MetricBar({ value, max, color }) {
 }
 
 export default function AdminDashboard() {
-    const navigate = useNavigate();
     const [stats, setStats] = useState(null);
     const [uploadedByYear, setUploadedByYear] = useState([]);
     const [studentsPerYear, setStudentsPerYear] = useState([]);
@@ -100,7 +98,6 @@ export default function AdminDashboard() {
 
     if (loading) return <Loading text="Loading dashboard..." />;
 
-    const totalStudents = studentsPerYear.reduce((sum, d) => sum + (d.count || 0), 0);
     const maxViews = mostViewed[0]?.unique_views || 1;
     const maxCitations = mostCited[0]?.citation_count || 1;
 

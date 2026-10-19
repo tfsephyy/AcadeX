@@ -44,6 +44,7 @@ class VisitorCapstoneController extends Controller
      */
     private function visibleQuery()
     {
+<<<<<<< HEAD
         return Capstone::with(['keywords', 'uploader:id,name', 'adviser:id,name'])
             ->where('is_archived', false)
             ->where('approval_status', 'approved')   // Must pass internal review first
@@ -63,11 +64,15 @@ class VisitorCapstoneController extends Controller
     {
         return $capstone->publication_status === 'published'
             || $capstone->copyright_status   === 'copyrighted';
+=======
+        return Capstone::published();
     }
 
-    // ──────────────────────────────────────────────────────────────
-    // List
-    // ──────────────────────────────────────────────────────────────
+    private function canSeeCapstonePdf(Capstone $capstone): bool
+    {
+        return app(\App\Services\CapstoneAccess::class)->published($capstone);
+>>>>>>> ee8974fe9d3c2e424b7f25c29171302cd39d7c56
+    }
 
     public function index(Request $request): JsonResponse
     {
@@ -173,6 +178,7 @@ class VisitorCapstoneController extends Controller
 
     public function show(Request $request, Capstone $capstone): JsonResponse
     {
+<<<<<<< HEAD
         // Enforce visibility: must be approved AND meet at least one visitor-visibility tier
         $visible = $capstone->is_archived === false
             && $capstone->approval_status === 'approved'
@@ -181,6 +187,15 @@ class VisitorCapstoneController extends Controller
                 || $capstone->copyright_status === 'copyrighted'
                 || !empty($capstone->imrad_path)
             );
+=======
+        $this->authorize('view', $capstone);
+        // Enforce visibility: capstone must be in the visitor-visible set
+        $visible = $capstone->is_archived === false && (
+            $capstone->publication_status === 'published' ||
+            $capstone->copyright_status === 'copyrighted' ||
+            !empty($capstone->imrad_path)
+        );
+>>>>>>> ee8974fe9d3c2e424b7f25c29171302cd39d7c56
 
         if (!$visible) {
             return $this->errorResponse('Capstone not found.', 404);
@@ -214,6 +229,7 @@ class VisitorCapstoneController extends Controller
      */
     public function servePdf(Request $request, Capstone $capstone): \Symfony\Component\HttpFoundation\StreamedResponse|JsonResponse
     {
+        $this->authorize('view', $capstone);
         if (!$this->canSeeCapstonePdf($capstone)) {
             return $this->errorResponse('You do not have permission to view this file.', 403);
         }
@@ -250,6 +266,7 @@ class VisitorCapstoneController extends Controller
      */
     public function serveImrad(Request $request, Capstone $capstone): \Symfony\Component\HttpFoundation\StreamedResponse|JsonResponse
     {
+<<<<<<< HEAD
         // Must be approved and visitor-visible
         $canAccessImrad = $capstone->approval_status === 'approved'
             && !$capstone->is_archived
@@ -263,6 +280,9 @@ class VisitorCapstoneController extends Controller
             return $this->errorResponse('You do not have permission to view this file.', 403);
         }
 
+=======
+        $this->authorize('view', $capstone);
+>>>>>>> ee8974fe9d3c2e424b7f25c29171302cd39d7c56
         if (!$capstone->imrad_path || !Storage::disk('local')->exists($capstone->imrad_path)) {
             return $this->errorResponse('IMRAD file not found.', 404);
         }

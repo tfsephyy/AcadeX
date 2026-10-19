@@ -154,82 +154,12 @@ class PdfTextService
 
     private function extractWithOcr(string $pdfPath): ?string
     {
-        $tmpDir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'edubot_ocr_' . uniqid('', true);
-        @mkdir($tmpDir, 0777, true);
-
-        try {
-            // ── Render PDF pages to PNG images via Ghostscript ────────────
-            $outputPattern = $tmpDir . DIRECTORY_SEPARATOR . 'page_%04d.png';
-            $gs            = $this->findGhostscript();
-
-            // Use lower DPI (200 vs 300) for 2-3x speed improvement with minimal accuracy loss
-            $gsCmd = sprintf(
-                '"%s" -dNOPAUSE -dBATCH -dSAFER -sDEVICE=pnggray -r%d -dTextAlphaBits=4 -dGraphicsAlphaBits=4 -dFirstPage=1 -dLastPage=%d -sOutputFile="%s" "%s" 2>&1',
-                $gs,
-                self::OCR_DPI,
-                self::MAX_OCR_PAGES,
-                $outputPattern,
-                $pdfPath
-            );
-
-            exec($gsCmd, $gsOutput, $gsCode);
-
-            if ($gsCode !== 0) {
-                Log::warning('PdfTextService: Ghostscript failed: ' . implode(' ', $gsOutput));
-                return null;
-            }
-
-            // ── Run Tesseract on each page image ──────────────────────────
-            $images   = glob($tmpDir . DIRECTORY_SEPARATOR . 'page_*.png');
-            $textParts = [];
-
-            if (empty($images)) {
-                Log::warning('PdfTextService: Ghostscript produced no images.');
-                return null;
-            }
-
-            $tess = $this->findTesseract();
-
-            // Process pages in parallel using Windows START command for async execution
-            $commands = [];
-            foreach (array_slice($images, 0, self::MAX_OCR_PAGES) as $i => $imagePath) {
-                $outBase = $imagePath . '_ocr';
-                // Use PSM 1 (auto with OSD) for better accuracy, or PSM 3 for speed
-                $tessCmd = sprintf(
-                    '"%s" "%s" "%s" -l eng --psm 1 --oem 1 2>&1',
-                    $tess,
-                    $imagePath,
-                    $outBase
-                );
-                $commands[] = ['cmd' => $tessCmd, 'output' => $outBase . '.txt'];
-            }
-
-            // Execute Tesseract commands (can be parallelized with Process pools in future)
-            $textParts = [];
-            foreach ($commands as $cmd) {
-                exec($cmd['cmd'], $tessOutput, $tessCode);
-
-                if (file_exists($cmd['output'])) {
-                    $pageText = trim(file_get_contents($cmd['output']));
-                    if (!empty($pageText)) {
-                        $textParts[] = $pageText;
-                    }
-                    $this->deleteSafe($cmd['output']);
-                }
-            }
-
-            return !empty($textParts) ? implode("\n\n", $textParts) : null;
-
-        } catch (\Throwable $e) {
-            Log::error('PdfTextService OCR error: ' . $e->getMessage());
-            return null;
-        } finally {
-            // Clean up temp images
-            foreach (glob($tmpDir . DIRECTORY_SEPARATOR . '*') as $f) {
-                $this->deleteSafe($f);
-            }
-            @rmdir($tmpDir);
-        }
+        $gs = $this->findGhostscript();
+        $tess = $this->findTesseract();
+        if (!$gs || !$tess) return null;
+        $pages = app(BoundedPdfOcr::class)->extract($gs, $tess, $pdfPath, 1);
+        $text = trim(implode("\n\n", $pages));
+        return $text !== '' ? $text : null;
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -254,7 +184,7 @@ class PdfTextService
 
     private function tempFile(string $ext): string
     {
-        return sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'edubot_pdf_' . uniqid('', true) . $ext;
+        return PrivateTemp::file($ext);
     }
 
     private function deleteSafe(string $path): void

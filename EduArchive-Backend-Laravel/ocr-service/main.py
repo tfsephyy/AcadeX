@@ -8,14 +8,15 @@ All endpoints, request formats, and response schemas are preserved.
 
 import logging
 import os
+import asyncio
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, File, HTTPException, UploadFile, status
-from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from starlette.concurrency import run_in_threadpool
 
 from ocr_service import _get_ocr, extract_text_from_image, extract_text_from_pdf
-from validators import ALLOWED_EXTENSIONS, validate_file
+from validators import MAX_FILE_SIZE_BYTES, validate_file
 
 # ── Logging ───────────────────────────────────────────────────────────────────
 logging.basicConfig(
@@ -50,19 +51,9 @@ app = FastAPI(
     redoc_url=None,
 )
 
-# CORS — allow the React dev server and Laravel API server (local only)
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",
-        "http://localhost:5174",
-        "http://127.0.0.1:5173",
-        "http://127.0.0.1:5174",
-    ],
-    allow_credentials=True,
-    allow_methods=["GET", "POST", "OPTIONS"],
-    allow_headers=["*"],
-)
+# Server-to-server only. Never publish this listener or proxy it to browsers.
+# Paddle's singleton is serialized; offloading keeps health requests responsive.
+processing_lock = asyncio.Lock()
 
 
 # ── Health endpoints ──────────────────────────────────────────────────────────
@@ -111,12 +102,14 @@ async def run_ocr(file: UploadFile = File(...)):
     """
     # 1. Read upload
     try:
-        content = await file.read()
+        content = await file.read(MAX_FILE_SIZE_BYTES + 1)
     except Exception:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Could not read the uploaded file.",
         )
+    finally:
+        await file.close()
 
     # 2. Validate
     filename = file.filename or ""
@@ -130,10 +123,9 @@ async def run_ocr(file: UploadFile = File(...)):
     # 3. Route to extractor
     ext = os.path.splitext(filename)[1].lower()
     try:
-        if ext == ".pdf":
-            result = extract_text_from_pdf(content)
-        else:
-            result = extract_text_from_image(content)
+        async with processing_lock:
+            extractor = extract_text_from_pdf if ext == ".pdf" else extract_text_from_image
+            result = await run_in_threadpool(extractor, content)
 
     except ValueError as exc:
         # e.g. PDF page-count limit exceeded
@@ -142,7 +134,7 @@ async def run_ocr(file: UploadFile = File(...)):
             detail=str(exc),
         )
     except Exception:
-        logger.exception("OCR processing failed for file: %s", filename)
+        logger.exception("OCR processing failed")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="OCR processing failed. Please try again with a clearer image.",
@@ -157,8 +149,8 @@ if __name__ == "__main__":
 
     uvicorn.run(
         "main:app",
-        host="0.0.0.0",
+        host="127.0.0.1",
         port=8001,
-        reload=True,
+        reload=False,
         log_level="info",
     )

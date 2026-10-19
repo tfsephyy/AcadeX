@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { HiOutlineX, HiOutlineMail, HiOutlineCheckCircle } from 'react-icons/hi';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../context/useAuth';
 import { updateProfile, sendVerificationCode, verifyEmailCode } from '../api/admin';
-import { useNotification } from './Notification';
+import { useNotification } from './useNotification';
 
 export default function ChangeEmailModal({ open, onClose }) {
     const { user, setUser } = useAuth();
@@ -10,7 +10,6 @@ export default function ChangeEmailModal({ open, onClose }) {
     const [currentPassword, setCurrentPassword] = useState('');
     const [newEmail, setNewEmail] = useState('');
     const [showPassword, setShowPassword] = useState(false);
-    const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState(false);
     

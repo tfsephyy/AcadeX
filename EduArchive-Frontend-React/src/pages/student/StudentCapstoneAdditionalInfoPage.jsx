@@ -10,7 +10,7 @@ import {
     uploadStudentResource, uploadStudentImrad,
     getPublishedCapstones, getFacultyList,
 } from '../../api/admin';
-import { useNotification } from '../../components/Notification';
+import { useNotification } from '../../components/useNotification';
 import { LoadingOverlay } from '../../components/Loading';
 import axios from '../../api/axios';
 

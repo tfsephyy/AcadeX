@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { HiOutlineX, HiOutlineMail, HiOutlineKey, HiOutlineShieldCheck, HiOutlineCheckCircle } from 'react-icons/hi';
-import { sendForgotPasswordCode, verifyResetCode, resetPassword } from '../api/admin';
+import { sendForgotPasswordCode, resetPassword } from '../api/admin';
 
 export default function ForgotPasswordModal({ open, onClose }) {
     const [step, setStep] = useState(1); // 1=email, 2=code+password, 3=success

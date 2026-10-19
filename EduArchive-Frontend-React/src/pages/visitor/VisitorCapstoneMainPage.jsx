@@ -6,7 +6,7 @@ import {
     HiOutlineBookmark, HiAcademicCap, HiOutlineFolder, HiOutlineDocumentText,
 } from 'react-icons/hi';
 import { getVisitorCapstone, loadVisitorPdf, loadVisitorImrad, toggleVisitorBookmark } from '../../api/visitor';
-import { useNotification } from '../../components/Notification';
+import { useNotification } from '../../components/useNotification';
 import AuthorDetailsModal from '../../components/AuthorDetailsModal';
 import CitationGenerator from '../../components/CitationGenerator';
 import Loading from '../../components/Loading';
@@ -15,7 +15,7 @@ import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
 import api from '../../api/axios';
 
-pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
+pdfjs.GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/build/pdf.worker.min.mjs', import.meta.url).toString();
 
 export default function VisitorCapstoneMainPage() {
     const { id } = useParams();
@@ -91,9 +91,9 @@ export default function VisitorCapstoneMainPage() {
             setBookmarked(data.is_bookmarked ?? false);
 
             const canSeePdf = data.visitor_can_see_pdf;
-            const hasImrad  = !!data.imrad_path;
+            const hasImrad  = !!data.imrad_available;
 
-            if (canSeePdf && data.pdf_path) {
+            if (canSeePdf && data.pdf_available) {
                 // Load capstone PDF first (primary view)
                 try {
                     const r = await loadVisitorPdf(id);
@@ -117,7 +117,7 @@ export default function VisitorCapstoneMainPage() {
                 // IMRAD-only — load and display IMRAD
                 await tryLoadImrad();
             }
-        } catch (err) {
+        } catch {
             setError('Capstone not found or not accessible.');
         } finally {
             setLoading(false);
@@ -276,7 +276,7 @@ export default function VisitorCapstoneMainPage() {
                         )}
 
                         {/* IMRAD chip */}
-                        {capstone.imrad_path && (
+                        {capstone.imrad_available && (
                             <div>
                                 <label className="text-[11px] font-semibold text-gray-500 uppercase block mb-1.5">IMRAD File</label>
                                 {canSeePdf ? (

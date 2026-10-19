@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { HiOutlineUserAdd, HiOutlineAcademicCap, HiOutlineBriefcase, HiOutlineEye, HiOutlineCheck, HiOutlineX, HiOutlineTrash, HiOutlineSearch, HiOutlineGlobe, HiOutlineWifi } from 'react-icons/hi';
 import { HiOutlineArchiveBoxArrowDown, HiOutlineArchiveBoxXMark } from 'react-icons/hi2';
 import { getNewUsers, getStudents, getFaculty, getVisitors, approveUser, denyUser, removeUser, archiveUser, unarchiveUser, getArchivedUsers, getOnlineUsers } from '../../api/admin';
-import { useNotification } from '../../components/Notification';
+import { useNotification } from '../../components/useNotification';
 import ConfirmDialog from '../../components/ConfirmDialog';
 import Loading, { TableSkeleton } from '../../components/Loading';
 import EmptyState from '../../components/EmptyState';
@@ -88,7 +88,7 @@ export default function UserManagement() {
             setFacultyTotal(facRes.data.data?.total ?? 0);
             setVisitorsTotal(visRes.data.data?.total ?? 0);
             setArchivedTotal(archRes.data.data?.total ?? 0);
-        } catch {}
+        } catch { /* Optional request failed; keep the current view. */ }
     };
 
     const fetchTabData = useCallback(async () => {
@@ -176,7 +176,7 @@ export default function UserManagement() {
                     to: data?.to || 0,
                 });
             }
-        } catch (err) {
+        } catch {
             notify.error('Failed to fetch users.');
         } finally {
             setLoading(false);
@@ -196,7 +196,7 @@ export default function UserManagement() {
                     await approveUser(user.id);
                     notify.success('User accepted!');
                     refreshAll();
-                } catch (err) {
+                } catch {
                     notify.error('Failed to accept user.');
                 }
                 setConfirm(prev => ({ ...prev, open: false }));
@@ -215,7 +215,7 @@ export default function UserManagement() {
                     await denyUser(user.id);
                     notify.success('User denied and removed.');
                     refreshAll();
-                } catch (err) {
+                } catch {
                     notify.error('Failed to deny user.');
                 }
                 setConfirm(prev => ({ ...prev, open: false }));
@@ -234,7 +234,7 @@ export default function UserManagement() {
                     await archiveUser(user.id);
                     notify.success('User archived successfully.');
                     refreshAll();
-                } catch (err) {
+                } catch {
                     notify.error('Failed to archive user.');
                 }
                 setConfirm(prev => ({ ...prev, open: false }));
@@ -253,7 +253,7 @@ export default function UserManagement() {
                     await unarchiveUser(user.id);
                     notify.success('User restored successfully.');
                     refreshAll();
-                } catch (err) {
+                } catch {
                     notify.error('Failed to restore user.');
                 }
                 setConfirm(prev => ({ ...prev, open: false }));
@@ -272,7 +272,7 @@ export default function UserManagement() {
                     await removeUser(user.id);
                     notify.success('User account permanently deleted.');
                     refreshAll();
-                } catch (err) {
+                } catch {
                     notify.error('Failed to delete user.');
                 }
                 setConfirm(prev => ({ ...prev, open: false }));

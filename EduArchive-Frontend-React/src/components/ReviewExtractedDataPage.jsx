@@ -5,7 +5,7 @@ import {
     HiOutlinePlus, HiOutlineX, HiOutlineUserGroup,
 } from 'react-icons/hi';
 import CategoryCombobox from './CategoryCombobox';
-import { useNotification } from './Notification';
+import { useNotification } from './useNotification';
 
 export default function ReviewExtractedDataPage({ nextPath, backPath }) {
     const navigate = useNavigate();

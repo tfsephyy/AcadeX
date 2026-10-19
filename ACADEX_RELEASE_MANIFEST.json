@@ -1,0 +1,1325 @@
+{
+  "candidate_id": "acadex-remediation-d61a0aa271f7a1e4",
+  "source_sha256": "d61a0aa271f7a1e4390b991959d2b9eddb2c55f598babbb77aab10fbd55324b6",
+  "base_commit": "4560e3f32e6cd8b6f63e0c2a4373b8b94f241546",
+  "branch": "main",
+  "date": "2026-10-13",
+  "state": "uncommitted source candidate; NOT READY for public production",
+  "files": [
+    {
+      "path": ".gitignore",
+      "sha256": "3c4b51f31bd18ea07f8c8bd6764809800891bdbdbbf2dc093a029e8e926d7a90",
+      "identity_input": true
+    },
+    {
+      "path": "ACADEX_RELEASE_READINESS.md",
+      "sha256": "975eae0686b0080319251430d15eb12d3a0212ea692f9029bc0b727a322ff678",
+      "identity_input": false
+    },
+    {
+      "path": "CAPSTONE_AWS_DEPLOYMENT_HANDOFF.md",
+      "sha256": "07d6d45dc11db05ee41356acc903fcb9cd9049378341d63c9d7bc161dad9da01",
+      "identity_input": false
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/.editorconfig",
+      "sha256": "f78cc5a2ef8ba61ad956d0f5db453748a981270f6a1b9f4a5a00df8690e7946d",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/.env.example",
+      "sha256": "c3ab2515bf7ee0b9e5479b924596e216fdc9947ebe9d51fa27385b58c43529b5",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/.env.production.example",
+      "sha256": "555bf25dffda61349b7cbcc44a993c082cce106fa40b7ff107cfe90814fc5dd0",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/.env.testing.example",
+      "sha256": "d3bfeee92ff9da9aa8108c1915498175cb51c7a35b39b6c2468137cee2824f8c",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/.gitattributes",
+      "sha256": "a40eb27ee0b545ca5b5542daaf99fec51f84f23b3766a6353864ef2a115bc51c",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/.gitignore",
+      "sha256": "41e54abd62aa86fd5b731e0cd411c5bc7d4196a1f7aef363f434672da8fffa5d",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/README.md",
+      "sha256": "d8b15dfcda5b6e61a96730afedc1ed5376e46ba367e21749a9d789cc222009c4",
+      "identity_input": false
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/app/Console/Commands/BackfillPdfText.php",
+      "sha256": "b310b2d531892503ab5a7ae39418693961ee1963037bebde3fb469b4eff23d07",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/app/Console/Commands/BootstrapAdmin.php",
+      "sha256": "b30704c4f0cbdd3a1deb2e4036cf17c3c71a85b4432b07bc3b32522d8a7e43fd",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/app/Console/Commands/CheckProduction.php",
+      "sha256": "254a5a32ecc1bf536e69b0c4c543cff6d251c47e036d83267bcf3338ec6a0f04",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/app/Console/Commands/EncryptExistingPdfs.php",
+      "sha256": "dbeb69c51b3bd7054c1f8b2f3779cb6958bb225b4b24b11f0a44b68326cbdf68",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/app/Http/Controllers/Api/V1/ActivityLogController.php",
+      "sha256": "3747c0bc8639a147664eb77398ac3befc87eb6660689db5985fc16c4b75c83c5",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/app/Http/Controllers/Api/V1/AdminDashboardController.php",
+      "sha256": "d682045fc4cdc8bf379e62579ba4b30591c643bfff167c3c82b5c2c284f19e1c",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/app/Http/Controllers/Api/V1/AuthController.php",
+      "sha256": "a717e94da5496124cb005e01544c67d24bbc3f81e1556fb9c692f6a87e50ca20",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/app/Http/Controllers/Api/V1/CapstoneController.php",
+      "sha256": "9023663be0d4f2e0b8016ce7b8be26b956ac36fc9cb392c778982130518ee8f9",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/app/Http/Controllers/Api/V1/ChatbotController.php",
+      "sha256": "3635c9b1cb23d9d576335a6bb3ac2c0a8c5f12db6bf29af68c99238dd0f84b2d",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/app/Http/Controllers/Api/V1/NotificationController.php",
+      "sha256": "8aa4b1af828b3b98045f68eed94fff274f83dbec8f1f271aaeb67bdc11a2e87f",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/app/Http/Controllers/Api/V1/PasswordResetController.php",
+      "sha256": "1a0b327f64b5392ff9ea7f6722ef1b504710a29b88d6c27feaba996d2459d28e",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/app/Http/Controllers/Api/V1/PublishedCapstoneController.php",
+      "sha256": "38c4f07f2a94eddd64b1311cab6099081c9a766c8308d6147f5a4f5d19030c95",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/app/Http/Controllers/Api/V1/UserManagementController.php",
+      "sha256": "bd061d49fa6ce19045936dd8533ba5d93821ad1935f82914606654abda5c60d8",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/app/Http/Controllers/Api/V1/VisitorCapstoneController.php",
+      "sha256": "f53733baeb747d728d3984f20f0c21f5b2cc51798dd11f9763fc84617e5b5683",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/app/Http/Controllers/Controller.php",
+      "sha256": "5c2f134f23968a13e7891d50e34f3e6779d94f3d53cb0ae5d670ad515c6d02ce",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/app/Http/Middleware/AttachTokenFromCookie.php",
+      "sha256": "9283a73c3abc85c6ce06e1023c769176ece4428c424665e27d94dfab363a9a34",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/app/Http/Middleware/EnsureActiveAccount.php",
+      "sha256": "ece04d1b799bddc54e01f9ed102306140615c411388a02aa8567f0fbaa051b27",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/app/Http/Middleware/RoleMiddleware.php",
+      "sha256": "937d7175a3180999f068901358e3c6f7ee38209ceb3eb09b6fec58810452a595",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/app/Http/Middleware/TrackLastActive.php",
+      "sha256": "5e0ecd105e7eac94adce6ae99ac94482b17deafa1dca5e3ca16487d5d01f4fcf",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/app/Http/Middleware/TrustConfiguredProxies.php",
+      "sha256": "a947b4d287443620f8a51e5532b9ed184e9ae4900aceb32cb3dc9743514fa2c7",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/app/Http/Middleware/VerifyApiCsrfToken.php",
+      "sha256": "6fc507f585a20190ad9e2186fc08b6c31d765bcdba08f5e80960a992722d9aa4",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/app/Http/Requests/LoginRequest.php",
+      "sha256": "236124510e195a3bc63e037c1d0c6770c40df42de08ca36a7618e4308ea6e337",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/app/Http/Requests/RegisterRequest.php",
+      "sha256": "b312dd63abb03e4afd3863cf831a36eef34ecb3a78a006a0649fe2b90378f4b7",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/app/Jobs/ExtractPdfTextJob.php",
+      "sha256": "d9da44e90fd0d4f52e8bdafcf27b5eddc4490c23935a1cc88796603478cc5244",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/app/Models/AuditLog.php",
+      "sha256": "89217344c597791a41d85f0402d27f28d037c8f4b6fe350c371f86d749862b4d",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/app/Models/Bookmark.php",
+      "sha256": "26a3219bbc8d37f7e686c78daeec50cce205d6d9018da0aea61f2857b90344c9",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/app/Models/Capstone.php",
+      "sha256": "8fd10e221f34f8c45360ce8570c0816ffc32ea2e04adeeb1bfb3296a6592d550",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/app/Models/CapstoneResource.php",
+      "sha256": "6e898cba920bbfec22ac9636dc07d2deeaad45398077776fdb26bda8dfef24a0",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/app/Models/CapstoneView.php",
+      "sha256": "22185088df58410e8ce81847b30faa7ebdda08fad8183e0e05ce2294725edbdc",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/app/Models/DocumentUpload.php",
+      "sha256": "f509e72808a73f0a33ad17f36084f8854339bb0f191fb8b64dee7d354194a231",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/app/Models/Download.php",
+      "sha256": "4428efa1e075a63522d2caeab0f624799b93852c2d8d27a814b2b30cfc7a4f9f",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/app/Models/Keyword.php",
+      "sha256": "8b71c012b88a30d9162018d294d6ce072f4499a6014c9c500356d1ac00ca1e9b",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/app/Models/LoginAudit.php",
+      "sha256": "d9975e15667d97d4d3fb263958e114f30e53bc8ecb50646653ecc0ec96428ba6",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/app/Models/Notification.php",
+      "sha256": "5289af6c7fe6303e5718d1b57c6ab01e54a9613fad4ae5840dd1f693f9da2220",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/app/Models/PasswordResetCode.php",
+      "sha256": "d7cb4e841dbf32d07495334f5d43796c460dd4b3374eb521101e196451826b97",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/app/Models/Role.php",
+      "sha256": "358e2ca6943389398c2ef5748947df4d7a514e186dec52e336aa0f65a2afd777",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/app/Models/StudentProfile.php",
+      "sha256": "6406e93d0ef56fb81c231a9ff702646cf27c17c1ebbbff1ca8a67b4eb08c96b3",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/app/Models/User.php",
+      "sha256": "fd13a951cd3a91253b42daf5c0b13ee07552a585468d741e184f1b38d7d7df99",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/app/Policies/CapstonePolicy.php",
+      "sha256": "7b7be00cc300f1b9d8f0c7313d3d66c7c51459db9eaad2d348149c0382c89eff",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/app/Providers/AppServiceProvider.php",
+      "sha256": "caf306ef6a25a547bbb7edd5508a39b51c365083eb6dd58378cf2242018e94c7",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/app/Services/CapstoneAccess.php",
+      "sha256": "7c45015e45f9d7c423323ff6faf792e0130dc8c41f2456d1a5bd0d19bcfbf5b0",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/app/Services/Chatbot/ChatbotAnalyticsService.php",
+      "sha256": "8ed178a464842d5a5444e762aa0750b864c7e216e031fc0600af5daac48ea1b9",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/app/Services/Chatbot/ChatbotIntentService.php",
+      "sha256": "d122bd275020e8a737edb05d52842cb16077868c1c69f6284df7e0a983dda03c",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/app/Services/Chatbot/ChatbotPermissionService.php",
+      "sha256": "3bd5359ac65c3dd0977061a797687a04b1344205f5e8fead3b035b8e95f00fd6",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/app/Services/Chatbot/ChatbotQueryService.php",
+      "sha256": "b191d0cc3ea057b1766c54b4a86ed86339c054a412c83e6095ca3a82c51103b0",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/app/Services/Chatbot/ChatbotResponseService.php",
+      "sha256": "a265d70e2e7964bd852343f993bc5de23f827c5926b14eeced8a0dbbda34e085",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/app/Services/DocumentUploads.php",
+      "sha256": "00f3e1d09f86ab0a175831a2af91d61ba51a5e8f2b4d868f9b596facc9d729cd",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/app/Services/EmailVerificationService.php",
+      "sha256": "c2b96fa4c050a737a7b8c39d9f014305e96c2f772f348e161758a05308a2b64e",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/app/Services/FastOcrService.php",
+      "sha256": "0e9ba66733ae602f622a6a49b38ea49d834a0d7b23a0a36622f5573a71d41b4a",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/app/Services/NlpSearchService.php",
+      "sha256": "f40269470b2cfc4141683a7b734c7245e397fd4e9d646d222a42c10282b3d7e8",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/app/Services/PdfEncryptorService.php",
+      "sha256": "cac22828cf311fc6ca453797b77801c1caaef453a58ad1ae6aa01da758b28447",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/app/Services/PdfExtractorService.php",
+      "sha256": "853806c7df9ad2913804b1f3da98082b0a6b525c789548daedfaf3d0072ab020",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/app/Services/PdfTextService.php",
+      "sha256": "f811494f33943c766a3919807454b67322d7f704dba72798e221507d7a8f0bde",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/app/Services/PrivateTemp.php",
+      "sha256": "b539e7fcb682417242dd320eabb579df43697b4ffcdaaf6e896844a99192ccc1",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/app/Traits/ApiResponses.php",
+      "sha256": "25c6ad365a0c0a3a9b02813503a669ef5d2d86e01f601cbe463c458b04e9c724",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/artisan",
+      "sha256": "f91a517c0c5d3a904c3f390933964a5e08ec1fc68146882730daac4aca4ffcec",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/bootstrap/app.php",
+      "sha256": "02e88475e5b70ccd8022a3cdbd6a636965a698a96f2389a98c8d07417b28afbc",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/bootstrap/cache/.gitignore",
+      "sha256": "240a3e0d37d2e86b614063f5347eb02d4f99ca6c254de6b82871ff8d95532a7d",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/bootstrap/providers.php",
+      "sha256": "2ef405f988a6ef3f5222bfbdd89352a6ad7b2e9e21aa25e236ac5dff58358953",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/composer.json",
+      "sha256": "223d21d36d5c514d0aded77c78a77496627e72a52483e935b0d4b8dd34f53e46",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/composer.lock",
+      "sha256": "a09dcdf2c7c0c4659a4dddf52c4eddad020a890c70a8974e4a2ecb30ed15709e",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/config/acadex.php",
+      "sha256": "027cfbcee38d8f24e966144d28bdb74d39b8011ad2019b3fe34dfa6c923c2cf1",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/config/app.php",
+      "sha256": "78dcd36b226fd7b24057cb95f567cb6e96561c2406653892d8aef6dcea8461e4",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/config/auth.php",
+      "sha256": "50f8a6fabf848d20ea42a21e01066dd8a75bd822c8251a45f8939616432424dc",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/config/cache.php",
+      "sha256": "b8bcf382283330b94c0a602ff06452de819041ea709e28eea5065d51d1d7d085",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/config/cors.php",
+      "sha256": "8bc307e0eecfb26532c934d8027d157f1652126e52032f45f6328157c34ed2a6",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/config/database.php",
+      "sha256": "4f56083ec3874d216946401fb162b6ef50bc0909d004cd3337e2e33424fc6403",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/config/filesystems.php",
+      "sha256": "be24338de6b37cc7edb6155c25278cd8962ed4619780caa2a4e43979cdfccdbf",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/config/logging.php",
+      "sha256": "d90f24826a3330437f2f2fc12bb28680abe1281d35d62b082c234f4b69873835",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/config/mail.php",
+      "sha256": "825c4b149f2fe412a2e37199794e7c05df7ed86fb51811777faf80238f748aae",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/config/queue.php",
+      "sha256": "ec5ce270a4b621968bbf77c749b28d48acc3ac8aa0d5e5a4d1a3dd899e969814",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/config/sanctum.php",
+      "sha256": "eb196d8621d69c737bc8a70e568d05ea9f07655a7586b8d5dd9d18174d269300",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/config/services.php",
+      "sha256": "e4204c768c5db8ac06f7c3532f0cbfdc38da86d6128180c9975adabec4420e11",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/config/session.php",
+      "sha256": "56ff359587bc83f36b0042cdfadb62751055b19f15085e7ad4523bc90df19e25",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/database/.gitignore",
+      "sha256": "e758642d95e83e907e010b6e46b07b3f953c7cef11fe5ebefc2a77b9d7b4d5f7",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/database/factories/UserFactory.php",
+      "sha256": "05c4cfa8e4dc7ebe659c66717b30ea6970f62d732a1bbce32b55650cccc6aa8d",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/database/migrations/0001_01_01_000000_create_users_table.php",
+      "sha256": "401e70bafb3cf496f1d266d99297b6d549c4f9838e53cf4b5fdff63e8f3e7d50",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/database/migrations/0001_01_01_000001_create_cache_table.php",
+      "sha256": "2ca8398390ecef8eaf72aeac7fefce67f7de631b6f2ec7b7081c8db8953215dc",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/database/migrations/0001_01_01_000002_create_jobs_table.php",
+      "sha256": "7c9c712adf4091c87bf2612f4d0dccdfa1df4501553e4ac068b83d7bd5462fa5",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/database/migrations/2026_02_28_094132_create_personal_access_tokens_table.php",
+      "sha256": "c81ecde85ea5072188c468dcaf79776728b6eb8f684d63fc0d88a4908484ca75",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/database/migrations/2026_03_04_000001_create_capstones_table.php",
+      "sha256": "af4b16c92c835da004f1de49156b6d9adc5ef81942a920406d618fb3eab7f390",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/database/migrations/2026_03_04_000002_create_keywords_tables.php",
+      "sha256": "5caaa9b543d571830ae9e705ca341b1cac4330d3acce0e24ef4b0f07868d1246",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/database/migrations/2026_03_04_000003_create_tracking_tables.php",
+      "sha256": "11cac7256b2c32b3e227adffbe0dbbda084a9bf896b6545e4ba823b49f457da0",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/database/migrations/2026_03_04_000004_create_audit_logs_table.php",
+      "sha256": "2f6c165928001411143071cd2791811c555c8d155d4118d1a27138751fb0ab16",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/database/migrations/2026_03_04_000005_add_approval_fields_to_users_table.php",
+      "sha256": "02cdb9bd97cc9a5c9c55fc9c0c36a593bdbe493014e9e29fbc66c8618f0a8f0c",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/database/migrations/2026_03_26_000001_add_category_to_capstones_table.php",
+      "sha256": "9a68a8ddbae059670a7c6d7a80674f9fd4576e407198dc5299cb661d0c16d1c8",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/database/migrations/2026_04_19_163112_create_password_reset_codes_table.php",
+      "sha256": "00ae1f847ce51f47a40212995ae9f8c9cf98073faafe9db21b71537818d7eb1e",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/database/migrations/2026_04_19_163710_add_is_archived_to_users_table.php",
+      "sha256": "dd2e6c0ba08f33861c0104196e9ec06bef01b89d8012a27c0982af95655a2d70",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/database/migrations/2026_05_07_160936_create_notifications_table.php",
+      "sha256": "5a3fbdea98a838e740061ad11a8764af403fed8573617fed718cd3bb2f61a430",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/database/migrations/2026_08_10_000001_add_publication_status_adviser_to_capstones.php",
+      "sha256": "04cc1267061027c7134a682e658533509ca162d68243587e9aa8b37dcf4708df",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/database/migrations/2026_08_10_000002_create_capstone_resources_table.php",
+      "sha256": "deb21965e9ddbf160c71c877cc1c552ffa3438b85e4ab5262f25fd44b93ae4b2",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/database/migrations/2026_08_10_000003_create_capstone_references_table.php",
+      "sha256": "35919b091a8846ab8ad6d8258188d9287cfa8442e051c38c81a341fb6707d5cb",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/database/migrations/2026_08_10_154246_add_unique_to_capstone_views.php",
+      "sha256": "2f173c15bd93e1ef873733eee201a4b524810edef9117da32b7c29a760237bcb",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/database/migrations/2026_08_10_181718_add_pdf_text_to_capstones_table.php",
+      "sha256": "991abd510925cb7c4f4f1678b736f74a90f641ab81e7b537b05f7c63100fa00e",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/database/migrations/2026_09_02_000001_add_visitor_role.php",
+      "sha256": "5df87fa6622bf7b2342f5584f91fe89d66e66bcd77664cdb35e3b0e46034da35",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/database/migrations/2026_09_02_153145_add_copyright_and_imrad_to_capstones_table.php",
+      "sha256": "f224a1c8dc846c0376960c0304e173d863610b4c2a6105f4b5698f3cfdbd5a74",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/database/migrations/2026_09_03_000001_add_last_active_at_to_users_table.php",
+      "sha256": "2c278d3bcfe69a3d0f17dbc4b169f19edd4f57602f8d82e1d6cc67d383006b7f",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/database/migrations/2026_09_13_000001_extend_fulltext_index_for_nlp_search.php",
+      "sha256": "a84afd0401677c448810071e64019c5cf0e5d5a081f0a5786b17a3278f15e37a",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/database/migrations/2026_09_13_000002_add_author_details_to_capstones_table.php",
+      "sha256": "882540ff780414e7d8844b63a80cf82f1484cd7815adba1e2d94a247480cce86",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/database/migrations/2026_09_22_000001_add_approval_fields_to_capstones.php",
+      "sha256": "2a91a8fcfc6b9cd431f721e75fc95668930060043d519edd9190a992048d3413",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/database/migrations/2026_09_26_154143_add_rejection_reason_to_capstones_table.php",
+      "sha256": "c06fb958ff5951a34248fd0c644af4683256e5fc81ff10bf1909a5add874669a",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/database/migrations/2026_09_26_201445_add_pdf_text_indexed_at_to_capstones_table.php",
+      "sha256": "3b344f1994f01db836b13466b0bce73e62e2559450479c8b417375a22b9d3929",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/database/migrations/2026_10_05_150935_drop_is_published_from_capstones_table.php",
+      "sha256": "51f739f732c25a2002051f2abdfd6c0c31e114aa9402e2667b7396cd6523bda2",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/database/migrations/2026_10_13_000001_secure_authentication_state.php",
+      "sha256": "fb2d0ce9c7f19580996d3dc1c8ea89ecbfcedbad5c9efd36a5477a26b789166f",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/database/migrations/2026_10_13_000002_create_document_uploads_table.php",
+      "sha256": "d8b891ad51d816a9490d368e54441211ce4e903ff5e53195b2499400f20480e7",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/database/seeders/CapstoneSeeder.php",
+      "sha256": "3927ed3737e7a4f74adf236969c48416ed03fc2e14fba613b44934b170d75a40",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/database/seeders/ClearCapstonesSeeder.php",
+      "sha256": "e6c24812112dab0e0c928ca175a6397cbaf3b7051f18ca8df9dc90c6edccefe5",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/database/seeders/DatabaseSeeder.php",
+      "sha256": "c7309f98af2ab6585aa12b222a1d163d0ac5549042e830bb89b89eaa06f23977",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/ocr-service/.env.example",
+      "sha256": "d98efa6aa163d875b3ccbdae6e9370305d5c0afcf88cc16550d1002a6e72769a",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/ocr-service/main.py",
+      "sha256": "c43100b7cad1756b37c14f8512c3d8d4536057bc803b6e2095730efa3abd1517",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/ocr-service/ocr_service.py",
+      "sha256": "cef7e4eef35dd6088ffbee0a32ddac86450b3ca214dcf3236c2f332624f35109",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/ocr-service/requirements-linux.lock",
+      "sha256": "3d997ad0aeee8b010e6e318d207586ee341fe19750b2fde9dc73855dcf1d0acc",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/ocr-service/requirements-windows.lock",
+      "sha256": "4a7151969fe9051f585fc5bf52f705ff24152763f8dc190bc9a0bb7074ed7e1b",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/ocr-service/requirements.txt",
+      "sha256": "768525ab711a82eb17e50dd105ffa2ddb17daaca05beac27db0f6e9b9a946e69",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/ocr-service/tests/probe_laravel_ocr.py",
+      "sha256": "e1e457b0c2bcfa3fcb557b8dcf02f29bd5f113a1a343c2aa55c4ed1eb1f42e53",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/ocr-service/tests/test_ocr.py",
+      "sha256": "2aa847c51d21c239a48fa762afc043904397e066c53451f38145c751e215c7d4",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/ocr-service/validators.py",
+      "sha256": "2c0f515962c6f4b63b9e5a109497831157305b72a88996b7222c7747da628c85",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/package-lock.json",
+      "sha256": "501a4b89fba1cdf862f9dcf366cf082e3b85b4623026798a60001750293f2938",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/package.json",
+      "sha256": "e1bf666b49a401c06ede562b32fc741b8e8dc45cca0a67de136edfbd51335f33",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/phpunit.xml",
+      "sha256": "cdb0cb728fc010b1590629c9664796b496540cb22d3b54c78b69ce5980cab61f",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/public/.htaccess",
+      "sha256": "b7e379c77639fd56144947dbae84c84eb466d9c686ea81f2f013ae85421da923",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/public/favicon.ico",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/public/index.php",
+      "sha256": "eba77cba39695b6bd091fe5211d481f7ebb2ce2d8d26230b5a609465d0a4aff9",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/public/robots.txt",
+      "sha256": "e5c4b84484ee4216e9373be99380320c25dd94805f99f0a805846f087636553f",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/resources/css/app.css",
+      "sha256": "9f49ed837fdc773b89a294d1e86dc68828ef2f774d7e797ba5f89c2a08c84760",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/resources/js/app.js",
+      "sha256": "cf6dab196c721f6911ff99cc4f910897f978599a2d289971a316a5fc33091f94",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/resources/js/bootstrap.js",
+      "sha256": "6fd9fc82e68fa915a882f4e227b9faacbe7bfd66cb953c628840e83bda6b72f4",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/resources/views/welcome.blade.php",
+      "sha256": "e50e41602994840b788471625fec54a4db6138ec971be05cfdfba40daf906c22",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/routes/api.php",
+      "sha256": "dc6ce4515e3aa3a98b4c917816197b62fdc6a9147a73d2b43f1138f405a60b52",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/routes/console.php",
+      "sha256": "9adccc33e7dd400683e434774077c7fdb2f299c5712cedf16a43fdf56f2850fa",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/routes/web.php",
+      "sha256": "248c7eeeb43bb61ee4fb6603e52b44843c64f72a841d671bcd41871aab23f970",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/scripts/http-security-probe.php",
+      "sha256": "440594018967628ea5e637f23259ca590291c48091907b3ca3b037e07f4b9bda",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/scripts/run-security-tests.php",
+      "sha256": "4a0446471426b057e9bd3b6f27fe9ab3d6e2fe0bd171a5f29a9fd66ece50245c",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/storage/app/.gitignore",
+      "sha256": "993b9e3709d7b5189da331725d1169d79e561a509db2490b722b525073d2d976",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/storage/app/private/.gitignore",
+      "sha256": "240a3e0d37d2e86b614063f5347eb02d4f99ca6c254de6b82871ff8d95532a7d",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/storage/app/public/.gitignore",
+      "sha256": "240a3e0d37d2e86b614063f5347eb02d4f99ca6c254de6b82871ff8d95532a7d",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/storage/framework/.gitignore",
+      "sha256": "2d452d65596636197757afa17df52331c84da7bb74ee0f3462fd5be4eb6afdc6",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/storage/framework/cache/.gitignore",
+      "sha256": "32f79194633ddb34f013c6ee8819d112104ff822357adf308ec385b46a7f42f6",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/storage/framework/cache/data/.gitignore",
+      "sha256": "240a3e0d37d2e86b614063f5347eb02d4f99ca6c254de6b82871ff8d95532a7d",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/storage/framework/sessions/.gitignore",
+      "sha256": "240a3e0d37d2e86b614063f5347eb02d4f99ca6c254de6b82871ff8d95532a7d",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/storage/framework/testing/.gitignore",
+      "sha256": "240a3e0d37d2e86b614063f5347eb02d4f99ca6c254de6b82871ff8d95532a7d",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/storage/framework/views/.gitignore",
+      "sha256": "240a3e0d37d2e86b614063f5347eb02d4f99ca6c254de6b82871ff8d95532a7d",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/storage/logs/.gitignore",
+      "sha256": "240a3e0d37d2e86b614063f5347eb02d4f99ca6c254de6b82871ff8d95532a7d",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/tests/Feature/AdminBootstrapTest.php",
+      "sha256": "0d44a2ec39c13fa19cde86d2e85f670b1090da31ff4b931c014be8f8f03ad4dc",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/tests/Feature/AuthenticationSecurityTest.php",
+      "sha256": "3ba2ffaf00ee756f4176bd03620843691d3d1b76026205edc632e208e4c7d453",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/tests/Feature/DocumentAuthorizationTest.php",
+      "sha256": "a11098e27362384ac5bb5db8da361054a522e3ca24a8364ce2ba0bcd6e33833b",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/tests/Feature/ExampleTest.php",
+      "sha256": "aaa4a192fb4aa96d4e81eda06a29968da3d9a73b71026b87a67297e66dd985b8",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/tests/Feature/ProductionConfigurationTest.php",
+      "sha256": "681407b2c02f5809ca2358a01e5d950ef98f0860771826ec0255ed3101d1693a",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/tests/Feature/UploadOwnershipTest.php",
+      "sha256": "533cd46bd281aafb09e9d7a628ef5ec019c9dd0e319cddcea50b95ca69f0975c",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/tests/SecurityTestCase.php",
+      "sha256": "56743a6a6698d33e8951c4158810853243c0a8b7f53cf72b4df541164ee29f5a",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/tests/TestCase.php",
+      "sha256": "c7c209f5579c42647c1f7b2a79ac828e8b54ac62a98442045a6e94fa2c0d0ebc",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/tests/Unit/ApiCsrfTest.php",
+      "sha256": "9ba09de6b117fa7234e1adf795895aa1c6dd64cdb926357d478789ba0c690b15",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/tests/Unit/ExampleTest.php",
+      "sha256": "ffacae5c1a2a44c809420af5b3b404910da1b12167d58764dac6d10b8ba8cfaf",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/tests/Unit/TrustedProxyTest.php",
+      "sha256": "06cb921dc637467a41c478dcde1a354fe85a3b0ae1ff0e16d1c0b4983aea7daf",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/vite.config.js",
+      "sha256": "b981a284135bcb7da21ea5e1aaa2dc31c8daeef92d9b4e5c79538bdb8dfaf6f0",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Frontend-React/.env.example",
+      "sha256": "66671bd12b18ca5ea74ee9b7628701a8d895f673254802cea8c13ceea8c33e0d",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Frontend-React/.gitignore",
+      "sha256": "772485ed8d9d5dafdfd174c938d1feb007e58ae4440c533f5989d977865e69ae",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Frontend-React/README.md",
+      "sha256": "0592a648101d2fb3057915284295c2c8b4cb794ad2e7fcb87caa2b67a6bbb0d3",
+      "identity_input": false
+    },
+    {
+      "path": "EduArchive-Frontend-React/eslint.config.js",
+      "sha256": "02f3d6265613630c8012d0cc7ae21780a57f1a8935e792817693e8da4a1c4c06",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Frontend-React/index.html",
+      "sha256": "d8625d1b77dc6d5c221b599aef43a6d7fac0f8ee1a32ae21c50ff5216b991604",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Frontend-React/package-lock.json",
+      "sha256": "ee2f675b066b73110decce0a58eb33c93caac5dda90b4aa9219371361b44c816",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Frontend-React/package.json",
+      "sha256": "d1f128da65e1c576fd928d0f7dc0f6fa62696e92368f16fb016600c36135c134",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Frontend-React/public/vite.svg",
+      "sha256": "4a748afd443918bb16591c834c401dae33e87861ab5dbad0811c3a3b4a9214fb",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/App.css",
+      "sha256": "1b75716b5511ad178574cd3e3656e5e8dd94544456944b4ff1d253c9ecc614d4",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/App.jsx",
+      "sha256": "f7d38924aa080ea5f50953ae4a0ce485ec4d075900474b8141370ac181c36aae",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/api/admin.js",
+      "sha256": "2e64f2fdc9253342cb7c6fb9844d3773a26a2f57df84b21ec6104ce22bd29068",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/api/axios.js",
+      "sha256": "81130135382e362fcc85462c4e73514e6bdc1cd850f225a567581fe1d074f0ad",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/api/baseUrl.js",
+      "sha256": "9579456a6a03cf9a63d5fcf5572d9fad94f741346d5310d306bf7520da70606f",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/api/faculty.js",
+      "sha256": "d7e4d129a4bd92e2d46080f952654918c9f6d7d854968701850cf7360d5e6d38",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/api/visitor.js",
+      "sha256": "9b555c37fb64278a890245c4b9d0c361e9e623be218367fb1f2ccdde8de47d0c",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/assets/react.svg",
+      "sha256": "35ef61ed53b323ae94a16a8ec659b3d0af3880698791133f23b084085ab1c2e5",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/components/About.jsx",
+      "sha256": "8e0104ff397024aab3a7e225c68a987dafb638435eca004d9a67138d12dcad0b",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/components/AuthorDetailsModal.jsx",
+      "sha256": "ff33667a46791c53a023da8ac8048925898a4606e40cb7c7be807cacf8ecfa2e",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/components/CTA.jsx",
+      "sha256": "081974adcceca5c77586a50a75b116dafd883d6890c3a2b7c9a710fb1423e14a",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/components/CapstoneAnalyticsPanel.jsx",
+      "sha256": "dfb34a40e38749eb0108619d4de28c872cdb3af46055d30f7b5e770f93e27c24",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/components/CategoryCombobox.jsx",
+      "sha256": "14b07d1dab07fd178478236bc7860a166e3775ded21fb8a1e0caf0eef670ad8f",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/components/ChangeEmailModal.jsx",
+      "sha256": "844d6641eaa424ab72e66fe02ff402c7934c7c1d37d15bbd4687673b78ddc687",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/components/ChangePasswordModal.jsx",
+      "sha256": "d56015427aba975e4724ea266dde2b788826cdb0410bb1b014f4ce46965e721f",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/components/Chatbot.jsx",
+      "sha256": "ecd878cc654a252edf4ee7d376b29659e129f5b73f348e8d85e1f1606aa072fe",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/components/CitationGenerator.jsx",
+      "sha256": "d8dec603c469eebe5c493f6d766de6f130b3ab79c28056eca775590f2c301932",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/components/ConfirmDialog.jsx",
+      "sha256": "f3d764cdb37e0e8290342cc88be60e1b63806bb551c85af8c4d273ba8d83d246",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/components/EmptyState.jsx",
+      "sha256": "831ad7ab9d7a0fe4450317e432b8c96fc7fc5d8763cb1eaa7d9a33766f83b068",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/components/Features.jsx",
+      "sha256": "7b0470843dd7ff9815eb6afa46fff6ce5089d2f6c705be1bc5564f251beeca8d",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/components/Footer.jsx",
+      "sha256": "f30e50d855b8dbb38def5c04159dbf0e56e75a2129436d651a6ceb5284f8b270",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/components/ForgotPasswordModal.jsx",
+      "sha256": "f64b97f899e1a68d9d0b53ecad81fb75ee5196564c4e42fc59fa63e21c2a62d6",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/components/GuestRoute.jsx",
+      "sha256": "dc5a9b22b0a6bbbd868c40becf164b7504ed19db3d6fb7678d2cce0afd09fea3",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/components/Hero.jsx",
+      "sha256": "14d31d1974ccc115bab6f3670206015b0dc4ab7e85472919db3075620cc324d4",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/components/Loading.jsx",
+      "sha256": "d41e226e2eab00336140105f5c21166b734b6ae793e7f06739a708183e5f177d",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/components/Modal.jsx",
+      "sha256": "de73c725cd14a99961cfe794a8d3275cf1cf7b815e2c723b810e6e930d55c5d0",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/components/Navbar.jsx",
+      "sha256": "a15cb73f91017eacacd804d0196ede4edc3f3dc4adfeda067775723ea52c8787",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/components/Notification.jsx",
+      "sha256": "acd80fca2f06bd529185f23110ea8490e4982f08e5f37b581f0eee8306bebf86",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/components/Pagination.jsx",
+      "sha256": "e1e422728a56ffe4450e4531b065ed86daea21e8b4e549807e13ddd14b5b4610",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/components/ProfileModal.jsx",
+      "sha256": "5e51467c788807cf516415b26d283786bd67e2791d5a50fc3444dd4ee808c0c4",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/components/ProtectedRoute.jsx",
+      "sha256": "115d8b6dc49955b29a27ff175b16d7abedda1095f5db9c29216b096117b51e79",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/components/RejectReasonModal.jsx",
+      "sha256": "c5f863fdebe0697cf6fb20f758637badb5051a76e5f0eb3bad0441c9cdfa4039",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/components/ReviewExtractedDataPage.jsx",
+      "sha256": "b529ed994c1ef0b94f47bbb2c7921c3df61b0a37139b902f45cbe1b0837479b5",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/components/SearchWithSuggestions.jsx",
+      "sha256": "810a43ffe874e2715f4a657114e656d2b561afe048a35478b2d68bd332927740",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/components/VerifyAccountEmailModal.jsx",
+      "sha256": "cf53b3e945f2f1997d61de2a74e05871f0c3db2f772e1eb2d1fa2d0d48c0fdeb",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/components/admin/AdminLayout.jsx",
+      "sha256": "e29443133e5864a77ee6190ed3cce98428154be134de528dadde5a05f1ebb9c3",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/components/admin/CapstoneModal.jsx",
+      "sha256": "2248d423d9073f71a6e4855b79301cf002ae077e64f29da3b9decdc297862714",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/components/admin/EditCapstoneModal.jsx",
+      "sha256": "0eb8f52019e91dc1864dee547047a8e21cce2ab8d98c3f8ac32d3df7016a8335",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/components/admin/UploadCapstoneModal.jsx",
+      "sha256": "b1dccee061da3c128d92a739c95e7b74718b3bc475798016c1e16704e0e7710f",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/components/faculty/FacultyLayout.jsx",
+      "sha256": "e4d3939783e75923279889d06b238424d653e5bd8e1fe7e977c5cfb1092dcdee",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/components/faculty/FacultyUploadCapstoneModal.jsx",
+      "sha256": "3183c683c308a51442eb46c54e3224f5a1437020367bbe77c2b6fd3588a91268",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/components/student/StudentLayout.jsx",
+      "sha256": "00c1f03ddccebcaa32cda04ce1ff7d169b586367a42fc5f9950571f64b9b2022",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/components/student/StudentUploadCapstoneModal.jsx",
+      "sha256": "dacc4d2119470b55d39925ea7b875585ccde0fe63a78cb5eba030d33e1196ecc",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/components/useNotification.js",
+      "sha256": "ee885f3a77bb8156f20517c345b40c4252b67dc24282ba68776310b061b415c5",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/components/visitor/VisitorLayout.jsx",
+      "sha256": "c8849d1f45f2157c9a999874b298d2cf6bd6197ce472209333c9082158cc8f8e",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/context/AuthContext.jsx",
+      "sha256": "e2c727557a4b8be895fb8de16ddca318705e717aba96f638a81406d0d0b73a80",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/context/ChatbotContext.jsx",
+      "sha256": "3909b431fe0a42333e366c3a82fa16ddd62d5aaa79976cde4f941fa0d5d979b3",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/context/ThemeContext.jsx",
+      "sha256": "3b621aa9bd2372ab42597cfef424e3d630c6dfa06612d71723a6c6e63b7b7caf",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/context/useAuth.js",
+      "sha256": "c032c36d84177d66bb5a91385598aeda4b38dae219c66a6f494c8b23ca2a24ff",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/context/useChatbotContext.js",
+      "sha256": "f2220efe1526686f9f6c5deecce517878fa7b0d53e35e7d4fef2342f2bce57b7",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/context/useTheme.js",
+      "sha256": "9d2e10f019611a2afde02e481f41e4b3a81990aeafb757c67049f736a8c27644",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/index.css",
+      "sha256": "bc9c6bff6b5c5a923920e8df8ab8216c5d137426ca74cf19c10c1753c93e52c7",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/main.jsx",
+      "sha256": "ae81f1c01f2c8018a1ba5cf73171921c8982d90b049bb6b039ea82f8e1dec958",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/pages/Dashboard.jsx",
+      "sha256": "c281590a9cf826adb5579d6a6d5761ed77e6086d8c0ddab56b41d4376ab68935",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/pages/Landing.jsx",
+      "sha256": "0d5d25ad5167fee5e78addd399e13dfb343bc8adb02fa7230bd3d71fd8a34aa6",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/pages/Login.jsx",
+      "sha256": "4b4d873082f1f25dbbe595c8e12765e5762d9360b7b913915566d31e131050a2",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/pages/Register.jsx",
+      "sha256": "642e8924e41526d3babdd33902c269e65990c154fd3fc54892381ff2ad2325c4",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/pages/admin/ActivityLogs.jsx",
+      "sha256": "38705ee5b07501d222142df372360bc07b62d697d487648cd246cd64e2885291",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/pages/admin/AdminCapstoneAdditionalInfoPage.jsx",
+      "sha256": "43c931845ec795c4c66cbd0d682d9a376723a12b97384bf5b5981288376ddf28",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/pages/admin/AdminDashboard.jsx",
+      "sha256": "df0a7e9a5ac5fb4e8e62d80047b60a755af3ffb020d1487055b168d2f49aa589",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/pages/admin/AdminProfile.jsx",
+      "sha256": "78cc8c9529eb938cfb2f7979a02da9735da4467a7ec82c733c92c69aa1f228d0",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/pages/admin/CapstoneApproval.jsx",
+      "sha256": "c47eb80f749b0044d4ab2791753624af49a5e55ad9883042b736ec7cc9b1c082",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/pages/admin/CapstoneLibrary.jsx",
+      "sha256": "11b6139a9ac09d3c4219e05688684b3eac0019628ef5087a485323f30a16575f",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/pages/admin/CapstoneMainPage.jsx",
+      "sha256": "072741b2f7f1f337d969341fbc3e2b6140736996ea7bc9e3be2e7143370b0379",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/pages/admin/PublishedCapstones.jsx",
+      "sha256": "daee3016b2929c7814ef07d8197bd103de3bc16e79d46921658cbf9a36e22a98",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/pages/admin/UserManagement.jsx",
+      "sha256": "8939c208e748716b5e72fa45fc2edf86a1484b57de51810b15f9f79640c11900",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/pages/faculty/CapstoneAdditionalInfoPage.jsx",
+      "sha256": "b16f317d714b916f476fd855e9a7ee54f6f4a9d8ef358c87de553502560efd35",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/pages/faculty/FacultyCapstoneApproval.jsx",
+      "sha256": "24bd6ac2df89b398046277e26361add219324dcdf94d29c605a50280e73f8635",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/pages/faculty/FacultyCapstoneLibrary.jsx",
+      "sha256": "2dc9804392465a725e5903788660e0b18f09ed1b13f7601fedcdc9eb9ae4e927",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/pages/faculty/FacultyProfile.jsx",
+      "sha256": "5eecaf8ca5c8d1c60d4054b8375428deda05efe56b0216b6db6deec88823575f",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/pages/faculty/FacultyUploadedCapstones.jsx",
+      "sha256": "802d2627f09a38adba0529260c03a906450d0e269d9719cba1334c018ae1b0d9",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/pages/student/StudentBookmarks.jsx",
+      "sha256": "8cb9c787b3fc4a7d322908fe8c9b840bfb535af5e6eb061474439e3e8ccf78cd",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/pages/student/StudentBrowseCapstones.jsx",
+      "sha256": "13d975832fa73041fa73086d539a1e896db989c4a67cd9e8bcb67aa31b2590aa",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/pages/student/StudentCapstoneAdditionalInfoPage.jsx",
+      "sha256": "fd33655ff67eb0ef601fad3b14aa4b31ff3df9e71e7743c79f27d16a5a0908c0",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/pages/student/StudentCapstoneLibrary.jsx",
+      "sha256": "180a5ddcabb062b422441d3f23e019627afc82ca67ad97c1bb520cd5cbd545eb",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/pages/student/StudentCapstoneMainPage.jsx",
+      "sha256": "a1e434ff8661304462832c80dd7355cf7de7e66cbb2e7f269a4ec3bc39d68413",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/pages/student/StudentDashboard.jsx",
+      "sha256": "55683ee53fe9f442c5cc04ec74f3711f01419a30e9c8565708628928cec6c478",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/pages/student/StudentProfile.jsx",
+      "sha256": "cda84b97ad57f0f6970b7bfb47a586cf8435d10944d96147d9a5f32257cbe50d",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/pages/student/StudentUploadedCapstones.jsx",
+      "sha256": "ec805d08e770d244cd8296bf70ac5361dc8c4c4bb8998c214b08f446adbea9d3",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/pages/visitor/VisitorCapstoneMainPage.jsx",
+      "sha256": "a03ca66353e1a43dd1be6bd37ad714a412f18aabc4831174c1c0450384af376b",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/pages/visitor/VisitorCapstones.jsx",
+      "sha256": "1b3482a3c6588beebd864db39c13200d4deac17de43cdee97bc8889d34af06b9",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/pages/visitor/VisitorProfile.jsx",
+      "sha256": "197e0889a4194709d5af184b1308d41eaf69d93285e9a3b64798a31d2bce98c2",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Frontend-React/tests/baseUrl.test.js",
+      "sha256": "7316b06a7b1d1142d81bb0f6118d539faf1bf25a823cae44a37d078dc3586ff5",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Frontend-React/vercel.json",
+      "sha256": "6860158a7f766c43ff65bab8c699470ceab780cf7d770f9e1ccbb70a55601eef",
+      "identity_input": true
+    },
+    {
+      "path": "EduArchive-Frontend-React/vite.config.js",
+      "sha256": "f0b28d45aee1d562a700e6d75a71e7aaf37af372aec4a6020721394aeccf3835",
+      "identity_input": true
+    },
+    {
+      "path": "deploy/acadex-ocr.service.example",
+      "sha256": "da3a41655fc24dae484fcbdbd15969cbda0298f98feec02c95ee1d84f447a6c4",
+      "identity_input": true
+    },
+    {
+      "path": "deploy/acadex-queue.service.example",
+      "sha256": "870523feff1ce0530d1298168d83360b127dee97497a8dddf61b5c6b9f1540b3",
+      "identity_input": true
+    },
+    {
+      "path": "docs/ACADEX_ACCESS_POLICY.md",
+      "sha256": "d2dddf098cab343e83a624830b91ad6e937ca1850edfed6e6be383acca91fd41",
+      "identity_input": false
+    },
+    {
+      "path": "docs/ACADEX_OCR_OPERATIONS.md",
+      "sha256": "05d9fdea0aae1c97c9e15834775bbf53084a70b218fce20a7359be01ab2bd50d",
+      "identity_input": false
+    },
+    {
+      "path": "scripts/verify-release-manifest.py",
+      "sha256": "712ad10758927dd2f3ae896f55c7cf79a22fd2209eed55a975120f8f1484fcd4",
+      "identity_input": true
+    }
+  ]
+}

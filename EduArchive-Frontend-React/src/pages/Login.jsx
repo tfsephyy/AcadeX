@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
-import { useAuth } from '../context/AuthContext'
-import { useTheme } from '../context/ThemeContext'
+import { useAuth } from '../context/useAuth'
+import { useTheme } from '../context/useTheme'
 import ForgotPasswordModal from '../components/ForgotPasswordModal'
+import VerifyAccountEmailModal from '../components/VerifyAccountEmailModal'
 
 /* ── Eye icons ─────────────────────────────────────────────── */
 function EyeIcon() {
@@ -197,6 +198,7 @@ export default function Login() {
   const [successMessage, setSuccessMessage] = useState('')
   const [loading, setLoading] = useState(false)
   const [forgotOpen, setForgotOpen] = useState(false)
+  const [verifyOpen, setVerifyOpen] = useState(false)
   const [shake, setShake] = useState(false)
 
   // Show registration success message
@@ -248,7 +250,8 @@ export default function Login() {
       const data = err.response?.data
       triggerShake()
       if (status === 423) {
-        setGlobalError('Your account is pending approval. Please wait for an administrator to activate your access.')
+        setGlobalError(data?.message || 'Account unavailable. Contact your administrator.')
+        if (data?.email_verification_required) setVerifyOpen(true)
       } else if (data?.errors) {
         setErrors(data.errors)
       } else {
@@ -528,6 +531,12 @@ export default function Login() {
       </div>
 
       <ForgotPasswordModal open={forgotOpen} onClose={() => setForgotOpen(false)} />
+      {verifyOpen && <VerifyAccountEmailModal email={form.email} password={form.password}
+        onClose={() => setVerifyOpen(false)} onVerified={() => {
+          setVerifyOpen(false)
+          setSuccessMessage('Email verified. You can sign in once your account is approved.')
+          setGlobalError('')
+        }} />}
     </div>
   )
 }

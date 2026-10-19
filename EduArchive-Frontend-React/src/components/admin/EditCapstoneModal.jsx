@@ -9,7 +9,7 @@ import {
     updateCapstone, uploadAdminResource, uploadAdminImrad,
     getPublishedCapstones, getFacultyList,
 } from '../../api/admin';
-import { useNotification } from '../../components/Notification';
+import { useNotification } from '../../components/useNotification';
 import { LoadingOverlay } from '../../components/Loading';
 import CategoryCombobox from '../../components/CategoryCombobox';
 
@@ -122,7 +122,7 @@ export default function EditCapstoneModal({ capstone, onClose, onSuccess, update
         });
         setPublicationStatus(capstone.publication_status || 'published');
         setCopyrightStatus(capstone.copyright_status || '');
-        setImradInfo(capstone.imrad_path ? { file_path: capstone.imrad_path, file_original_name: capstone.imrad_original_name } : null);
+        setImradInfo(capstone.imrad_available ? { file_path: capstone.imrad_reference, file_original_name: capstone.imrad_original_name } : null);
         setResources(capstone.resources?.map(r => ({ ...r, id: r.id || Date.now() + Math.random() })) || []);
         setReferences(capstone.references?.map(r => ({ id: r.id, title: r.title, author: r.author, year: r.year })) || []);
         setAdviser(capstone.adviser ? { id: capstone.adviser.id, name: capstone.adviser.name } : null);
@@ -231,7 +231,7 @@ export default function EditCapstoneModal({ capstone, onClose, onSuccess, update
                 imrad_original_name: imradInfo?.file_original_name || null,
                 adviser_id:          adviser?.id || null,
                 references:          references.map(r => r.id),
-                resources:           resources.map(r => ({ name: r.name, file_path: r.file_path, file_original_name: r.file_original_name })),
+                resources:           resources.map(r => ({ name: r.name, file_path: r.file_reference || r.file_path, file_original_name: r.file_original_name })),
             });
             notify.success('Capstone updated successfully!');
             onSuccess(res.data.data);

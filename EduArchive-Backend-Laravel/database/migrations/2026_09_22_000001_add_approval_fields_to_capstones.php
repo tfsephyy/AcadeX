@@ -12,13 +12,15 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('capstones', function (Blueprint $table) {
-            $table->enum('approval_status', ['pending', 'approved', 'rejected'])->default('pending')->after('status');
-            $table->unsignedBigInteger('approved_by')->nullable()->after('approval_status');
-            $table->timestamp('approved_at')->nullable()->after('approved_by');
-            $table->text('rejection_reason')->nullable()->after('approved_at');
-            
-            $table->foreign('approved_by')->references('id')->on('users')->onDelete('set null');
-            $table->index('approval_status');
+            // approved_by and approved_at belong to the original create migration.
+            // Check the new column and index separately to resume partial MySQL DDL.
+            if (! Schema::hasColumn('capstones', 'approval_status')) {
+                $table->enum('approval_status', ['pending', 'approved', 'rejected'])->default('pending')->after('status');
+            }
+            if (! Schema::hasIndex('capstones', 'capstones_approval_status_index')) {
+                $table->index('approval_status');
+            }
+            // rejection_reason belongs to the subsequent September 26 migration.
         });
     }
 
@@ -28,9 +30,8 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('capstones', function (Blueprint $table) {
-            $table->dropForeign(['approved_by']);
             $table->dropIndex(['approval_status']);
-            $table->dropColumn(['approval_status', 'approved_by', 'approved_at', 'rejection_reason']);
+            $table->dropColumn('approval_status');
         });
     }
 };

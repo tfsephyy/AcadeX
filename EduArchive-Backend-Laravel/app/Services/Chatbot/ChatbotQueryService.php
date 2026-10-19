@@ -37,19 +37,6 @@ class ChatbotQueryService
     {
         $query = Capstone::with('keywords');
 
-        if ($role === ChatbotPermissionService::ROLE_VISITOR) {
-            $query->where('is_archived', false)
-                  ->where(function ($q) {
-                      $q->where('publication_status', 'published')
-                        ->orWhere('copyright_status', 'copyrighted')
-                        ->orWhereNotNull('imrad_path');
-                  });
-        } else {
-            // Admin, Faculty, Student
-            $query->where('publication_status', 'published')
-                  ->where('is_archived', false);
-        }
-
         return $query;
     }
 

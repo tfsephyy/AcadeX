@@ -47,7 +47,10 @@ return [
     |
     */
 
-    'expiration' => null,
+    // Optional additional age limit. Every bearer request also requires a
+    // future per-token expires_at in EnsureActiveAccount; legacy null expiry
+    // is denied. Do not shorten explicitly issued lifetimes by default.
+    'expiration' => (int) env('SANCTUM_EXPIRATION', 0) ?: null,
 
     /*
     |--------------------------------------------------------------------------
