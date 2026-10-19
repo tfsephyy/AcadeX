@@ -104,9 +104,9 @@ Route::prefix('v1')->group(function () {
             Route::get('/capstones/pending',               [CapstoneController::class, 'getPendingCapstones']);
             Route::get('/capstones',                       [CapstoneController::class, 'index']);
             Route::post('/capstones',                      [CapstoneController::class, 'store']);
-            Route::post('/capstones/upload',               [CapstoneController::class, 'upload'])->middleware('throttle:uploads');
-            Route::post('/capstones/upload-resource',      [CapstoneController::class, 'uploadResource'])->middleware('throttle:uploads');
-            Route::post('/capstones/upload-imrad',         [CapstoneController::class, 'uploadImrad'])->middleware('throttle:uploads');
+            Route::post('/capstones/upload',               [CapstoneController::class, 'upload'])->middleware(['throttle:uploads', 'uploads.limit', 'uploads.concurrency']);
+            Route::post('/capstones/upload-resource',      [CapstoneController::class, 'uploadResource'])->middleware(['throttle:uploads', 'uploads.limit', 'uploads.concurrency']);
+            Route::post('/capstones/upload-imrad',         [CapstoneController::class, 'uploadImrad'])->middleware(['throttle:uploads', 'uploads.limit', 'uploads.concurrency']);
             Route::get('/capstones/archived',              [CapstoneController::class, 'archived']);
             Route::get('/capstones/bookmarked',            [CapstoneController::class, 'adminBookmarks']);
             Route::post('/capstones/{capstone}/approve',   [CapstoneController::class, 'approve']);
@@ -152,9 +152,9 @@ Route::prefix('v1')->group(function () {
             Route::get('/capstones/pending',                 [CapstoneController::class, 'getPendingCapstones']);
             Route::get('/capstones',                         [CapstoneController::class, 'index']);
             Route::post('/capstones',                        [CapstoneController::class, 'store']);
-            Route::post('/capstones/upload',                 [CapstoneController::class, 'upload'])->middleware('throttle:uploads');
-            Route::post('/capstones/upload-resource',        [CapstoneController::class, 'uploadResource'])->middleware('throttle:uploads');
-            Route::post('/capstones/upload-imrad',           [CapstoneController::class, 'uploadImrad'])->middleware('throttle:uploads');
+            Route::post('/capstones/upload',                 [CapstoneController::class, 'upload'])->middleware(['throttle:uploads', 'uploads.limit', 'uploads.concurrency']);
+            Route::post('/capstones/upload-resource',        [CapstoneController::class, 'uploadResource'])->middleware(['throttle:uploads', 'uploads.limit', 'uploads.concurrency']);
+            Route::post('/capstones/upload-imrad',           [CapstoneController::class, 'uploadImrad'])->middleware(['throttle:uploads', 'uploads.limit', 'uploads.concurrency']);
             Route::get('/capstones/archived',                [CapstoneController::class, 'archived']);
             Route::post('/capstones/{capstone}/approve',     [CapstoneController::class, 'approve']);
             Route::post('/capstones/{capstone}/reject',      [CapstoneController::class, 'reject']);
@@ -173,9 +173,9 @@ Route::prefix('v1')->group(function () {
             // Students can only see/manage their own uploaded capstones
             Route::get('/capstones',                         [CapstoneController::class, 'index']);
             Route::post('/capstones',                        [CapstoneController::class, 'store']);
-            Route::post('/capstones/upload',                 [CapstoneController::class, 'upload'])->middleware('throttle:uploads');
-            Route::post('/capstones/upload-resource',        [CapstoneController::class, 'uploadResource'])->middleware('throttle:uploads');
-            Route::post('/capstones/upload-imrad',           [CapstoneController::class, 'uploadImrad'])->middleware('throttle:uploads');
+            Route::post('/capstones/upload',                 [CapstoneController::class, 'upload'])->middleware(['throttle:uploads', 'uploads.limit', 'uploads.concurrency']);
+            Route::post('/capstones/upload-resource',        [CapstoneController::class, 'uploadResource'])->middleware(['throttle:uploads', 'uploads.limit', 'uploads.concurrency']);
+            Route::post('/capstones/upload-imrad',           [CapstoneController::class, 'uploadImrad'])->middleware(['throttle:uploads', 'uploads.limit', 'uploads.concurrency']);
             Route::get('/capstones/archived',                [CapstoneController::class, 'archived']);
             Route::put('/capstones/{capstone}',              [CapstoneController::class, 'update']);
             Route::delete('/capstones/{capstone}',           [CapstoneController::class, 'destroy']);

@@ -14,6 +14,7 @@ use App\Services\NlpSearchService;
 use App\Services\PdfEncryptorService;
 use App\Services\PdfExtractorService;
 use App\Services\PdfTextService;
+use App\Services\UploadLimits;
 use App\Traits\ApiResponses;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -230,16 +231,30 @@ class CapstoneController extends Controller
      */
     public function upload(Request $request): JsonResponse
     {
+        $limits = app(UploadLimits::class);
+        if (!$limits->hasSafeUploadMemory()) {
+            return $this->errorResponse('Uploads are temporarily unavailable because the server memory limit is below the safe application baseline.', 503);
+        }
+
         $validator = Validator::make($request->all(), [
-            'pdf' => 'required|file|mimes:pdf|max:51200', // 50MB max
-        ]);
+            // No hard-coded application size limit: the server ceilings in
+            // PHP/Apache are reported below when they are the limiting layer.
+            'pdf' => 'required|file|mimes:pdf',
+        ], $this->uploadValidationMessages('pdf'));
+
+        $this->addUploadLimitError($validator, 'pdf');
 
         if ($validator->fails()) {
-            return $this->errorResponse('Validation failed.', 422, $validator->errors());
+            return $this->validationFailure($validator);
         }
 
         $file           = $request->file('pdf');
+        if ($file && $limits->effectiveMaxBytes() > 0 && $file->getSize() > $limits->effectiveMaxBytes()) {
+            return $this->errorResponse('The upload exceeds the maximum allowed size of '.$limits->humanBytes($limits->effectiveMaxBytes()).'.', 413);
+        }
+
         $skipExtraction = $request->boolean('skip_extraction', false);
+        $this->prepareUploadEnvironment($file);
 
         // Only run the expensive OCR/parsing step when not skipped
         if ($skipExtraction) {
@@ -276,15 +291,27 @@ class CapstoneController extends Controller
      */
     public function uploadResource(Request $request): JsonResponse
     {
+        $limits = app(UploadLimits::class);
+        if (!$limits->hasSafeUploadMemory()) {
+            return $this->errorResponse('Uploads are temporarily unavailable because the server memory limit is below the safe application baseline.', 503);
+        }
+
         $validator = Validator::make($request->all(), [
-            'file' => 'required|file|max:51200',
-        ]);
+            'file' => 'required|file',
+        ], $this->uploadValidationMessages('file'));
+
+        $this->addUploadLimitError($validator, 'file');
 
         if ($validator->fails()) {
-            return $this->errorResponse('Validation failed.', 422, $validator->errors());
+            return $this->validationFailure($validator);
         }
 
         $file      = $request->file('file');
+        if ($file && $limits->effectiveMaxBytes() > 0 && $file->getSize() > $limits->effectiveMaxBytes()) {
+            return $this->errorResponse('The upload exceeds the maximum allowed size of '.$limits->humanBytes($limits->effectiveMaxBytes()).'.', 413);
+        }
+
+        $this->prepareUploadEnvironment($file);
         $encryptor = new PdfEncryptorService();
         $path      = $encryptor->encryptAndStore('capstone_resources', $file);
         $reference = app(\App\Services\DocumentUploads::class)->stage($request->user(), 'resource', $path);
@@ -300,15 +327,27 @@ class CapstoneController extends Controller
      */
     public function uploadImrad(Request $request): JsonResponse
     {
+        $limits = app(UploadLimits::class);
+        if (!$limits->hasSafeUploadMemory()) {
+            return $this->errorResponse('Uploads are temporarily unavailable because the server memory limit is below the safe application baseline.', 503);
+        }
+
         $validator = Validator::make($request->all(), [
-            'file' => 'required|file|mimes:pdf|max:51200',
-        ]);
+            'file' => 'required|file|mimes:pdf',
+        ], $this->uploadValidationMessages('file'));
+
+        $this->addUploadLimitError($validator, 'file');
 
         if ($validator->fails()) {
-            return $this->errorResponse('Validation failed.', 422, $validator->errors());
+            return $this->validationFailure($validator);
         }
 
         $file      = $request->file('file');
+        if ($file && $limits->effectiveMaxBytes() > 0 && $file->getSize() > $limits->effectiveMaxBytes()) {
+            return $this->errorResponse('The upload exceeds the maximum allowed size of '.$limits->humanBytes($limits->effectiveMaxBytes()).'.', 413);
+        }
+
+        $this->prepareUploadEnvironment($file);
         $encryptor = new PdfEncryptorService();
         $path      = $encryptor->encryptAndStore('capstone_imrad', $file);
         $reference = app(\App\Services\DocumentUploads::class)->stage($request->user(), 'imrad', $path);
@@ -353,7 +392,7 @@ class CapstoneController extends Controller
         ]);
 
         if ($validator->fails()) {
-            return $this->errorResponse('Validation failed.', 422, $validator->errors());
+            return $this->validationFailure($validator);
         }
 
         // Determine approval status based on user role:
@@ -363,14 +402,17 @@ class CapstoneController extends Controller
         //   publication_status stays 'unpublished' until admin explicitly publishes
         // NOTE: approval_status and publication_status are SEPARATE concerns:
         //   approval_status = review gate (pending/approved/rejected)
-        //   publication_status = library visibility (published/unpublished/in_progress)
+        //   publication_status = external publication flag; it controls the
+        //   visitor full-document tier, not platform-library visibility
         $user = $request->user();
         $isStudent = $user->hasRole('student');
 
         $status = $isStudent ? 'pending' : 'approved';
         $approvalStatus = $isStudent ? 'pending' : 'approved';
-        // Students always start unpublished; admin/faculty use whatever they submitted
-        $publicationStatus = $isStudent ? 'unpublished' : $request->input('publication_status', 'published');
+        // Students always start unpublished; admin/faculty uploads also default to unpublished
+        // unless visitor full-document release is explicitly chosen. An explicit null normalizes to unpublished.
+        $rawPub = $request->input('publication_status');
+        $publicationStatus = $isStudent ? 'unpublished' : ($rawPub ?: 'unpublished');
 
         $capstone = DB::transaction(function () use ($request, $user, $status, $approvalStatus, $publicationStatus) {
         $uploads = app(\App\Services\DocumentUploads::class);
@@ -799,15 +841,19 @@ class CapstoneController extends Controller
             return $this->errorResponse('Capstone is not archived.', 400);
         }
 
-<<<<<<< HEAD
+        // Restoration must never grant approval. A rejected submission goes back
+        // through review as pending; any restored record also leaves the external
+        // publication gate closed until an administrator deliberately publishes it.
+        $wasRejected = $capstone->status === 'rejected' || $capstone->approval_status === 'rejected';
         $capstone->update([
-            'status'      => 'approved',
-            'is_archived' => false,
-            // Do NOT touch publication_status — admin sets that separately
+            'status'             => $wasRejected ? 'pending' : $capstone->status,
+            'approval_status'    => $wasRejected ? 'pending' : $capstone->approval_status,
+            'is_archived'        => false,
+            'publication_status' => 'unpublished',
+            'rejection_reason'   => null,
+            'approved_by'        => $wasRejected ? null : $capstone->approved_by,
+            'approved_at'        => $wasRejected ? null : $capstone->approved_at,
         ]);
-=======
-        $capstone->update(['is_archived' => false, 'publication_status' => 'unpublished']);
->>>>>>> ee8974fe9d3c2e424b7f25c29171302cd39d7c56
 
         AuditLog::log('unarchive_capstone', $request->user()->id, Capstone::class, $capstone->id);
 
@@ -821,6 +867,12 @@ class CapstoneController extends Controller
      */
     public function publish(Request $request, Capstone $capstone): JsonResponse
     {
+        $this->authorize('update', $capstone);
+
+        if ($capstone->is_archived) {
+            return $this->errorResponse('Restore the capstone before publishing it.', 400);
+        }
+
         if ($capstone->approval_status !== 'approved') {
             return $this->errorResponse('Only approved capstones can be published.', 400);
         }
@@ -853,14 +905,10 @@ class CapstoneController extends Controller
      */
     public function unpublish(Request $request, Capstone $capstone): JsonResponse
     {
-<<<<<<< HEAD
+        $this->authorize('update', $capstone);
+
         if ($capstone->publication_status !== 'published') {
             return $this->errorResponse('Capstone is not currently published.', 400);
-=======
-        $this->authorize('update', $capstone);
-        if ($capstone->status !== 'approved') {
-            return $this->errorResponse('Only approved capstones can be unpublished.', 400);
->>>>>>> ee8974fe9d3c2e424b7f25c29171302cd39d7c56
         }
 
         $oldStatus = $capstone->publication_status;
@@ -868,12 +916,6 @@ class CapstoneController extends Controller
         // Only change the publication gate — approval_status is SEPARATE and unchanged.
         $capstone->update([
             'publication_status' => 'unpublished',
-<<<<<<< HEAD
-=======
-            'approval_status'    => 'pending',
-            'approved_by'        => null,
-            'approved_at'        => null,
->>>>>>> ee8974fe9d3c2e424b7f25c29171302cd39d7c56
         ]);
 
         AuditLog::log(
@@ -925,6 +967,16 @@ class CapstoneController extends Controller
 
         $capstones = $query->orderByDesc('created_at')
             ->paginate($request->get('per_page', 12));
+
+        if ($user->hasRole('visitor')) {
+            $access = app(\App\Services\CapstoneAccess::class);
+            $capstones->getCollection()->transform(function ($c) use ($access) {
+                $canSeePdf = $access->visitorCanViewDocument($c);
+                $c->visitor_can_see_pdf = $canSeePdf;
+                $c->visitor_imrad_only  = !$canSeePdf && !empty($c->imrad_path);
+                return $c;
+            });
+        }
 
         return $this->successResponse($capstones, 'User bookmarked capstones retrieved.');
     }
@@ -990,7 +1042,7 @@ class CapstoneController extends Controller
      */
     public function recordView(Request $request, Capstone $capstone): JsonResponse
     {
-        $this->authorize('view', $capstone);
+        $this->authorize('interact', $capstone);
         $userId = $request->user()?->id;
         $ip     = $request->ip();
 
@@ -1293,7 +1345,7 @@ class CapstoneController extends Controller
      */
     public function toggleBookmark(Request $request, Capstone $capstone): JsonResponse
     {
-        $this->authorize('view', $capstone);
+        $this->authorize('interact', $capstone);
         $user = $request->user();
         $existing = $capstone->bookmarks()->where('user_id', $user->id)->first();
 
@@ -1346,7 +1398,7 @@ class CapstoneController extends Controller
         ]);
 
         if ($validator->fails()) {
-            return $this->errorResponse('Validation failed.', 422, $validator->errors());
+            return $this->validationFailure($validator);
         }
 
         return DB::transaction(function () use ($request, $capstone) {
@@ -1385,6 +1437,10 @@ class CapstoneController extends Controller
             $updateData['publication_status'] = 'unpublished';
             $updateData['approved_by'] = null;
             $updateData['approved_at'] = null;
+        } else {
+            if (array_key_exists('publication_status', $updateData)) {
+                $updateData['publication_status'] = $updateData['publication_status'] ?: 'unpublished';
+            }
         }
         $capstone->update($updateData);
 
@@ -1597,5 +1653,73 @@ class CapstoneController extends Controller
                 });
             }
         });
+    }
+
+    /**
+     * Return the first validation error as the top-level message so clients can
+     * show "file is too large" instead of the generic "Validation failed.".
+     */
+    private function validationFailure(\Illuminate\Validation\Validator $validator): JsonResponse
+    {
+        $message = $validator->errors()->first();
+
+        return $this->errorResponse(
+            $message !== '' ? $message : 'Validation failed.',
+            422,
+            $validator->errors()
+        );
+    }
+
+    private function uploadValidationMessages(string $field): array
+    {
+        $limits = app(UploadLimits::class);
+        $server = $limits->serverSummary();
+
+        return [
+            $field.'.required' => 'Select a file before uploading.',
+            $field.'.file' => 'The selected file could not be uploaded.',
+            $field.'.mimes' => 'The selected file must be a valid PDF.',
+            $field.'.uploaded' => 'The file was rejected by the server upload limit ('.$server.'). '
+                .'Ask the administrator to raise upload_max_filesize and post_max_size.',
+        ];
+    }
+
+    /**
+     * PHP reports UPLOAD_ERR_INI_SIZE as a generic "failed to upload" message.
+     * Add a precise error from the actual server ceilings.
+     */
+    private function addUploadLimitError(\Illuminate\Validation\Validator $validator, string $field): void
+    {
+        $validator->after(function (\Illuminate\Validation\Validator $validator) use ($field) {
+            $file = request()->file($field);
+            if (!$file) return;
+
+            $limits = app(UploadLimits::class);
+            $size = (int) $file->getSize();
+            $serverMax = $limits->fileMaxBytes();
+            $effectiveMax = $limits->effectiveMaxBytes();
+
+            if (in_array($file->getError(), [UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_FORM_SIZE], true)) {
+                $validator->errors()->add($field,
+                    'The file exceeds the server upload limit of '.$limits->humanBytes($serverMax).'. '
+                    .'Ask the administrator to raise the PHP upload_max_filesize and post_max_size limits.');
+            } elseif ($serverMax > 0 && $size > $serverMax) {
+                $validator->errors()->add($field,
+                    'The file is '.$limits->humanBytes($size).' but the server accepts at most '
+                    .$limits->humanBytes($serverMax).' per file.');
+            } elseif ($effectiveMax > 0 && $size > $effectiveMax) {
+                $validator->errors()->add($field,
+                    'The upload exceeds the maximum allowed size of '.$limits->humanBytes($effectiveMax).'.');
+            }
+        });
+    }
+
+    /**
+     * Set a reasonable execution time limit for extraction and encryption
+     * without overriding the administrator's configured memory ceiling.
+     */
+    private function prepareUploadEnvironment(\Illuminate\Http\UploadedFile $file): void
+    {
+        @set_time_limit(600);
     }
 }

@@ -186,7 +186,6 @@ class Capstone extends Model
      */
     public function scopePublished($query)
     {
-<<<<<<< HEAD
         return $query->where('approval_status', 'approved')
                      ->where('is_archived', false);
     }
@@ -195,11 +194,6 @@ class Capstone extends Model
     public function scopeApproved($query)
     {
         return $query->where('approval_status', 'approved')
-=======
-        // A capstone is considered published when publication_status = 'published'
-        // and it is not archived.
-        return $query->where('publication_status', 'published')->where('status', 'approved')->where('approval_status', 'approved')
->>>>>>> ee8974fe9d3c2e424b7f25c29171302cd39d7c56
                      ->where('is_archived', false);
     }
 

@@ -413,34 +413,37 @@ class ChatbotResponseService
             ],
             [
                 'triggers' => ['publication status', 'publication'],
-                'answer'   => "📰 **Publication Status** indicates whether a capstone has been formally published or submitted to an academic conference or journal.\n\n" .
-                    "Possible values include:\n- **Published** — formally submitted to a publication\n- **Unpublished** — internal archive only\n\n" .
-                    "This is separate from whether the capstone is *visible* in EduArchive (controlled by `publication_status`).",
+                'answer'   => "📰 **Publication Status** controls whether a capstone is externally released to authenticated visitor accounts:\n\n" .
+                    "- **Published** — grants authenticated visitor accounts full-document access (complete PDF and resources) once approved\n" .
+                    "- **Unpublished** — internal archive only; accessible to authenticated students and faculty once approved, but hidden from visitors unless copyrighted or an IMRAD document is provided\n\n" .
+                    "This is separate from **Approval Status**, which controls inclusion in the authenticated EduArchive library.",
             ],
             [
                 'triggers' => ['copyright'],
                 'answer'   => "©️ **Copyright Status** indicates the intellectual property status of a capstone.\n\n" .
-                    "Common values:\n- **Copyrighted** — the authors have claimed copyright\n- **None / Not specified** — no formal copyright claim\n\n" .
-                    "Copyrighted capstones may be visible to visitors even if they haven't been formally published in EduArchive.",
+                    "Common values:\n- **Copyrighted** — the authors have claimed copyright\n- **Pending** — copyright processing or verification is underway\n- **Unprotected** — no formal copyright claim\n\n" .
+                    "Approved capstones marked as copyrighted grant authenticated visitor accounts full document access even when unpublished.",
             ],
             [
                 'triggers' => ['archived vs published', 'archived and published', 'difference between archived', 'archived'],
                 'answer'   => "📦 **Archived vs Published:**\n\n" .
-                    "- **Published** (`publication_status = 'published'`) — the capstone is visible in the EduArchive library for all users.\n" .
-                    "- **Archived** (`is_archived = true`) — the capstone has been hidden/removed from public view but is still in the database.\n\n" .
-                    "An archived capstone will not appear in search results.",
+                    "- **Approved** (`approval_status = 'approved'`) — the capstone is in the internal EduArchive library for authenticated students and faculty.\n" .
+                    "- **Published** (`publication_status = 'published'`) — grants authenticated visitor accounts access to the complete document and resources.\n" .
+                    "- **Archived** (`is_archived = true`) — the capstone has been hidden from library view and search results.",
             ],
             [
                 'triggers' => ['approval status', 'approval'],
                 'answer'   => "✅ **Approval Status** tracks where a capstone is in the review pipeline:\n\n" .
-                    "- **Pending** — awaiting faculty/admin review\n- **Approved** — accepted and published\n- **Rejected** — returned with a reason for revision\n\n" .
-                    "You can see the rejection reason in your uploaded capstones list.",
+                    "- **Pending** — awaiting faculty adviser or admin review (student submissions begin here)\n" .
+                    "- **Approved** — accepted into the authenticated EduArchive library\n" .
+                    "- **Rejected** — returned with a reason for revision\n\n" .
+                    "Admin and faculty uploads are automatically approved upon upload. Rejection reasons are shown in your uploaded capstones list.",
             ],
             [
                 'triggers' => ['pending'],
-                'answer'   => "⏳ **Pending** means your capstone submission is waiting for review.\n\n" .
-                    "The approval flow is:\n1. Student/Faculty uploads capstone → status = **Pending**\n2. Faculty reviews it → Approved or Rejected\n3. Admin gives final approval → Capstone becomes Published\n\n" .
-                    "You will receive a notification when the status changes.",
+                'answer'   => "⏳ **Pending** means a student capstone submission is waiting for review.\n\n" .
+                    "The review flow is:\n1. Student uploads capstone → status = **Pending** and **Unpublished**\n2. Faculty adviser or Admin reviews the submission → **Approved** or **Rejected**\n3. Once approved, the capstone enters the internal library for students and faculty\n4. Visitor full-document release (publication) is managed separately\n\n" .
+                    "Admin and faculty uploads are auto-approved upon submission. You will receive a notification when submission status changes.",
             ],
             [
                 'triggers' => ['role of an adviser', 'adviser', 'advisor'],

@@ -119,7 +119,7 @@ flowchart LR
 | `SETUP.md` | Original workstation setup history and local commands; not a current production runbook |
 | `.local/` | Ignored workstation tooling, logs, evidence, temporary test material, and source backups; not part of a normal clone |
 
-The frontend's `vercel.json` is a repository artifact from an earlier hosting arrangement. It does not describe the active EC2 release process. WWW previously pointed to an obsolete Vercel deployment and was corrected.
+The obsolete frontend Vercel configuration was removed from the repository on October 19, 2026 after the client standardized deployment on AWS. No Vercel configuration, package, script, or local project metadata is required for the EC2 release process. Dated reports and source snapshots retain historical references to the former hosting arrangement as evidence; they are not active deployment configuration. WWW previously pointed to that obsolete deployment and was corrected.
 
 ## 4. Last verified AWS and host baseline
 
@@ -242,15 +242,15 @@ Read [docs/ACADEX_ACCESS_POLICY.md](docs/ACADEX_ACCESS_POLICY.md) for the full p
 | Role | Core behavior to preserve |
 | --- | --- |
 | Admin | Management and authorized access to all archive states and attachments |
-| Faculty | Own uploads, assigned student submissions, and approved published material; adviser assignment does not grant general edit/delete rights |
-| Student | Own submissions and approved published material; existing download restrictions remain |
-| Visitor | Approved, published, unarchived material; no document mutation or general download permission |
+| Faculty | Own uploads, assigned student submissions, and approved unarchived library records; adviser assignment does not grant general edit/delete rights |
+| Student | Own submissions and approved unarchived library records; existing download restrictions remain |
+| Visitor (authenticated visitor accounts) | Approved, unarchived records in the visitor tiers: full PDF/resources only when published or copyright-cleared; IMRAD/metadata only when an IMRAD document exists; no document mutation or download permission |
 
 Attachments, resources, IMRAD files, preview/download routes, queries, references, and chatbot access inherit the parent record's authorization. Archived/private/unpublished records must not become accessible through guessed identifiers, tokens, filtering, or a secondary route.
 
 Private file encryption is implemented by `PdfEncryptorService`. The application key and encrypted storage belong to the same recovery set. A SQL-only backup is insufficient to restore the archive; a source-only Git clone is also insufficient.
 
-Staged uploads are opaque owner/purpose-bound references. Limits introduced during finalization: 20 pending references per owner, 256 MiB of pending encrypted bytes, and a 2 GiB free-space reserve before new encrypted writes. Upload routes use a shared authenticated-owner rate limit of 30 per hour. Inspect `DocumentUploads`, `PdfEncryptorService`, `config/acadex.php`, `AppServiceProvider`, and `routes/api.php` before changing these values.
+Staged uploads are opaque owner/purpose-bound references. Limits introduced during finalization: 20 pending references per owner, 256 MiB of pending encrypted bytes, and a 2 GiB free-space reserve before new encrypted writes. Upload routes use a shared authenticated-owner rate limit of 30 per hour. The application no longer imposes a separate 50 MiB per-file rule; the effective ceiling is PHP-FPM (`public/.user.ini`, currently 64M per file / 70M per request / 512M memory) or an optional `ACADEX_MAX_UPLOAD_BYTES` which can only lower the 64 MiB memory-safe ceiling. Supporting a genuine 128 MiB limit requires a reviewed streaming/chunked encryption design or separately validated server capacity; it is not supported by the current whole-file implementation. Inspect `DocumentUploads`, `PdfEncryptorService`, `UploadLimits`, `RejectOversizedUploads`, `config/acadex.php`, `AppServiceProvider`, and `routes/api.php` before changing these values.
 
 The adviser projection was narrowed to identity fields rather than serializing a complete account/profile. Full extracted PDF text and physical storage paths should not become API response fields.
 
@@ -717,13 +717,18 @@ Never copy the laptop `.env` over production. It can point to a different schema
 | `MAX_PENDING_UPLOADS` | Source default 20 per owner |
 | `MAX_PENDING_UPLOAD_BYTES` | Source default 268435456 bytes / 256 MiB |
 | `MIN_FREE_STORAGE_BYTES` | Source default 2147483648 bytes / 2 GiB |
+| `ACADEX_MAX_UPLOAD_BYTES` | Optional application ceiling; `0` means automatic memory-safe ceiling (at most 64 MiB); a positive value can only lower it |
+| `UPLOAD_LOCK_STORE` | Inter-process cache store for upload concurrency locking across PHP-FPM workers; defaults to `CACHE_STORE`. In production, must be an inter-process store (`database`, `file`, `redis`); process-local stores (`array`, `null`) are rejected |
+| `public/.user.ini` | PHP-FPM upload ceilings: 64M per file / 70M per request, 600s timeouts, 512M memory; adjust with server RAM |
 | Upload limiter in `AppServiceProvider` / route middleware | Shared 30 uploads per hour per authenticated owner |
 | OCR `HOME`, `OCR_MODEL_CACHE`, `TMPDIR` | Actual service-process directories; read current unit, do not assume the example file is loaded |
 | `OMP_NUM_THREADS`, `MKL_NUM_THREADS` | Preserve the measured bounded service settings; inspect actual unit rather than multiplying CPU concurrency |
 | OCR process count | One worker in the tested installation |
 | Historical OCR memory limits | `MemoryMax=1153433600`, `MemorySwapMax=805306368` from systemd discovery; confirm current unit |
 
-PHP upload/post/body limits, reverse-proxy limits/timeouts, OCR request limits, and application file validation are separate layers. Inspect actual Apache/PHP-FPM configuration and test the intended file size end to end before increasing a single layer. The fact that Laravel accepts up to 50 MiB does not increase the primary OCR service's 20 MiB request budget.
+PHP upload/post/body limits, reverse-proxy limits/timeouts, OCR request limits, and application file validation are separate layers. Inspect actual Apache/PHP-FPM configuration and test the intended file size end to end before increasing a single layer. The application has no 50 MiB per-file rule; uploads are limited by PHP-FPM (see `public/.user.ini`), optional `ACADEX_MAX_UPLOAD_BYTES` (clamped to the memory-safe ceiling of 64 MiB), the owner's staged-upload quota, Apache `LimitRequestBody` if configured, and reverse-proxy body limits. Multipart `Content-Length` is compared against `post_max_size` (allowing headers, boundaries, and fields within the 70M request envelope), while the 64 MiB per-file application limit is verified against each parsed uploaded file's actual byte size. A large upload must still fit the OCR service's separate 20 MiB request budget when extraction is requested; documents between 20 MiB and 64 MiB require the skip/manual extraction path. After deployment, confirm `upload_max_filesize`/`post_max_size` through the web SAPI and perform an authenticated test upload through the browser; `acadex:check-production` prints informational CLI values and separates unconstrained memory (`-1 (unlimited)`) from zero capacity, which can differ from PHP-FPM.
+
+**October 19, 2026 upload/approval release note.** Removal of the former hard-coded Laravel 50 MiB ceiling was confirmed from source. A low PHP-FPM upload/post ceiling (such as PHP defaults of 2 MiB `upload_max_filesize` and 8 MiB `post_max_size`) is the leading production hypothesis for the reported empty multipart/422 symptom, though it was not directly observed in the live web SAPI. Apache `LimitRequestBody`, reverse-proxy limits, web-SAPI configuration, permissions, timeouts, and host resource exhaustion remain active deployment checks. The source now ships `public/.user.ini` (64M/70M/512M), an upload concurrency guard (`GuardUploadConcurrency`) backed by an inter-process lock store (`UPLOAD_LOCK_STORE` with production rejection of `array`/`null`), a global `PostTooLargeException` JSON/413 handler plus route middleware reporting the actual ceiling and validating individual file sizes, optional `ACADEX_MAX_UPLOAD_BYTES` with safe memory bounding (capped at 64 MiB under whole-file encryption), and no hard-coded 50 MiB rule. Supporting a genuine 128 MiB limit requires a reviewed streaming/chunked encryption design or separately validated server capacity; it is not supported by the current whole-file implementation. The release also adds `2026_10_19_000001_backfill_capstone_approval_status` for legacy approved/rejected rows and `2026_10_19_000002_change_capstone_publication_status_default` for secure unpublished default. On deployment: preserve `.env`/APP_KEY/storage, deploy the new `public/.user.ini` and `.htaccess`, run `php artisan migrate --force`, rebuild caches, reload PHP-FPM/Apache if the system-level ini is used, then test an upload through the browser and confirm approved submissions appear only after review. Do not substitute `migrate:fresh` or a seeder.
 
 ### 22.4 Mail and logs
 

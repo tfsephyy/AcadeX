@@ -1,0 +1,16 @@
+; AcadeX upload ceilings for PHP-FPM (system-level fallback).
+;
+; Install as /etc/php/<version>/fpm/conf.d/99-acadex-uploads.ini when
+; per-directory .user.ini files are disabled, then:
+;   sudo php-fpm<version> -t
+;   sudo systemctl reload php<version>-fpm
+;
+; Keep post_max_size larger than upload_max_filesize so multipart overhead fits.
+; Adjust to the server's RAM before raising memory_limit. A whole-file upload
+; is encrypted in memory, so whole-file encryption needs substantially more RAM
+; than the raw file size.
+upload_max_filesize = 64M
+post_max_size = 70M
+max_execution_time = 600
+max_input_time = 600
+memory_limit = 512M

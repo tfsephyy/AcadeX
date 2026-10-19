@@ -2,6 +2,7 @@ import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { HiOutlineUpload, HiOutlineX, HiOutlineDocumentText, HiOutlineArrowRight } from 'react-icons/hi';
 import axios from '../../api/axios';
+import { getApiErrorMessage } from '../../api/errors';
 import { useNotification } from '../useNotification';
 
 export default function StudentUploadCapstoneModal({ open, onClose }) {
@@ -24,7 +25,7 @@ export default function StudentUploadCapstoneModal({ open, onClose }) {
 
     const handleFileSelect = (e) => {
         const selected = e.target.files[0];
-        if (selected && selected.type === 'application/pdf') {
+        if (selected && (selected.type === 'application/pdf' || /\.pdf$/i.test(selected.name))) {
             setFile(selected);
         } else {
             notify.error('Please select a PDF file.');
@@ -52,7 +53,7 @@ export default function StudentUploadCapstoneModal({ open, onClose }) {
                 },
             });
         } catch (err) {
-            notify.error(err.response?.data?.message || 'Upload failed. Please try again.');
+            notify.error(getApiErrorMessage(err, 'Upload failed. Please try again.'));
             setSkipping(false);
             setUploading(false);
         }
@@ -81,7 +82,7 @@ export default function StudentUploadCapstoneModal({ open, onClose }) {
             });
         } catch (err) {
             if (axios.isCancel?.(err) || err.name === 'CanceledError' || err.code === 'ERR_CANCELED') return;
-            notify.error(err.response?.data?.message || 'Upload failed.');
+            notify.error(getApiErrorMessage(err, 'Upload failed.'));
             setUploading(false);
         }
     };

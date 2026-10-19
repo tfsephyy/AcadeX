@@ -15,9 +15,9 @@ import { LoadingOverlay } from '../../components/Loading';
 
 /* ─── Status options ─────────────────────────────────────────── */
 const STATUS_OPTIONS = [
-    { value: 'published',   label: 'Published',   desc: 'Visible to all in the library', icon: HiOutlineGlobeAlt,  accent: '#16a34a', bg: 'rgba(22,163,74,0.12)',  border: 'rgba(22,163,74,0.4)' },
-    { value: 'unpublished', label: 'Unpublished', desc: 'Saved but hidden from view',    icon: HiOutlineEyeSlash, accent: 'var(--color-text-muted)', bg: 'var(--color-bg-tertiary)', border: 'var(--color-border-strong)' },
-    { value: 'in_progress', label: 'In Progress', desc: 'Still being worked on',         icon: HiOutlineClock,    accent: '#d97706', bg: 'rgba(217,119,6,0.1)',  border: 'rgba(217,119,6,0.35)' },
+    { value: 'unpublished', label: 'Internal Only (Unpublished)', desc: 'Visible in the authenticated library once approved. Hidden from visitors unless copyrighted or IMRAD provided.', icon: HiOutlineEyeSlash, accent: 'var(--color-text-muted)', bg: 'var(--color-bg-tertiary)', border: 'var(--color-border-strong)' },
+    { value: 'published',   label: 'Visitor Access (Published)',   desc: 'Grants authenticated visitor accounts access to view the complete PDF and resources once approved.', icon: HiOutlineGlobeAlt,  accent: '#16a34a', bg: 'rgba(22,163,74,0.12)',  border: 'rgba(22,163,74,0.4)' },
+    { value: 'in_progress', label: 'In Progress',                 desc: 'Still being worked on', icon: HiOutlineClock,    accent: '#d97706', bg: 'rgba(217,119,6,0.1)',  border: 'rgba(217,119,6,0.35)' },
 ];
 
 const COPYRIGHT_OPTIONS = [
@@ -79,7 +79,7 @@ export default function CapstoneAdditionalInfoPage() {
         if (!initialForm || !pdfInfo) navigate('/faculty/capstone-library', { replace: true });
     }, []);
 
-    const [publicationStatus, setPublicationStatus] = useState('published');
+    const [publicationStatus, setPublicationStatus] = useState('unpublished');
     const [copyrightStatus, setCopyrightStatus] = useState('');
     const [saving, setSaving] = useState(false);
 
@@ -270,7 +270,7 @@ export default function CapstoneAdditionalInfoPage() {
                     </div>
 
                     {/* ── Publication Status ── */}
-                    <SectionCard icon={HiOutlineGlobeAlt} title="Publication Status" subtitle="Choose who can see this capstone" accent="#16a34a">
+                    <SectionCard icon={HiOutlineGlobeAlt} title="Visitor Access & External Publication" subtitle="Approved capstones enter the internal library for students and faculty. Choose whether authenticated visitor accounts can also access the full document." accent="#16a34a">
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                             {STATUS_OPTIONS.map((opt) => {
                                 const isSelected = publicationStatus === opt.value;

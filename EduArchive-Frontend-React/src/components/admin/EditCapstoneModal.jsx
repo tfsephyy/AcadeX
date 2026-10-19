@@ -15,9 +15,9 @@ import CategoryCombobox from '../../components/CategoryCombobox';
 
 /* ─── Constants ─────────────────────────────────────────────── */
 const STATUS_OPTIONS = [
-    { value: 'published',   label: 'Published',   desc: 'Visible to all', icon: HiOutlineGlobeAlt,  accent: '#16a34a', bg: 'rgba(22,163,74,0.12)',   border: 'rgba(22,163,74,0.4)' },
-    { value: 'unpublished', label: 'Unpublished', desc: 'Hidden from view', icon: HiOutlineEyeSlash, accent: '#6b7280', bg: 'rgba(107,114,128,0.1)',  border: 'rgba(107,114,128,0.35)' },
-    { value: 'in_progress', label: 'In Progress', desc: 'Still being worked on', icon: HiOutlineClock, accent: '#d97706', bg: 'rgba(217,119,6,0.12)', border: 'rgba(217,119,6,0.35)' },
+    { value: 'unpublished', label: 'Internal Only', desc: 'Platform library only; hidden from visitors unless cleared.', icon: HiOutlineEyeSlash, accent: '#6b7280', bg: 'rgba(107,114,128,0.1)',  border: 'rgba(107,114,128,0.35)' },
+    { value: 'published',   label: 'Visitor Access', desc: 'Grants authenticated visitor accounts full PDF and resource access.', icon: HiOutlineGlobeAlt,  accent: '#16a34a', bg: 'rgba(22,163,74,0.12)',   border: 'rgba(22,163,74,0.4)' },
+    { value: 'in_progress', label: 'In Progress',   desc: 'Still being worked on.', icon: HiOutlineClock, accent: '#d97706', bg: 'rgba(217,119,6,0.12)', border: 'rgba(217,119,6,0.35)' },
 ];
 
 const COPYRIGHT_OPTIONS = [
@@ -78,7 +78,7 @@ export default function EditCapstoneModal({ capstone, onClose, onSuccess, update
     const [newAuthor, setNewAuthor] = useState({ name: '', email: '', contact: '' });
 
     /* ── Step 3 state ── */
-    const [publicationStatus, setPublicationStatus] = useState('published');
+    const [publicationStatus, setPublicationStatus] = useState('unpublished');
     const [copyrightStatus, setCopyrightStatus] = useState('');
 
     // IMRAD
@@ -120,7 +120,7 @@ export default function EditCapstoneModal({ capstone, onClose, onSuccess, update
             abstract: capstone.abstract || '',
             keywords: capstone.keywords?.map(k => k.name || k) || [],
         });
-        setPublicationStatus(capstone.publication_status || 'published');
+        setPublicationStatus(capstone.publication_status || 'unpublished');
         setCopyrightStatus(capstone.copyright_status || '');
         setImradInfo(capstone.imrad_available ? { file_path: capstone.imrad_reference, file_original_name: capstone.imrad_original_name } : null);
         setResources(capstone.resources?.map(r => ({ ...r, id: r.id || Date.now() + Math.random() })) || []);
@@ -503,7 +503,10 @@ export default function EditCapstoneModal({ capstone, onClose, onSuccess, update
 
                             {/* Publication Status */}
                             <div>
-                                <SectionLabel>Publication Status</SectionLabel>
+                                <SectionLabel>Visitor Access / External Publication</SectionLabel>
+                                <p className="text-[11px] mb-2" style={{ color: 'var(--color-text-muted)' }}>
+                                    Approved records are always visible in the internal library for students and faculty. Publishing grants authenticated visitor accounts full-document access.
+                                </p>
                                 <div className="grid grid-cols-3 gap-2">
                                     {STATUS_OPTIONS.map(opt => {
                                         const isSelected = publicationStatus === opt.value;

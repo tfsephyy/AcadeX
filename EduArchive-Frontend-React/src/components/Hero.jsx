@@ -45,7 +45,7 @@ function HeroIllustration() {
             <p className="text-xs font-semibold mb-0.5" style={{ color: 'var(--color-primary)' }}>PDF Metadata Extracted</p>
             <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>Automated · Instant · Accurate</p>
           </div>
-          <div className="ml-auto">
+          <div className="ml-auto sm:hidden">
             <span className="text-xs font-semibold px-2.5 py-1 rounded-full"
               style={{ background: 'rgba(91,190,99,0.12)', color: 'var(--color-primary)', border: '1px solid var(--color-border)' }}>
               Verified
@@ -96,7 +96,7 @@ function HeroIllustration() {
 
       {/* Floating card 1 — bottom left */}
       <div
-        className="absolute -bottom-6 -left-8 rounded-xl p-3.5 animate-float"
+        className="absolute -bottom-4 left-0 sm:-bottom-6 sm:-left-8 rounded-xl p-3.5 animate-float"
         style={{
           background: 'var(--color-surface)',
           backdropFilter: 'blur(16px)',
@@ -124,7 +124,7 @@ function HeroIllustration() {
 
       {/* Floating card 2 — top right */}
       <div
-        className="absolute -top-5 -right-6 rounded-xl p-3 animate-float-delayed"
+        className="hidden sm:block absolute sm:-top-5 sm:-right-6 rounded-xl p-3 animate-float-delayed"
         style={{
           background: 'var(--color-surface)',
           backdropFilter: 'blur(16px)',
@@ -208,7 +208,7 @@ export default function Hero() {
       id="home"
       ref={sectionRef}
       className="relative flex items-center overflow-hidden bg-grid"
-      style={{ background: 'var(--gradient-hero)', paddingTop: 68, minHeight: '100vh', maxHeight: '100vh' }}
+      style={{ background: 'var(--gradient-hero)', paddingTop: 68, minHeight: '100vh' }}
     >
       {/* Background orbs */}
       <div aria-hidden="true" className="absolute top-[-5%] right-[-10%] w-[700px] h-[700px] rounded-full opacity-20 pointer-events-none animate-blob"
@@ -218,7 +218,7 @@ export default function Hero() {
       <div aria-hidden="true" className="absolute top-[40%] left-[40%] w-[300px] h-[300px] rounded-full opacity-10 pointer-events-none animate-float-slow"
         style={{ background: 'radial-gradient(circle, rgba(91,190,99,0.2) 0%, transparent 70%)', filter: 'blur(40px)' }} />
 
-      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 lg:py-10 w-full">
+      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-28 sm:pt-10 sm:pb-24 lg:py-10 w-full">
         <div className="flex flex-col lg:flex-row items-center gap-8 lg:gap-12">
 
           {/* Left — Content */}

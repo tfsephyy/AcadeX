@@ -179,7 +179,7 @@ class AdminDashboardController extends Controller
      */
     public function copyrightedCapstones(): JsonResponse
     {
-        $count = Capstone::where('copyright_status', 'Copyrighted')->count();
+        $count = Capstone::where('copyright_status', 'copyrighted')->count();
 
         return $this->successResponse(['count' => $count], 'Copyrighted capstones count.');
     }
@@ -189,7 +189,7 @@ class AdminDashboardController extends Controller
      */
     public function publishedCapstones(): JsonResponse
     {
-        $count = Capstone::where('publication_status', 'Published')->count();
+        $count = Capstone::where('publication_status', 'published')->count();
 
         return $this->successResponse(['count' => $count], 'Published capstones count.');
     }

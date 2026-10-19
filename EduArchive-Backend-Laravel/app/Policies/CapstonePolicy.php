@@ -15,6 +15,11 @@ class CapstonePolicy
         return $this->access->view($user, $capstone);
     }
 
+    public function interact(User $user, Capstone $capstone): bool
+    {
+        return $this->access->canAccessRecord($user, $capstone);
+    }
+
     public function update(User $user, Capstone $capstone): bool
     {
         return ($user->hasRole('admin') || !$capstone->is_archived) && $this->access->manage($user, $capstone);

@@ -80,7 +80,7 @@ export default function StudentCapstoneAdditionalInfoPage() {
         if (!initialForm || !pdfInfo) navigate('/student/capstone-library', { replace: true });
     }, []);
 
-    const [publicationStatus, setPublicationStatus] = useState('published');
+    const [publicationStatus] = useState('unpublished');
     const [copyrightStatus, setCopyrightStatus] = useState('');
     const [saving, setSaving] = useState(false);
 
@@ -270,27 +270,19 @@ export default function StudentCapstoneAdditionalInfoPage() {
                         </div>
                     </div>
 
-                    {/* ── Publication Status ── */}
-                    <SectionCard icon={HiOutlineGlobeAlt} title="Publication Status" subtitle="Choose who can see this capstone" accent="#16a34a">
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                            {STATUS_OPTIONS.map((opt) => {
-                                const isSelected = publicationStatus === opt.value;
-                                const Icon = opt.icon;
-                                return (
-                                    <button key={opt.value} onClick={() => setPublicationStatus(opt.value)}
-                                        className="relative text-left p-4 rounded-xl border-2 transition-all"
-                                        style={{ background: isSelected ? opt.bg : 'var(--color-bg-secondary)', borderColor: isSelected ? opt.border : 'var(--color-border)' }}>
-                                        {isSelected && (
-                                            <div className="absolute top-3 right-3 w-5 h-5 rounded-full flex items-center justify-center" style={{ background: opt.accent }}>
-                                                <HiOutlineCheck className="w-3 h-3 text-white" />
-                                            </div>
-                                        )}
-                                        <Icon className="w-5 h-5 mb-2" style={{ color: opt.accent }} />
-                                        <p className="text-sm font-semibold" style={{ color: 'var(--color-text)' }}>{opt.label}</p>
-                                        <p className="text-xs mt-0.5 leading-relaxed" style={{ color: 'var(--color-text-muted)' }}>{opt.desc}</p>
-                                    </button>
-                                );
-                            })}
+                    {/* ── Library Visibility & Publication Notice ── */}
+                    <SectionCard icon={HiOutlineGlobeAlt} title="Library Visibility & Publication" subtitle="Student submissions begin pending review and unpublished" accent="#16a34a">
+                        <div className="p-4 rounded-xl border flex items-start gap-3.5"
+                            style={{ background: 'var(--color-bg-secondary)', borderColor: 'var(--color-border)' }}>
+                            <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(22,163,74,0.1)' }}>
+                                <HiOutlineEyeSlash className="w-4 h-4 text-emerald-600" />
+                            </div>
+                            <div className="space-y-1">
+                                <p className="text-sm font-semibold" style={{ color: 'var(--color-text)' }}>Internal Archive (Pending Approval)</p>
+                                <p className="text-xs leading-relaxed" style={{ color: 'var(--color-text-muted)' }}>
+                                    Your capstone will be submitted as <strong>Pending</strong> review and <strong>Unpublished</strong>. Once reviewed and approved by your faculty adviser or an administrator, it will become accessible to students and faculty in the EduArchive internal library. After approval, &ldquo;published&rdquo; or &ldquo;copyrighted&rdquo; records qualify for full authenticated-visitor preview access, while a record with only an IMRAD file qualifies for restricted visitor metadata/IMRAD access. Visitor downloads remain disabled. Publication status is controlled separately from approval.
+                                </p>
+                            </div>
                         </div>
                     </SectionCard>
 

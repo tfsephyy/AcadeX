@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Models\Capstone;
+use App\Services\CapstoneAccess;
 use App\Services\NlpSearchService;
 use App\Services\PdfEncryptorService;
 use App\Traits\ApiResponses;
@@ -26,6 +27,8 @@ class VisitorCapstoneController extends Controller
 {
     use ApiResponses;
 
+    public function __construct(private CapstoneAccess $access) {}
+
     // ──────────────────────────────────────────────────────────────
     // Query Helpers
     // ──────────────────────────────────────────────────────────────
@@ -44,7 +47,6 @@ class VisitorCapstoneController extends Controller
      */
     private function visibleQuery()
     {
-<<<<<<< HEAD
         return Capstone::with(['keywords', 'uploader:id,name', 'adviser:id,name'])
             ->where('is_archived', false)
             ->where('approval_status', 'approved')   // Must pass internal review first
@@ -56,22 +58,22 @@ class VisitorCapstoneController extends Controller
     }
 
     /**
+     * Whether the visitor may see the record and its IMRAD/abstract metadata.
+     * Requires approval plus one of the three visitor-visibility tiers.
+     */
+    private function visitorCanViewRecord(Capstone $capstone): bool
+    {
+        return $this->access->visitorVisible($capstone);
+    }
+
+    /**
      * Whether the visitor may see the full capstone PDF and resources.
      * Requires: publication_status = 'published' OR copyright_status = 'copyrighted'.
      * If neither, visitor sees IMRAD only (if available).
      */
     private function canSeeCapstonePdf(Capstone $capstone): bool
     {
-        return $capstone->publication_status === 'published'
-            || $capstone->copyright_status   === 'copyrighted';
-=======
-        return Capstone::published();
-    }
-
-    private function canSeeCapstonePdf(Capstone $capstone): bool
-    {
-        return app(\App\Services\CapstoneAccess::class)->published($capstone);
->>>>>>> ee8974fe9d3c2e424b7f25c29171302cd39d7c56
+        return $this->access->visitorCanViewDocument($capstone);
     }
 
     public function index(Request $request): JsonResponse
@@ -178,26 +180,10 @@ class VisitorCapstoneController extends Controller
 
     public function show(Request $request, Capstone $capstone): JsonResponse
     {
-<<<<<<< HEAD
-        // Enforce visibility: must be approved AND meet at least one visitor-visibility tier
-        $visible = $capstone->is_archived === false
-            && $capstone->approval_status === 'approved'
-            && (
-                $capstone->publication_status === 'published'
-                || $capstone->copyright_status === 'copyrighted'
-                || !empty($capstone->imrad_path)
-            );
-=======
-        $this->authorize('view', $capstone);
-        // Enforce visibility: capstone must be in the visitor-visible set
-        $visible = $capstone->is_archived === false && (
-            $capstone->publication_status === 'published' ||
-            $capstone->copyright_status === 'copyrighted' ||
-            !empty($capstone->imrad_path)
-        );
->>>>>>> ee8974fe9d3c2e424b7f25c29171302cd39d7c56
-
-        if (!$visible) {
+        // Enforce visibility: must be approved AND meet at least one visitor-visibility tier.
+        // The visitor route is deliberately not routed through the staff document policy:
+        // an IMRAD-only record is visible to visitors as metadata/IMRAD, never as the full PDF.
+        if (!$this->visitorCanViewRecord($capstone)) {
             return $this->errorResponse('Capstone not found.', 404);
         }
 
@@ -209,6 +195,11 @@ class VisitorCapstoneController extends Controller
         $data = $capstone->toArray();
         $data['visitor_can_see_pdf'] = $canSeePdf;
         $data['visitor_imrad_only']  = $imradOnly;
+        $data['is_bookmarked']       = $request->user()
+            ? \App\Models\Bookmark::where('user_id', $request->user()->id)
+                ->where('capstone_id', $capstone->id)
+                ->exists()
+            : false;
 
         // If IMRAD-only: strip full PDF path and resources from the response
         if ($imradOnly) {
@@ -229,9 +220,11 @@ class VisitorCapstoneController extends Controller
      */
     public function servePdf(Request $request, Capstone $capstone): \Symfony\Component\HttpFoundation\StreamedResponse|JsonResponse
     {
-        $this->authorize('view', $capstone);
+        if (!$this->visitorCanViewRecord($capstone)) {
+            return $this->errorResponse('Capstone not found.', 404);
+        }
         if (!$this->canSeeCapstonePdf($capstone)) {
-            return $this->errorResponse('You do not have permission to view this file.', 403);
+            return $this->errorResponse('The complete capstone document is restricted. Only the IMRAD document is available.', 403);
         }
 
         if (!$capstone->pdf_path || !Storage::disk('local')->exists($capstone->pdf_path)) {
@@ -266,23 +259,11 @@ class VisitorCapstoneController extends Controller
      */
     public function serveImrad(Request $request, Capstone $capstone): \Symfony\Component\HttpFoundation\StreamedResponse|JsonResponse
     {
-<<<<<<< HEAD
         // Must be approved and visitor-visible
-        $canAccessImrad = $capstone->approval_status === 'approved'
-            && !$capstone->is_archived
-            && (
-                $capstone->publication_status === 'published'
-                || $capstone->copyright_status === 'copyrighted'
-                || !empty($capstone->imrad_path)
-            );
-
-        if (!$canAccessImrad) {
-            return $this->errorResponse('You do not have permission to view this file.', 403);
+        if (!$this->visitorCanViewRecord($capstone)) {
+            return $this->errorResponse('Capstone not found.', 404);
         }
 
-=======
-        $this->authorize('view', $capstone);
->>>>>>> ee8974fe9d3c2e424b7f25c29171302cd39d7c56
         if (!$capstone->imrad_path || !Storage::disk('local')->exists($capstone->imrad_path)) {
             return $this->errorResponse('IMRAD file not found.', 404);
         }
