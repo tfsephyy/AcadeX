@@ -18,3 +18,8 @@ auth.json
 
 # Project exports can contain secrets and private uploads.
 *.zip
+
+# Workspace-local tools, logs, process receipts, and Python environments.
+/.local/
+**/.venv/
+**/__pycache__/

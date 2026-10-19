@@ -23,7 +23,7 @@ import {
 } from 'react-icons/hi';
 import { getActivityLogs, getActivityLogUsers, getActivityLogCapstones } from '../../api/admin';
 import Loading from '../../components/Loading';
-import { useNotification } from '../../components/Notification';
+import { useNotification } from '../../components/useNotification';
 
 // ── Category configs ─────────────────────────────────────────────────────────
 const CATEGORY_CONFIG = {

@@ -24,10 +24,10 @@ export const storeCapstone = (data) => axios.post('/admin/capstones', data);
 export const uploadAdminResource = (formData) => axios.post('/admin/capstones/upload-resource', formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
 });
-export const uploadAdminImrad = (formData) => axios.post('/admin/capstones/upload-resource', formData, {
+export const uploadAdminImrad = (formData) => axios.post('/admin/capstones/upload-imrad', formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
 });
-export const uploadFacultyImrad = (formData) => axios.post('/faculty/capstones/upload-resource', formData, {
+export const uploadFacultyImrad = (formData) => axios.post('/faculty/capstones/upload-imrad', formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
 });
 export const updateCapstone = (id, data) => axios.put(`/admin/capstones/${id}`, data);
@@ -136,7 +136,7 @@ export const getArchivedStudentCapstones = (params = {}) => axios.get('/student/
 export const sendForgotPasswordCode = (email) => axios.post('/forgot-password', { email });
 export const verifyResetCode = (data) => axios.post('/verify-reset-code', data);
 export const resetPassword = (data) => axios.post('/reset-password', data);
-export const sendVerificationCode = (email) => axios.post('/send-verification-code', { email });
+export const sendVerificationCode = (email, options = {}) => axios.post('/send-verification-code', { email, ...options });
 export const verifyEmailCode = (data) => axios.post('/verify-email-code', data);
 
 // ── Authenticated User Actions ────────────────────

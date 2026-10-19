@@ -36,26 +36,13 @@ class VisitorCapstoneController extends Controller
      */
     private function visibleQuery()
     {
-        return Capstone::with(['keywords', 'uploader:id,name', 'adviser:id,name'])
-            ->where('is_archived', false)
-            ->where(function ($q) {
-                $q->where('publication_status', 'published')
-                  ->orWhere('copyright_status', 'copyrighted')
-                  ->orWhereNotNull('imrad_path');
-            });
+        return Capstone::published();
     }
 
-    /**
-     * Whether the visitor may see the capstone PDF for this record.
-     */
     private function canSeeCapstonePdf(Capstone $capstone): bool
     {
-        return $capstone->publication_status === 'published' || $capstone->copyright_status === 'copyrighted';
+        return app(\App\Services\CapstoneAccess::class)->published($capstone);
     }
-
-    // ──────────────────────────────────────────────────────────────
-    // List
-    // ──────────────────────────────────────────────────────────────
 
     public function index(Request $request): JsonResponse
     {
@@ -158,6 +145,7 @@ class VisitorCapstoneController extends Controller
 
     public function show(Request $request, Capstone $capstone): JsonResponse
     {
+        $this->authorize('view', $capstone);
         // Enforce visibility: capstone must be in the visitor-visible set
         $visible = $capstone->is_archived === false && (
             $capstone->publication_status === 'published' ||
@@ -187,6 +175,7 @@ class VisitorCapstoneController extends Controller
      */
     public function servePdf(Request $request, Capstone $capstone): \Symfony\Component\HttpFoundation\StreamedResponse|JsonResponse
     {
+        $this->authorize('view', $capstone);
         if (!$this->canSeeCapstonePdf($capstone)) {
             return $this->errorResponse('You do not have permission to view this file.', 403);
         }
@@ -221,6 +210,7 @@ class VisitorCapstoneController extends Controller
      */
     public function serveImrad(Request $request, Capstone $capstone): \Symfony\Component\HttpFoundation\StreamedResponse|JsonResponse
     {
+        $this->authorize('view', $capstone);
         if (!$capstone->imrad_path || !Storage::disk('local')->exists($capstone->imrad_path)) {
             return $this->errorResponse('IMRAD file not found.', 404);
         }

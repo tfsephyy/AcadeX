@@ -6,7 +6,7 @@ import {
     HiOutlineFolder, HiOutlineDocumentText,
 } from 'react-icons/hi';
 import { getCapstone, recordView, downloadCapstone, toggleBookmark, getCapstoneImradBlob, getCapstoneResourceBlob, downloadCapstoneResource } from '../../api/admin';
-import { useNotification } from '../../components/Notification';
+import { useNotification } from '../../components/useNotification';
 import CitationGenerator from '../../components/CitationGenerator';
 import CapstoneAnalyticsPanel from '../../components/CapstoneAnalyticsPanel';
 import AuthorDetailsModal from '../../components/AuthorDetailsModal';
@@ -15,12 +15,13 @@ import { Document, Page, pdfjs } from 'react-pdf';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
 import api from '../../api/axios';
-import { useChatbotContext } from '../../context/ChatbotContext';
+import { useChatbotContext } from '../../context/useChatbotContext';
 
-pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
+pdfjs.GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/build/pdf.worker.min.mjs', import.meta.url).toString();
 
 export default function CapstoneMainPage() {
     const { id } = useParams();
+    const location = useLocation();
     const navigate = useNavigate();
     const notify = useNotification();
     const { setCapstoneContext } = useChatbotContext();
@@ -120,7 +121,7 @@ export default function CapstoneMainPage() {
                     await recordView(id);
                     sessionStorage.setItem(viewKey, '1');
                     setCapstone(prev => ({ ...prev, view_count: (prev.view_count || 0) + 1 }));
-                } catch {}
+                } catch { /* Optional request failed; keep the current view. */ }
             }
 
             // Fetch PDF as blob
@@ -141,7 +142,7 @@ export default function CapstoneMainPage() {
                     setPdfError('Could not load PDF. Please try again.');
                 }
             }
-        } catch (err) {
+        } catch {
             notify.error('Failed to load capstone.');
         } finally {
             setLoading(false);
@@ -161,7 +162,7 @@ export default function CapstoneMainPage() {
             window.URL.revokeObjectURL(url);
             setCapstone(prev => ({ ...prev, download_count: (prev.download_count || 0) + 1 }));
             notify.success('Download started.');
-        } catch (err) {
+        } catch {
             notify.error('Download failed.');
         }
     };
@@ -219,7 +220,7 @@ export default function CapstoneMainPage() {
             setBookmarked(res.data.data.bookmarked);
             setCapstone(prev => ({ ...prev, bookmark_count: res.data.data.bookmark_count }));
             notify.success(res.data.data.bookmarked ? 'Bookmarked!' : 'Bookmark removed.');
-        } catch (err) {
+        } catch {
             notify.error('Bookmark action failed.');
         }
     };
@@ -243,7 +244,6 @@ export default function CapstoneMainPage() {
     const refs = capstone.referenced_capstones ?? capstone.referencedCapstones ?? [];
 
     // Derive role prefix from current path so this shared component works for both admin and faculty
-    const location = useLocation();
     const rolePrefix = location.pathname.startsWith('/faculty') ? '/faculty' : '/admin';
 
     return (
@@ -319,7 +319,7 @@ export default function CapstoneMainPage() {
                         {/* IMRAD Section — clickable to swap PDF viewer */}
                         <div>
                             <label className="text-[11px] font-semibold text-gray-500 uppercase block mb-1.5">IMRAD File</label>
-                            {capstone.imrad_path ? (
+                            {capstone.imrad_available ? (
                                 <button
                                     onClick={activePdf === 'imrad' ? switchToCapstone : loadImradPdf}
                                     className={`w-full flex items-center gap-2 p-2.5 rounded-lg border transition-all text-left ${

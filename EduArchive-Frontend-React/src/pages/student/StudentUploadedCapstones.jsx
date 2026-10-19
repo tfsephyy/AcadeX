@@ -10,7 +10,7 @@ import {
     getStudentAllCapstones, getStudentBrowseFilterOptions,
     toggleBookmark, getStudentBookmarkedCapstones,
 } from '../../api/admin';
-import { useNotification } from '../../components/Notification';
+import { useNotification } from '../../components/useNotification';
 import Loading from '../../components/Loading';
 import EmptyState from '../../components/EmptyState';
 import ConfirmDialog from '../../components/ConfirmDialog';
@@ -52,7 +52,7 @@ export default function StudentUploadedCapstones() {
 
     // ── Pagination ────────────────────────────────────────────────────────────────
     const [page, setPage] = useState(1);
-    const [lastPage, setLastPage] = useState(1);
+    const [, setLastPage] = useState(1);
     const [pagination, setPagination] = useState({ current_page: 1, last_page: 1, total: 0, from: 0, to: 0 });
 
     // ── Modal / confirm state ─────────────────────────────────────────────────────
@@ -117,7 +117,7 @@ export default function StudentUploadedCapstones() {
                 from: data?.from || 0,
                 to: data?.to || 0,
             });
-        } catch (err) {
+        } catch {
             notify.error('Failed to load capstones.');
         } finally {
             setLoading(false);
@@ -178,7 +178,7 @@ export default function StudentUploadedCapstones() {
             variant: 'danger',
             action: async () => {
                 try { await toggleBookmark(cap.id); notify.success('Removed from saved.'); fetchSavedCapstones(); }
-                catch (err) { notify.error('Failed to remove bookmark.'); }
+                catch { notify.error('Failed to remove bookmark.'); }
                 setConfirm(prev => ({ ...prev, open: false }));
             },
         });

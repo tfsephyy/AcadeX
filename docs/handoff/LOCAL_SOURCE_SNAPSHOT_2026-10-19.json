@@ -1,0 +1,1623 @@
+{
+  "document_date_asia_manila": "2026-10-19",
+  "scope": "Current eligible application/deployment source in the local worktree, including uncommitted files; not a deployed-server manifest.",
+  "source_git_head": "4560e3f32e6cd8b6f63e0c2a4373b8b94f241546",
+  "file_count": 267,
+  "line_endings": "Compare sha256_lf_utf8 for UTF-8 text across Git CRLF/LF conversions; sha256_raw records exact local bytes.",
+  "exclusions": [
+    "private environment values",
+    "private keys",
+    "Git history",
+    "dependencies",
+    "virtualenvs",
+    "private uploads",
+    "database dumps",
+    "generated caches",
+    "workstation evidence"
+  ],
+  "expected_absent_tracked_paths": [],
+  "files": [
+    {
+      "path": ".gitignore",
+      "size_bytes": 435,
+      "sha256_raw": "3c4b51f31bd18ea07f8c8bd6764809800891bdbdbbf2dc093a029e8e926d7a90",
+      "sha256_lf_utf8": "537d3ab7e70ac4f8c3ecff6d9104118a0baf8b033c071fa6fbc5759dc8bba136"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/.editorconfig",
+      "size_bytes": 252,
+      "sha256_raw": "f78cc5a2ef8ba61ad956d0f5db453748a981270f6a1b9f4a5a00df8690e7946d",
+      "sha256_lf_utf8": "f78cc5a2ef8ba61ad956d0f5db453748a981270f6a1b9f4a5a00df8690e7946d"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/.env.example",
+      "size_bytes": 1832,
+      "sha256_raw": "c3ab2515bf7ee0b9e5479b924596e216fdc9947ebe9d51fa27385b58c43529b5",
+      "sha256_lf_utf8": "194b502d0fdd9f6ac49a6fe09615f95fdcce6edfd8a27f68dc43c3c8ded88ae3"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/.env.production.example",
+      "size_bytes": 1641,
+      "sha256_raw": "555bf25dffda61349b7cbcc44a993c082cce106fa40b7ff107cfe90814fc5dd0",
+      "sha256_lf_utf8": "555bf25dffda61349b7cbcc44a993c082cce106fa40b7ff107cfe90814fc5dd0"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/.env.testing.example",
+      "size_bytes": 1119,
+      "sha256_raw": "d3bfeee92ff9da9aa8108c1915498175cb51c7a35b39b6c2468137cee2824f8c",
+      "sha256_lf_utf8": "43743018bf1d7de60868fa44d6bd7839e4017ad4abe1a9083a34cb081c0b6bb6"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/.gitattributes",
+      "size_bytes": 186,
+      "sha256_raw": "a40eb27ee0b545ca5b5542daaf99fec51f84f23b3766a6353864ef2a115bc51c",
+      "sha256_lf_utf8": "a40eb27ee0b545ca5b5542daaf99fec51f84f23b3766a6353864ef2a115bc51c"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/.gitignore",
+      "size_bytes": 283,
+      "sha256_raw": "41e54abd62aa86fd5b731e0cd411c5bc7d4196a1f7aef363f434672da8fffa5d",
+      "sha256_lf_utf8": "41e54abd62aa86fd5b731e0cd411c5bc7d4196a1f7aef363f434672da8fffa5d"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/README.md",
+      "size_bytes": 3911,
+      "sha256_raw": "d8b15dfcda5b6e61a96730afedc1ed5376e46ba367e21749a9d789cc222009c4",
+      "sha256_lf_utf8": "d8b15dfcda5b6e61a96730afedc1ed5376e46ba367e21749a9d789cc222009c4"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/app/Console/Commands/BackfillPdfText.php",
+      "size_bytes": 2515,
+      "sha256_raw": "b310b2d531892503ab5a7ae39418693961ee1963037bebde3fb469b4eff23d07",
+      "sha256_lf_utf8": "b310b2d531892503ab5a7ae39418693961ee1963037bebde3fb469b4eff23d07"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/app/Console/Commands/BootstrapAdmin.php",
+      "size_bytes": 2933,
+      "sha256_raw": "b30704c4f0cbdd3a1deb2e4036cf17c3c71a85b4432b07bc3b32522d8a7e43fd",
+      "sha256_lf_utf8": "b30704c4f0cbdd3a1deb2e4036cf17c3c71a85b4432b07bc3b32522d8a7e43fd"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/app/Console/Commands/CheckProduction.php",
+      "size_bytes": 2540,
+      "sha256_raw": "254a5a32ecc1bf536e69b0c4c543cff6d251c47e036d83267bcf3338ec6a0f04",
+      "sha256_lf_utf8": "254a5a32ecc1bf536e69b0c4c543cff6d251c47e036d83267bcf3338ec6a0f04"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/app/Console/Commands/EncryptExistingPdfs.php",
+      "size_bytes": 2619,
+      "sha256_raw": "dbeb69c51b3bd7054c1f8b2f3779cb6958bb225b4b24b11f0a44b68326cbdf68",
+      "sha256_lf_utf8": "dbeb69c51b3bd7054c1f8b2f3779cb6958bb225b4b24b11f0a44b68326cbdf68"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/app/Http/Controllers/Api/V1/ActivityLogController.php",
+      "size_bytes": 17280,
+      "sha256_raw": "3747c0bc8639a147664eb77398ac3befc87eb6660689db5985fc16c4b75c83c5",
+      "sha256_lf_utf8": "3747c0bc8639a147664eb77398ac3befc87eb6660689db5985fc16c4b75c83c5"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/app/Http/Controllers/Api/V1/AdminDashboardController.php",
+      "size_bytes": 7519,
+      "sha256_raw": "d682045fc4cdc8bf379e62579ba4b30591c643bfff167c3c82b5c2c284f19e1c",
+      "sha256_lf_utf8": "d682045fc4cdc8bf379e62579ba4b30591c643bfff167c3c82b5c2c284f19e1c"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/app/Http/Controllers/Api/V1/AuthController.php",
+      "size_bytes": 13403,
+      "sha256_raw": "a717e94da5496124cb005e01544c67d24bbc3f81e1556fb9c692f6a87e50ca20",
+      "sha256_lf_utf8": "a717e94da5496124cb005e01544c67d24bbc3f81e1556fb9c692f6a87e50ca20"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/app/Http/Controllers/Api/V1/CapstoneController.php",
+      "size_bytes": 64189,
+      "sha256_raw": "77046396a93aa2201ad52a943db2c1a894d1da08672bf2999f7824b0165762e5",
+      "sha256_lf_utf8": "bbe402149104d0eb931f5fe79fc517afe1600d791f5ab3d43e0372a4dfce446a"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/app/Http/Controllers/Api/V1/ChatbotController.php",
+      "size_bytes": 22335,
+      "sha256_raw": "3635c9b1cb23d9d576335a6bb3ac2c0a8c5f12db6bf29af68c99238dd0f84b2d",
+      "sha256_lf_utf8": "a861ffc5434d36963679ea7b55ddbc9465b642bccc3c2ea935dc3a632d071d25"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/app/Http/Controllers/Api/V1/NotificationController.php",
+      "size_bytes": 2642,
+      "sha256_raw": "8aa4b1af828b3b98045f68eed94fff274f83dbec8f1f271aaeb67bdc11a2e87f",
+      "sha256_lf_utf8": "8aa4b1af828b3b98045f68eed94fff274f83dbec8f1f271aaeb67bdc11a2e87f"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/app/Http/Controllers/Api/V1/PasswordResetController.php",
+      "size_bytes": 18306,
+      "sha256_raw": "1a0b327f64b5392ff9ea7f6722ef1b504710a29b88d6c27feaba996d2459d28e",
+      "sha256_lf_utf8": "1a0b327f64b5392ff9ea7f6722ef1b504710a29b88d6c27feaba996d2459d28e"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/app/Http/Controllers/Api/V1/PublishedCapstoneController.php",
+      "size_bytes": 8018,
+      "sha256_raw": "38c4f07f2a94eddd64b1311cab6099081c9a766c8308d6147f5a4f5d19030c95",
+      "sha256_lf_utf8": "38c4f07f2a94eddd64b1311cab6099081c9a766c8308d6147f5a4f5d19030c95"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/app/Http/Controllers/Api/V1/UserManagementController.php",
+      "size_bytes": 10500,
+      "sha256_raw": "bd061d49fa6ce19045936dd8533ba5d93821ad1935f82914606654abda5c60d8",
+      "sha256_lf_utf8": "bd061d49fa6ce19045936dd8533ba5d93821ad1935f82914606654abda5c60d8"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/app/Http/Controllers/Api/V1/VisitorCapstoneController.php",
+      "size_bytes": 12441,
+      "sha256_raw": "f53733baeb747d728d3984f20f0c21f5b2cc51798dd11f9763fc84617e5b5683",
+      "sha256_lf_utf8": "5d66303030a656071c4e35bc7632e3a7b4eab1456c019607a677dae42ad22842"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/app/Http/Controllers/Controller.php",
+      "size_bytes": 133,
+      "sha256_raw": "5c2f134f23968a13e7891d50e34f3e6779d94f3d53cb0ae5d670ad515c6d02ce",
+      "sha256_lf_utf8": "5c2f134f23968a13e7891d50e34f3e6779d94f3d53cb0ae5d670ad515c6d02ce"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/app/Http/Middleware/AttachTokenFromCookie.php",
+      "size_bytes": 645,
+      "sha256_raw": "9283a73c3abc85c6ce06e1023c769176ece4428c424665e27d94dfab363a9a34",
+      "sha256_lf_utf8": "9283a73c3abc85c6ce06e1023c769176ece4428c424665e27d94dfab363a9a34"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/app/Http/Middleware/EnsureActiveAccount.php",
+      "size_bytes": 1168,
+      "sha256_raw": "ece04d1b799bddc54e01f9ed102306140615c411388a02aa8567f0fbaa051b27",
+      "sha256_lf_utf8": "ece04d1b799bddc54e01f9ed102306140615c411388a02aa8567f0fbaa051b27"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/app/Http/Middleware/RoleMiddleware.php",
+      "size_bytes": 909,
+      "sha256_raw": "937d7175a3180999f068901358e3c6f7ee38209ceb3eb09b6fec58810452a595",
+      "sha256_lf_utf8": "937d7175a3180999f068901358e3c6f7ee38209ceb3eb09b6fec58810452a595"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/app/Http/Middleware/TrackLastActive.php",
+      "size_bytes": 448,
+      "sha256_raw": "5e0ecd105e7eac94adce6ae99ac94482b17deafa1dca5e3ca16487d5d01f4fcf",
+      "sha256_lf_utf8": "5e0ecd105e7eac94adce6ae99ac94482b17deafa1dca5e3ca16487d5d01f4fcf"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/app/Http/Middleware/TrustConfiguredProxies.php",
+      "size_bytes": 1122,
+      "sha256_raw": "a947b4d287443620f8a51e5532b9ed184e9ae4900aceb32cb3dc9743514fa2c7",
+      "sha256_lf_utf8": "a947b4d287443620f8a51e5532b9ed184e9ae4900aceb32cb3dc9743514fa2c7"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/app/Http/Middleware/VerifyApiCsrfToken.php",
+      "size_bytes": 307,
+      "sha256_raw": "6fc507f585a20190ad9e2186fc08b6c31d765bcdba08f5e80960a992722d9aa4",
+      "sha256_lf_utf8": "6fc507f585a20190ad9e2186fc08b6c31d765bcdba08f5e80960a992722d9aa4"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/app/Http/Requests/LoginRequest.php",
+      "size_bytes": 766,
+      "sha256_raw": "236124510e195a3bc63e037c1d0c6770c40df42de08ca36a7618e4308ea6e337",
+      "sha256_lf_utf8": "236124510e195a3bc63e037c1d0c6770c40df42de08ca36a7618e4308ea6e337"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/app/Http/Requests/RegisterRequest.php",
+      "size_bytes": 2382,
+      "sha256_raw": "b312dd63abb03e4afd3863cf831a36eef34ecb3a78a006a0649fe2b90378f4b7",
+      "sha256_lf_utf8": "b312dd63abb03e4afd3863cf831a36eef34ecb3a78a006a0649fe2b90378f4b7"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/app/Jobs/ExtractPdfTextJob.php",
+      "size_bytes": 2063,
+      "sha256_raw": "d9da44e90fd0d4f52e8bdafcf27b5eddc4490c23935a1cc88796603478cc5244",
+      "sha256_lf_utf8": "d9da44e90fd0d4f52e8bdafcf27b5eddc4490c23935a1cc88796603478cc5244"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/app/Models/AuditLog.php",
+      "size_bytes": 1227,
+      "sha256_raw": "89217344c597791a41d85f0402d27f28d037c8f4b6fe350c371f86d749862b4d",
+      "sha256_lf_utf8": "89217344c597791a41d85f0402d27f28d037c8f4b6fe350c371f86d749862b4d"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/app/Models/Bookmark.php",
+      "size_bytes": 414,
+      "sha256_raw": "26a3219bbc8d37f7e686c78daeec50cce205d6d9018da0aea61f2857b90344c9",
+      "sha256_lf_utf8": "26a3219bbc8d37f7e686c78daeec50cce205d6d9018da0aea61f2857b90344c9"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/app/Models/Capstone.php",
+      "size_bytes": 5866,
+      "sha256_raw": "8fd10e221f34f8c45360ce8570c0816ffc32ea2e04adeeb1bfb3296a6592d550",
+      "sha256_lf_utf8": "cfbf62dfedf7ce64338cc0a6d20c4615b3bce7d53c23e8d648c5ef3ab1056481"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/app/Models/CapstoneResource.php",
+      "size_bytes": 663,
+      "sha256_raw": "6e898cba920bbfec22ac9636dc07d2deeaad45398077776fdb26bda8dfef24a0",
+      "sha256_lf_utf8": "6e898cba920bbfec22ac9636dc07d2deeaad45398077776fdb26bda8dfef24a0"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/app/Models/CapstoneView.php",
+      "size_bytes": 474,
+      "sha256_raw": "22185088df58410e8ce81847b30faa7ebdda08fad8183e0e05ce2294725edbdc",
+      "sha256_lf_utf8": "22185088df58410e8ce81847b30faa7ebdda08fad8183e0e05ce2294725edbdc"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/app/Models/DocumentUpload.php",
+      "size_bytes": 359,
+      "sha256_raw": "f509e72808a73f0a33ad17f36084f8854339bb0f191fb8b64dee7d354194a231",
+      "sha256_lf_utf8": "f509e72808a73f0a33ad17f36084f8854339bb0f191fb8b64dee7d354194a231"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/app/Models/Download.php",
+      "size_bytes": 428,
+      "sha256_raw": "4428efa1e075a63522d2caeab0f624799b93852c2d8d27a814b2b30cfc7a4f9f",
+      "sha256_lf_utf8": "4428efa1e075a63522d2caeab0f624799b93852c2d8d27a814b2b30cfc7a4f9f"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/app/Models/Keyword.php",
+      "size_bytes": 801,
+      "sha256_raw": "8b71c012b88a30d9162018d294d6ce072f4499a6014c9c500356d1ac00ca1e9b",
+      "sha256_lf_utf8": "559d38416e7c426f2ddaabde1133fdea700b35f0c8616cff5bd6965975b7a28e"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/app/Models/LoginAudit.php",
+      "size_bytes": 503,
+      "sha256_raw": "d9975e15667d97d4d3fb263958e114f30e53bc8ecb50646653ecc0ec96428ba6",
+      "sha256_lf_utf8": "d9975e15667d97d4d3fb263958e114f30e53bc8ecb50646653ecc0ec96428ba6"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/app/Models/Notification.php",
+      "size_bytes": 764,
+      "sha256_raw": "5289af6c7fe6303e5718d1b57c6ab01e54a9613fad4ae5840dd1f693f9da2220",
+      "sha256_lf_utf8": "5289af6c7fe6303e5718d1b57c6ab01e54a9613fad4ae5840dd1f693f9da2220"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/app/Models/PasswordResetCode.php",
+      "size_bytes": 687,
+      "sha256_raw": "d7cb4e841dbf32d07495334f5d43796c460dd4b3374eb521101e196451826b97",
+      "sha256_lf_utf8": "d7cb4e841dbf32d07495334f5d43796c460dd4b3374eb521101e196451826b97"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/app/Models/Role.php",
+      "size_bytes": 359,
+      "sha256_raw": "358e2ca6943389398c2ef5748947df4d7a514e186dec52e336aa0f65a2afd777",
+      "sha256_lf_utf8": "358e2ca6943389398c2ef5748947df4d7a514e186dec52e336aa0f65a2afd777"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/app/Models/StudentProfile.php",
+      "size_bytes": 445,
+      "sha256_raw": "6406e93d0ef56fb81c231a9ff702646cf27c17c1ebbbff1ca8a67b4eb08c96b3",
+      "sha256_lf_utf8": "6406e93d0ef56fb81c231a9ff702646cf27c17c1ebbbff1ca8a67b4eb08c96b3"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/app/Models/User.php",
+      "size_bytes": 3919,
+      "sha256_raw": "fd13a951cd3a91253b42daf5c0b13ee07552a585468d741e184f1b38d7d7df99",
+      "sha256_lf_utf8": "fd13a951cd3a91253b42daf5c0b13ee07552a585468d741e184f1b38d7d7df99"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/app/Policies/CapstonePolicy.php",
+      "size_bytes": 1217,
+      "sha256_raw": "7b7be00cc300f1b9d8f0c7313d3d66c7c51459db9eaad2d348149c0382c89eff",
+      "sha256_lf_utf8": "7b7be00cc300f1b9d8f0c7313d3d66c7c51459db9eaad2d348149c0382c89eff"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/app/Providers/AppServiceProvider.php",
+      "size_bytes": 595,
+      "sha256_raw": "78be08d968167f54579daf29412f61309294305a7a15c7efac93289762ef7585",
+      "sha256_lf_utf8": "78be08d968167f54579daf29412f61309294305a7a15c7efac93289762ef7585"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/app/Services/BoundedPdfOcr.php",
+      "size_bytes": 2823,
+      "sha256_raw": "3b2c9047da5fbe1c2036dce8a398e079da601fcc9116407e86ea7a445f2c433f",
+      "sha256_lf_utf8": "3b2c9047da5fbe1c2036dce8a398e079da601fcc9116407e86ea7a445f2c433f"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/app/Services/CapstoneAccess.php",
+      "size_bytes": 2792,
+      "sha256_raw": "7c45015e45f9d7c423323ff6faf792e0130dc8c41f2456d1a5bd0d19bcfbf5b0",
+      "sha256_lf_utf8": "7c45015e45f9d7c423323ff6faf792e0130dc8c41f2456d1a5bd0d19bcfbf5b0"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/app/Services/Chatbot/ChatbotAnalyticsService.php",
+      "size_bytes": 22809,
+      "sha256_raw": "8ed178a464842d5a5444e762aa0750b864c7e216e031fc0600af5daac48ea1b9",
+      "sha256_lf_utf8": "9cdfd0a971978c9935c2e23239c376b5668f0907a5675eae17f3594244f361b7"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/app/Services/Chatbot/ChatbotIntentService.php",
+      "size_bytes": 15712,
+      "sha256_raw": "d122bd275020e8a737edb05d52842cb16077868c1c69f6284df7e0a983dda03c",
+      "sha256_lf_utf8": "d122bd275020e8a737edb05d52842cb16077868c1c69f6284df7e0a983dda03c"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/app/Services/Chatbot/ChatbotPermissionService.php",
+      "size_bytes": 3392,
+      "sha256_raw": "3bd5359ac65c3dd0977061a797687a04b1344205f5e8fead3b035b8e95f00fd6",
+      "sha256_lf_utf8": "3bd5359ac65c3dd0977061a797687a04b1344205f5e8fead3b035b8e95f00fd6"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/app/Services/Chatbot/ChatbotQueryService.php",
+      "size_bytes": 6570,
+      "sha256_raw": "b191d0cc3ea057b1766c54b4a86ed86339c054a412c83e6095ca3a82c51103b0",
+      "sha256_lf_utf8": "4b8c8c0a657e593c7d51766e9b174c8afbe2803486d3fda33b330e13bbdde7ba"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/app/Services/Chatbot/ChatbotResponseService.php",
+      "size_bytes": 51533,
+      "sha256_raw": "a265d70e2e7964bd852343f993bc5de23f827c5926b14eeced8a0dbbda34e085",
+      "sha256_lf_utf8": "a265d70e2e7964bd852343f993bc5de23f827c5926b14eeced8a0dbbda34e085"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/app/Services/DocumentUploads.php",
+      "size_bytes": 3225,
+      "sha256_raw": "c7776d11f92679c8b68835773396e09cade956d8247662a104d3924b8695f663",
+      "sha256_lf_utf8": "c7776d11f92679c8b68835773396e09cade956d8247662a104d3924b8695f663"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/app/Services/EmailVerificationService.php",
+      "size_bytes": 919,
+      "sha256_raw": "c2b96fa4c050a737a7b8c39d9f014305e96c2f772f348e161758a05308a2b64e",
+      "sha256_lf_utf8": "c2b96fa4c050a737a7b8c39d9f014305e96c2f772f348e161758a05308a2b64e"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/app/Services/FastOcrService.php",
+      "size_bytes": 7932,
+      "sha256_raw": "0e9ba66733ae602f622a6a49b38ea49d834a0d7b23a0a36622f5573a71d41b4a",
+      "sha256_lf_utf8": "e88ddaeb53deb5e49ea8c39ed3e3ba8bd3cba4e2f9b7305c1e16b9e4c6ca677f"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/app/Services/NlpSearchService.php",
+      "size_bytes": 16513,
+      "sha256_raw": "f40269470b2cfc4141683a7b734c7245e397fd4e9d646d222a42c10282b3d7e8",
+      "sha256_lf_utf8": "f40269470b2cfc4141683a7b734c7245e397fd4e9d646d222a42c10282b3d7e8"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/app/Services/PdfEncryptorService.php",
+      "size_bytes": 4533,
+      "sha256_raw": "f388860eb9b1edd53a8cfcc27ec71bf9788dfe74243c03707ee4453f46c35619",
+      "sha256_lf_utf8": "f388860eb9b1edd53a8cfcc27ec71bf9788dfe74243c03707ee4453f46c35619"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/app/Services/PdfExtractorService.php",
+      "size_bytes": 54424,
+      "sha256_raw": "63832e3f9268d0e27f07d1f75cf299797ef748e0782812b2a9b7bc1437d56ee9",
+      "sha256_lf_utf8": "16553e328723e1094e58937031650db80e350eb2106c8ffca480ce6157d5d3d7"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/app/Services/PdfTextService.php",
+      "size_bytes": 10234,
+      "sha256_raw": "87167085661125fab16ad006767711772acf65f175a2189f4b1328a7a4d44426",
+      "sha256_lf_utf8": "447b0ed17db992a255dc27130cabb7ad7639d6900acad85c41be80f6f0b1a302"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/app/Services/PrivateTemp.php",
+      "size_bytes": 1347,
+      "sha256_raw": "b539e7fcb682417242dd320eabb579df43697b4ffcdaaf6e896844a99192ccc1",
+      "sha256_lf_utf8": "b539e7fcb682417242dd320eabb579df43697b4ffcdaaf6e896844a99192ccc1"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/app/Traits/ApiResponses.php",
+      "size_bytes": 1193,
+      "sha256_raw": "25c6ad365a0c0a3a9b02813503a669ef5d2d86e01f601cbe463c458b04e9c724",
+      "sha256_lf_utf8": "25c6ad365a0c0a3a9b02813503a669ef5d2d86e01f601cbe463c458b04e9c724"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/artisan",
+      "size_bytes": 425,
+      "sha256_raw": "f91a517c0c5d3a904c3f390933964a5e08ec1fc68146882730daac4aca4ffcec",
+      "sha256_lf_utf8": "f91a517c0c5d3a904c3f390933964a5e08ec1fc68146882730daac4aca4ffcec"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/bootstrap/app.php",
+      "size_bytes": 1436,
+      "sha256_raw": "02e88475e5b70ccd8022a3cdbd6a636965a698a96f2389a98c8d07417b28afbc",
+      "sha256_lf_utf8": "02e88475e5b70ccd8022a3cdbd6a636965a698a96f2389a98c8d07417b28afbc"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/bootstrap/cache/.gitignore",
+      "size_bytes": 14,
+      "sha256_raw": "240a3e0d37d2e86b614063f5347eb02d4f99ca6c254de6b82871ff8d95532a7d",
+      "sha256_lf_utf8": "240a3e0d37d2e86b614063f5347eb02d4f99ca6c254de6b82871ff8d95532a7d"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/bootstrap/providers.php",
+      "size_bytes": 64,
+      "sha256_raw": "2ef405f988a6ef3f5222bfbdd89352a6ad7b2e9e21aa25e236ac5dff58358953",
+      "sha256_lf_utf8": "2ef405f988a6ef3f5222bfbdd89352a6ad7b2e9e21aa25e236ac5dff58358953"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/composer.json",
+      "size_bytes": 2968,
+      "sha256_raw": "223d21d36d5c514d0aded77c78a77496627e72a52483e935b0d4b8dd34f53e46",
+      "sha256_lf_utf8": "223d21d36d5c514d0aded77c78a77496627e72a52483e935b0d4b8dd34f53e46"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/composer.lock",
+      "size_bytes": 316543,
+      "sha256_raw": "a09dcdf2c7c0c4659a4dddf52c4eddad020a890c70a8974e4a2ecb30ed15709e",
+      "sha256_lf_utf8": "a09dcdf2c7c0c4659a4dddf52c4eddad020a890c70a8974e4a2ecb30ed15709e"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/config/acadex.php",
+      "size_bytes": 707,
+      "sha256_raw": "79bb5f0c901d19e5b20127076a929afe805884d68e23d46c66469054a43a7783",
+      "sha256_lf_utf8": "79bb5f0c901d19e5b20127076a929afe805884d68e23d46c66469054a43a7783"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/config/app.php",
+      "size_bytes": 4272,
+      "sha256_raw": "78dcd36b226fd7b24057cb95f567cb6e96561c2406653892d8aef6dcea8461e4",
+      "sha256_lf_utf8": "78dcd36b226fd7b24057cb95f567cb6e96561c2406653892d8aef6dcea8461e4"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/config/auth.php",
+      "size_bytes": 4029,
+      "sha256_raw": "50f8a6fabf848d20ea42a21e01066dd8a75bd822c8251a45f8939616432424dc",
+      "sha256_lf_utf8": "50f8a6fabf848d20ea42a21e01066dd8a75bd822c8251a45f8939616432424dc"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/config/cache.php",
+      "size_bytes": 3683,
+      "sha256_raw": "b8bcf382283330b94c0a602ff06452de819041ea709e28eea5065d51d1d7d085",
+      "sha256_lf_utf8": "b8bcf382283330b94c0a602ff06452de819041ea709e28eea5065d51d1d7d085"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/config/cors.php",
+      "size_bytes": 584,
+      "sha256_raw": "8bc307e0eecfb26532c934d8027d157f1652126e52032f45f6328157c34ed2a6",
+      "sha256_lf_utf8": "8bc307e0eecfb26532c934d8027d157f1652126e52032f45f6328157c34ed2a6"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/config/database.php",
+      "size_bytes": 6979,
+      "sha256_raw": "4f56083ec3874d216946401fb162b6ef50bc0909d004cd3337e2e33424fc6403",
+      "sha256_lf_utf8": "4f56083ec3874d216946401fb162b6ef50bc0909d004cd3337e2e33424fc6403"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/config/filesystems.php",
+      "size_bytes": 2561,
+      "sha256_raw": "be24338de6b37cc7edb6155c25278cd8962ed4619780caa2a4e43979cdfccdbf",
+      "sha256_lf_utf8": "be24338de6b37cc7edb6155c25278cd8962ed4619780caa2a4e43979cdfccdbf"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/config/logging.php",
+      "size_bytes": 4327,
+      "sha256_raw": "d90f24826a3330437f2f2fc12bb28680abe1281d35d62b082c234f4b69873835",
+      "sha256_lf_utf8": "d90f24826a3330437f2f2fc12bb28680abe1281d35d62b082c234f4b69873835"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/config/mail.php",
+      "size_bytes": 3614,
+      "sha256_raw": "825c4b149f2fe412a2e37199794e7c05df7ed86fb51811777faf80238f748aae",
+      "sha256_lf_utf8": "825c4b149f2fe412a2e37199794e7c05df7ed86fb51811777faf80238f748aae"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/config/queue.php",
+      "size_bytes": 4202,
+      "sha256_raw": "ec5ce270a4b621968bbf77c749b28d48acc3ac8aa0d5e5a4d1a3dd899e969814",
+      "sha256_lf_utf8": "ec5ce270a4b621968bbf77c749b28d48acc3ac8aa0d5e5a4d1a3dd899e969814"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/config/sanctum.php",
+      "size_bytes": 3301,
+      "sha256_raw": "eb196d8621d69c737bc8a70e568d05ea9f07655a7586b8d5dd9d18174d269300",
+      "sha256_lf_utf8": "eb196d8621d69c737bc8a70e568d05ea9f07655a7586b8d5dd9d18174d269300"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/config/services.php",
+      "size_bytes": 1101,
+      "sha256_raw": "e4204c768c5db8ac06f7c3532f0cbfdc38da86d6128180c9975adabec4420e11",
+      "sha256_lf_utf8": "e4204c768c5db8ac06f7c3532f0cbfdc38da86d6128180c9975adabec4420e11"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/config/session.php",
+      "size_bytes": 7870,
+      "sha256_raw": "56ff359587bc83f36b0042cdfadb62751055b19f15085e7ad4523bc90df19e25",
+      "sha256_lf_utf8": "56ff359587bc83f36b0042cdfadb62751055b19f15085e7ad4523bc90df19e25"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/database/.gitignore",
+      "size_bytes": 10,
+      "sha256_raw": "e758642d95e83e907e010b6e46b07b3f953c7cef11fe5ebefc2a77b9d7b4d5f7",
+      "sha256_lf_utf8": "e758642d95e83e907e010b6e46b07b3f953c7cef11fe5ebefc2a77b9d7b4d5f7"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/database/factories/UserFactory.php",
+      "size_bytes": 1075,
+      "sha256_raw": "05c4cfa8e4dc7ebe659c66717b30ea6970f62d732a1bbce32b55650cccc6aa8d",
+      "sha256_lf_utf8": "05c4cfa8e4dc7ebe659c66717b30ea6970f62d732a1bbce32b55650cccc6aa8d"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/database/migrations/0001_01_01_000000_create_users_table.php",
+      "size_bytes": 3188,
+      "sha256_raw": "401e70bafb3cf496f1d266d99297b6d549c4f9838e53cf4b5fdff63e8f3e7d50",
+      "sha256_lf_utf8": "401e70bafb3cf496f1d266d99297b6d549c4f9838e53cf4b5fdff63e8f3e7d50"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/database/migrations/0001_01_01_000001_create_cache_table.php",
+      "size_bytes": 867,
+      "sha256_raw": "2ca8398390ecef8eaf72aeac7fefce67f7de631b6f2ec7b7081c8db8953215dc",
+      "sha256_lf_utf8": "2ca8398390ecef8eaf72aeac7fefce67f7de631b6f2ec7b7081c8db8953215dc"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/database/migrations/0001_01_01_000002_create_jobs_table.php",
+      "size_bytes": 1812,
+      "sha256_raw": "7c9c712adf4091c87bf2612f4d0dccdfa1df4501553e4ac068b83d7bd5462fa5",
+      "sha256_lf_utf8": "7c9c712adf4091c87bf2612f4d0dccdfa1df4501553e4ac068b83d7bd5462fa5"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/database/migrations/2026_02_28_094132_create_personal_access_tokens_table.php",
+      "size_bytes": 863,
+      "sha256_raw": "c81ecde85ea5072188c468dcaf79776728b6eb8f684d63fc0d88a4908484ca75",
+      "sha256_lf_utf8": "c81ecde85ea5072188c468dcaf79776728b6eb8f684d63fc0d88a4908484ca75"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/database/migrations/2026_03_04_000001_create_capstones_table.php",
+      "size_bytes": 1715,
+      "sha256_raw": "af4b16c92c835da004f1de49156b6d9adc5ef81942a920406d618fb3eab7f390",
+      "sha256_lf_utf8": "af4b16c92c835da004f1de49156b6d9adc5ef81942a920406d618fb3eab7f390"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/database/migrations/2026_03_04_000002_create_keywords_tables.php",
+      "size_bytes": 963,
+      "sha256_raw": "5caaa9b543d571830ae9e705ca341b1cac4330d3acce0e24ef4b0f07868d1246",
+      "sha256_lf_utf8": "5caaa9b543d571830ae9e705ca341b1cac4330d3acce0e24ef4b0f07868d1246"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/database/migrations/2026_03_04_000003_create_tracking_tables.php",
+      "size_bytes": 1537,
+      "sha256_raw": "11cac7256b2c32b3e227adffbe0dbbda084a9bf896b6545e4ba823b49f457da0",
+      "sha256_lf_utf8": "11cac7256b2c32b3e227adffbe0dbbda084a9bf896b6545e4ba823b49f457da0"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/database/migrations/2026_03_04_000004_create_audit_logs_table.php",
+      "size_bytes": 1088,
+      "sha256_raw": "2f6c165928001411143071cd2791811c555c8d155d4118d1a27138751fb0ab16",
+      "sha256_lf_utf8": "2f6c165928001411143071cd2791811c555c8d155d4118d1a27138751fb0ab16"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/database/migrations/2026_03_04_000005_add_approval_fields_to_users_table.php",
+      "size_bytes": 639,
+      "sha256_raw": "02cdb9bd97cc9a5c9c55fc9c0c36a593bdbe493014e9e29fbc66c8618f0a8f0c",
+      "sha256_lf_utf8": "02cdb9bd97cc9a5c9c55fc9c0c36a593bdbe493014e9e29fbc66c8618f0a8f0c"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/database/migrations/2026_03_26_000001_add_category_to_capstones_table.php",
+      "size_bytes": 622,
+      "sha256_raw": "9a68a8ddbae059670a7c6d7a80674f9fd4576e407198dc5299cb661d0c16d1c8",
+      "sha256_lf_utf8": "9a68a8ddbae059670a7c6d7a80674f9fd4576e407198dc5299cb661d0c16d1c8"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/database/migrations/2026_04_19_163112_create_password_reset_codes_table.php",
+      "size_bytes": 726,
+      "sha256_raw": "00ae1f847ce51f47a40212995ae9f8c9cf98073faafe9db21b71537818d7eb1e",
+      "sha256_lf_utf8": "00ae1f847ce51f47a40212995ae9f8c9cf98073faafe9db21b71537818d7eb1e"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/database/migrations/2026_04_19_163710_add_is_archived_to_users_table.php",
+      "size_bytes": 539,
+      "sha256_raw": "dd2e6c0ba08f33861c0104196e9ec06bef01b89d8012a27c0982af95655a2d70",
+      "sha256_lf_utf8": "dd2e6c0ba08f33861c0104196e9ec06bef01b89d8012a27c0982af95655a2d70"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/database/migrations/2026_05_07_160936_create_notifications_table.php",
+      "size_bytes": 1075,
+      "sha256_raw": "5a3fbdea98a838e740061ad11a8764af403fed8573617fed718cd3bb2f61a430",
+      "sha256_lf_utf8": "5a3fbdea98a838e740061ad11a8764af403fed8573617fed718cd3bb2f61a430"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/database/migrations/2026_08_10_000001_add_publication_status_adviser_to_capstones.php",
+      "size_bytes": 912,
+      "sha256_raw": "04cc1267061027c7134a682e658533509ca162d68243587e9aa8b37dcf4708df",
+      "sha256_lf_utf8": "04cc1267061027c7134a682e658533509ca162d68243587e9aa8b37dcf4708df"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/database/migrations/2026_08_10_000002_create_capstone_resources_table.php",
+      "size_bytes": 733,
+      "sha256_raw": "deb21965e9ddbf160c71c877cc1c552ffa3438b85e4ab5262f25fd44b93ae4b2",
+      "sha256_lf_utf8": "deb21965e9ddbf160c71c877cc1c552ffa3438b85e4ab5262f25fd44b93ae4b2"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/database/migrations/2026_08_10_000003_create_capstone_references_table.php",
+      "size_bytes": 809,
+      "sha256_raw": "35919b091a8846ab8ad6d8258188d9287cfa8442e051c38c81a341fb6707d5cb",
+      "sha256_lf_utf8": "35919b091a8846ab8ad6d8258188d9287cfa8442e051c38c81a341fb6707d5cb"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/database/migrations/2026_08_10_154246_add_unique_to_capstone_views.php",
+      "size_bytes": 1223,
+      "sha256_raw": "2f173c15bd93e1ef873733eee201a4b524810edef9117da32b7c29a760237bcb",
+      "sha256_lf_utf8": "2f173c15bd93e1ef873733eee201a4b524810edef9117da32b7c29a760237bcb"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/database/migrations/2026_08_10_181718_add_pdf_text_to_capstones_table.php",
+      "size_bytes": 768,
+      "sha256_raw": "991abd510925cb7c4f4f1678b736f74a90f641ab81e7b537b05f7c63100fa00e",
+      "sha256_lf_utf8": "991abd510925cb7c4f4f1678b736f74a90f641ab81e7b537b05f7c63100fa00e"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/database/migrations/2026_09_02_000001_add_visitor_role.php",
+      "size_bytes": 1015,
+      "sha256_raw": "5df87fa6622bf7b2342f5584f91fe89d66e66bcd77664cdb35e3b0e46034da35",
+      "sha256_lf_utf8": "5df87fa6622bf7b2342f5584f91fe89d66e66bcd77664cdb35e3b0e46034da35"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/database/migrations/2026_09_02_153145_add_copyright_and_imrad_to_capstones_table.php",
+      "size_bytes": 972,
+      "sha256_raw": "f224a1c8dc846c0376960c0304e173d863610b4c2a6105f4b5698f3cfdbd5a74",
+      "sha256_lf_utf8": "f224a1c8dc846c0376960c0304e173d863610b4c2a6105f4b5698f3cfdbd5a74"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/database/migrations/2026_09_03_000001_add_last_active_at_to_users_table.php",
+      "size_bytes": 544,
+      "sha256_raw": "2c278d3bcfe69a3d0f17dbc4b169f19edd4f57602f8d82e1d6cc67d383006b7f",
+      "sha256_lf_utf8": "2c278d3bcfe69a3d0f17dbc4b169f19edd4f57602f8d82e1d6cc67d383006b7f"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/database/migrations/2026_09_13_000001_extend_fulltext_index_for_nlp_search.php",
+      "size_bytes": 2126,
+      "sha256_raw": "a84afd0401677c448810071e64019c5cf0e5d5a081f0a5786b17a3278f15e37a",
+      "sha256_lf_utf8": "a84afd0401677c448810071e64019c5cf0e5d5a081f0a5786b17a3278f15e37a"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/database/migrations/2026_09_13_000002_add_author_details_to_capstones_table.php",
+      "size_bytes": 763,
+      "sha256_raw": "882540ff780414e7d8844b63a80cf82f1484cd7815adba1e2d94a247480cce86",
+      "sha256_lf_utf8": "882540ff780414e7d8844b63a80cf82f1484cd7815adba1e2d94a247480cce86"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/database/migrations/2026_09_22_000001_add_approval_fields_to_capstones.php",
+      "size_bytes": 1221,
+      "sha256_raw": "2a91a8fcfc6b9cd431f721e75fc95668930060043d519edd9190a992048d3413",
+      "sha256_lf_utf8": "2a91a8fcfc6b9cd431f721e75fc95668930060043d519edd9190a992048d3413"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/database/migrations/2026_09_26_154143_add_rejection_reason_to_capstones_table.php",
+      "size_bytes": 734,
+      "sha256_raw": "c06fb958ff5951a34248fd0c644af4683256e5fc81ff10bf1909a5add874669a",
+      "sha256_lf_utf8": "c06fb958ff5951a34248fd0c644af4683256e5fc81ff10bf1909a5add874669a"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/database/migrations/2026_09_26_201445_add_pdf_text_indexed_at_to_capstones_table.php",
+      "size_bytes": 754,
+      "sha256_raw": "3b344f1994f01db836b13466b0bce73e62e2559450479c8b417375a22b9d3929",
+      "sha256_lf_utf8": "3b344f1994f01db836b13466b0bce73e62e2559450479c8b417375a22b9d3929"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/database/migrations/2026_10_05_150935_drop_is_published_from_capstones_table.php",
+      "size_bytes": 1637,
+      "sha256_raw": "51f739f732c25a2002051f2abdfd6c0c31e114aa9402e2667b7396cd6523bda2",
+      "sha256_lf_utf8": "51f739f732c25a2002051f2abdfd6c0c31e114aa9402e2667b7396cd6523bda2"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/database/migrations/2026_10_13_000001_secure_authentication_state.php",
+      "size_bytes": 735,
+      "sha256_raw": "fb2d0ce9c7f19580996d3dc1c8ea89ecbfcedbad5c9efd36a5477a26b789166f",
+      "sha256_lf_utf8": "fb2d0ce9c7f19580996d3dc1c8ea89ecbfcedbad5c9efd36a5477a26b789166f"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/database/migrations/2026_10_13_000002_create_document_uploads_table.php",
+      "size_bytes": 842,
+      "sha256_raw": "d8b891ad51d816a9490d368e54441211ce4e903ff5e53195b2499400f20480e7",
+      "sha256_lf_utf8": "d8b891ad51d816a9490d368e54441211ce4e903ff5e53195b2499400f20480e7"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/database/seeders/CapstoneSeeder.php",
+      "size_bytes": 16634,
+      "sha256_raw": "3927ed3737e7a4f74adf236969c48416ed03fc2e14fba613b44934b170d75a40",
+      "sha256_lf_utf8": "4d2a69c156b788d55277b977f1b96ed66f6b6facf54de297582d4ebd08a61fef"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/database/seeders/ClearCapstonesSeeder.php",
+      "size_bytes": 744,
+      "sha256_raw": "e6c24812112dab0e0c928ca175a6397cbaf3b7051f18ca8df9dc90c6edccefe5",
+      "sha256_lf_utf8": "e6c24812112dab0e0c928ca175a6397cbaf3b7051f18ca8df9dc90c6edccefe5"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/database/seeders/DatabaseSeeder.php",
+      "size_bytes": 408,
+      "sha256_raw": "c7309f98af2ab6585aa12b222a1d163d0ac5549042e830bb89b89eaa06f23977",
+      "sha256_lf_utf8": "a1c64c6b2bd498b4798e7d6749b68f33bf6b6e6050bb28b942914c012ce88dc7"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/ocr-service/.env.example",
+      "size_bytes": 394,
+      "sha256_raw": "d98efa6aa163d875b3ccbdae6e9370305d5c0afcf88cc16550d1002a6e72769a",
+      "sha256_lf_utf8": "788639b6ea6ac22fd39d2e649cf7865a03dda8da315d0042b1d4d8015f8eaec3"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/ocr-service/main.py",
+      "size_bytes": 5495,
+      "sha256_raw": "c43100b7cad1756b37c14f8512c3d8d4536057bc803b6e2095730efa3abd1517",
+      "sha256_lf_utf8": "c43100b7cad1756b37c14f8512c3d8d4536057bc803b6e2095730efa3abd1517"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/ocr-service/ocr_service.py",
+      "size_bytes": 14674,
+      "sha256_raw": "763c9de37e58447e2df0404b87b9ea767f4570d05e1680dc4588e367e28c40b9",
+      "sha256_lf_utf8": "763c9de37e58447e2df0404b87b9ea767f4570d05e1680dc4588e367e28c40b9"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/ocr-service/requirements-linux.lock",
+      "size_bytes": 166457,
+      "sha256_raw": "3d997ad0aeee8b010e6e318d207586ee341fe19750b2fde9dc73855dcf1d0acc",
+      "sha256_lf_utf8": "3d997ad0aeee8b010e6e318d207586ee341fe19750b2fde9dc73855dcf1d0acc"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/ocr-service/requirements-windows.lock",
+      "size_bytes": 162412,
+      "sha256_raw": "4a7151969fe9051f585fc5bf52f705ff24152763f8dc190bc9a0bb7074ed7e1b",
+      "sha256_lf_utf8": "4a7151969fe9051f585fc5bf52f705ff24152763f8dc190bc9a0bb7074ed7e1b"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/ocr-service/requirements.txt",
+      "size_bytes": 553,
+      "sha256_raw": "768525ab711a82eb17e50dd105ffa2ddb17daaca05beac27db0f6e9b9a946e69",
+      "sha256_lf_utf8": "bb957c57d45f7926f59592c091bf5bc4fc9462763529116390a718fb385617bb"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/ocr-service/tests/probe_laravel_ocr.py",
+      "size_bytes": 2214,
+      "sha256_raw": "e1e457b0c2bcfa3fcb557b8dcf02f29bd5f113a1a343c2aa55c4ed1eb1f42e53",
+      "sha256_lf_utf8": "e1e457b0c2bcfa3fcb557b8dcf02f29bd5f113a1a343c2aa55c4ed1eb1f42e53"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/ocr-service/tests/test_ocr.py",
+      "size_bytes": 3651,
+      "sha256_raw": "2aa847c51d21c239a48fa762afc043904397e066c53451f38145c751e215c7d4",
+      "sha256_lf_utf8": "2aa847c51d21c239a48fa762afc043904397e066c53451f38145c751e215c7d4"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/ocr-service/tests/test_preprocess_limits.py",
+      "size_bytes": 900,
+      "sha256_raw": "b0eb127e63d5f219885b3c30a43f84e4204b1a0fdf6833a2b818bc6660a9b414",
+      "sha256_lf_utf8": "b0eb127e63d5f219885b3c30a43f84e4204b1a0fdf6833a2b818bc6660a9b414"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/ocr-service/validators.py",
+      "size_bytes": 2705,
+      "sha256_raw": "c3b3606131f744d78136f8730fc901a40a1a88dbe80a17f4aad26333816d3c8b",
+      "sha256_lf_utf8": "c3b3606131f744d78136f8730fc901a40a1a88dbe80a17f4aad26333816d3c8b"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/package-lock.json",
+      "size_bytes": 96771,
+      "sha256_raw": "501a4b89fba1cdf862f9dcf366cf082e3b85b4623026798a60001750293f2938",
+      "sha256_lf_utf8": "501a4b89fba1cdf862f9dcf366cf082e3b85b4623026798a60001750293f2938"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/package.json",
+      "size_bytes": 414,
+      "sha256_raw": "e1bf666b49a401c06ede562b32fc741b8e8dc45cca0a67de136edfbd51335f33",
+      "sha256_lf_utf8": "e1bf666b49a401c06ede562b32fc741b8e8dc45cca0a67de136edfbd51335f33"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/phpunit.xml",
+      "size_bytes": 1284,
+      "sha256_raw": "cdb0cb728fc010b1590629c9664796b496540cb22d3b54c78b69ce5980cab61f",
+      "sha256_lf_utf8": "cdb0cb728fc010b1590629c9664796b496540cb22d3b54c78b69ce5980cab61f"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/public/.htaccess",
+      "size_bytes": 740,
+      "sha256_raw": "b7e379c77639fd56144947dbae84c84eb466d9c686ea81f2f013ae85421da923",
+      "sha256_lf_utf8": "b7e379c77639fd56144947dbae84c84eb466d9c686ea81f2f013ae85421da923"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/public/favicon.ico",
+      "size_bytes": 0,
+      "sha256_raw": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "sha256_lf_utf8": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/public/index.php",
+      "size_bytes": 543,
+      "sha256_raw": "eba77cba39695b6bd091fe5211d481f7ebb2ce2d8d26230b5a609465d0a4aff9",
+      "sha256_lf_utf8": "eba77cba39695b6bd091fe5211d481f7ebb2ce2d8d26230b5a609465d0a4aff9"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/public/robots.txt",
+      "size_bytes": 24,
+      "sha256_raw": "e5c4b84484ee4216e9373be99380320c25dd94805f99f0a805846f087636553f",
+      "sha256_lf_utf8": "e5c4b84484ee4216e9373be99380320c25dd94805f99f0a805846f087636553f"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/resources/css/app.css",
+      "size_bytes": 390,
+      "sha256_raw": "9f49ed837fdc773b89a294d1e86dc68828ef2f774d7e797ba5f89c2a08c84760",
+      "sha256_lf_utf8": "9f49ed837fdc773b89a294d1e86dc68828ef2f774d7e797ba5f89c2a08c84760"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/resources/js/app.js",
+      "size_bytes": 22,
+      "sha256_raw": "cf6dab196c721f6911ff99cc4f910897f978599a2d289971a316a5fc33091f94",
+      "sha256_lf_utf8": "cf6dab196c721f6911ff99cc4f910897f978599a2d289971a316a5fc33091f94"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/resources/js/bootstrap.js",
+      "size_bytes": 127,
+      "sha256_raw": "6fd9fc82e68fa915a882f4e227b9faacbe7bfd66cb953c628840e83bda6b72f4",
+      "sha256_lf_utf8": "6fd9fc82e68fa915a882f4e227b9faacbe7bfd66cb953c628840e83bda6b72f4"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/resources/views/welcome.blade.php",
+      "size_bytes": 82568,
+      "sha256_raw": "e50e41602994840b788471625fec54a4db6138ec971be05cfdfba40daf906c22",
+      "sha256_lf_utf8": "e50e41602994840b788471625fec54a4db6138ec971be05cfdfba40daf906c22"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/routes/api.php",
+      "size_bytes": 16294,
+      "sha256_raw": "95124da399c559891119efb2c1d69130bb5c74df9fcae824ee25301c331ceb3f",
+      "sha256_lf_utf8": "5d4f882fbe7b25ab4c4beb3c7f4aee92a63f27bdec92651500bc498cc1a9416b"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/routes/console.php",
+      "size_bytes": 210,
+      "sha256_raw": "9adccc33e7dd400683e434774077c7fdb2f299c5712cedf16a43fdf56f2850fa",
+      "sha256_lf_utf8": "9adccc33e7dd400683e434774077c7fdb2f299c5712cedf16a43fdf56f2850fa"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/routes/web.php",
+      "size_bytes": 108,
+      "sha256_raw": "248c7eeeb43bb61ee4fb6603e52b44843c64f72a841d671bcd41871aab23f970",
+      "sha256_lf_utf8": "248c7eeeb43bb61ee4fb6603e52b44843c64f72a841d671bcd41871aab23f970"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/scripts/http-security-probe.php",
+      "size_bytes": 5260,
+      "sha256_raw": "440594018967628ea5e637f23259ca590291c48091907b3ca3b037e07f4b9bda",
+      "sha256_lf_utf8": "440594018967628ea5e637f23259ca590291c48091907b3ca3b037e07f4b9bda"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/scripts/run-security-tests.php",
+      "size_bytes": 6071,
+      "sha256_raw": "4a0446471426b057e9bd3b6f27fe9ab3d6e2fe0bd171a5f29a9fd66ece50245c",
+      "sha256_lf_utf8": "58e620a6d7cf12be6166d6c031fce4210b941e2d89288fa031902df1ea474f4d"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/storage/app/.gitignore",
+      "size_bytes": 33,
+      "sha256_raw": "993b9e3709d7b5189da331725d1169d79e561a509db2490b722b525073d2d976",
+      "sha256_lf_utf8": "993b9e3709d7b5189da331725d1169d79e561a509db2490b722b525073d2d976"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/storage/app/private/.gitignore",
+      "size_bytes": 14,
+      "sha256_raw": "240a3e0d37d2e86b614063f5347eb02d4f99ca6c254de6b82871ff8d95532a7d",
+      "sha256_lf_utf8": "240a3e0d37d2e86b614063f5347eb02d4f99ca6c254de6b82871ff8d95532a7d"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/storage/app/public/.gitignore",
+      "size_bytes": 14,
+      "sha256_raw": "240a3e0d37d2e86b614063f5347eb02d4f99ca6c254de6b82871ff8d95532a7d",
+      "sha256_lf_utf8": "240a3e0d37d2e86b614063f5347eb02d4f99ca6c254de6b82871ff8d95532a7d"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/storage/framework/.gitignore",
+      "size_bytes": 119,
+      "sha256_raw": "2d452d65596636197757afa17df52331c84da7bb74ee0f3462fd5be4eb6afdc6",
+      "sha256_lf_utf8": "2d452d65596636197757afa17df52331c84da7bb74ee0f3462fd5be4eb6afdc6"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/storage/framework/cache/.gitignore",
+      "size_bytes": 21,
+      "sha256_raw": "32f79194633ddb34f013c6ee8819d112104ff822357adf308ec385b46a7f42f6",
+      "sha256_lf_utf8": "32f79194633ddb34f013c6ee8819d112104ff822357adf308ec385b46a7f42f6"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/storage/framework/cache/data/.gitignore",
+      "size_bytes": 14,
+      "sha256_raw": "240a3e0d37d2e86b614063f5347eb02d4f99ca6c254de6b82871ff8d95532a7d",
+      "sha256_lf_utf8": "240a3e0d37d2e86b614063f5347eb02d4f99ca6c254de6b82871ff8d95532a7d"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/storage/framework/sessions/.gitignore",
+      "size_bytes": 14,
+      "sha256_raw": "240a3e0d37d2e86b614063f5347eb02d4f99ca6c254de6b82871ff8d95532a7d",
+      "sha256_lf_utf8": "240a3e0d37d2e86b614063f5347eb02d4f99ca6c254de6b82871ff8d95532a7d"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/storage/framework/testing/.gitignore",
+      "size_bytes": 14,
+      "sha256_raw": "240a3e0d37d2e86b614063f5347eb02d4f99ca6c254de6b82871ff8d95532a7d",
+      "sha256_lf_utf8": "240a3e0d37d2e86b614063f5347eb02d4f99ca6c254de6b82871ff8d95532a7d"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/storage/framework/views/.gitignore",
+      "size_bytes": 14,
+      "sha256_raw": "240a3e0d37d2e86b614063f5347eb02d4f99ca6c254de6b82871ff8d95532a7d",
+      "sha256_lf_utf8": "240a3e0d37d2e86b614063f5347eb02d4f99ca6c254de6b82871ff8d95532a7d"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/storage/logs/.gitignore",
+      "size_bytes": 14,
+      "sha256_raw": "240a3e0d37d2e86b614063f5347eb02d4f99ca6c254de6b82871ff8d95532a7d",
+      "sha256_lf_utf8": "240a3e0d37d2e86b614063f5347eb02d4f99ca6c254de6b82871ff8d95532a7d"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/tests/Feature/AdminBootstrapTest.php",
+      "size_bytes": 1690,
+      "sha256_raw": "0d44a2ec39c13fa19cde86d2e85f670b1090da31ff4b931c014be8f8f03ad4dc",
+      "sha256_lf_utf8": "0d44a2ec39c13fa19cde86d2e85f670b1090da31ff4b931c014be8f8f03ad4dc"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/tests/Feature/AuthenticationSecurityTest.php",
+      "size_bytes": 9706,
+      "sha256_raw": "3ba2ffaf00ee756f4176bd03620843691d3d1b76026205edc632e208e4c7d453",
+      "sha256_lf_utf8": "5cf0333ea3d4160441c4fa101b6e95bc49285a3402bb794927b343bff5e97333"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/tests/Feature/DeploymentHardeningTest.php",
+      "size_bytes": 3101,
+      "sha256_raw": "5944055e9c284c9c520b3e0621560cf52b35d2f97b0b56350f7bdca6ef6a2a02",
+      "sha256_lf_utf8": "5944055e9c284c9c520b3e0621560cf52b35d2f97b0b56350f7bdca6ef6a2a02"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/tests/Feature/DocumentAuthorizationTest.php",
+      "size_bytes": 8380,
+      "sha256_raw": "a11098e27362384ac5bb5db8da361054a522e3ca24a8364ce2ba0bcd6e33833b",
+      "sha256_lf_utf8": "010f4c96a465d8ae90e218ff43acdc2d490feec9664d16177c6a9d1cc6f19fe4"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/tests/Feature/ExampleTest.php",
+      "size_bytes": 359,
+      "sha256_raw": "aaa4a192fb4aa96d4e81eda06a29968da3d9a73b71026b87a67297e66dd985b8",
+      "sha256_lf_utf8": "aaa4a192fb4aa96d4e81eda06a29968da3d9a73b71026b87a67297e66dd985b8"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/tests/Feature/ProductionConfigurationTest.php",
+      "size_bytes": 888,
+      "sha256_raw": "681407b2c02f5809ca2358a01e5d950ef98f0860771826ec0255ed3101d1693a",
+      "sha256_lf_utf8": "681407b2c02f5809ca2358a01e5d950ef98f0860771826ec0255ed3101d1693a"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/tests/Feature/UploadOwnershipTest.php",
+      "size_bytes": 5775,
+      "sha256_raw": "533cd46bd281aafb09e9d7a628ef5ec019c9dd0e319cddcea50b95ca69f0975c",
+      "sha256_lf_utf8": "fd4ca44608cd5aea5cafd5c8b2c7746aeb1fce88d116cb856029fee7483a47cd"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/tests/SecurityTestCase.php",
+      "size_bytes": 3110,
+      "sha256_raw": "56743a6a6698d33e8951c4158810853243c0a8b7f53cf72b4df541164ee29f5a",
+      "sha256_lf_utf8": "9f47a1e9ad0159f5a2b47992872e00fe8501884348371a157da59be25b9df831"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/tests/TestCase.php",
+      "size_bytes": 142,
+      "sha256_raw": "c7c209f5579c42647c1f7b2a79ac828e8b54ac62a98442045a6e94fa2c0d0ebc",
+      "sha256_lf_utf8": "c7c209f5579c42647c1f7b2a79ac828e8b54ac62a98442045a6e94fa2c0d0ebc"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/tests/Unit/ApiCsrfTest.php",
+      "size_bytes": 2085,
+      "sha256_raw": "9ba09de6b117fa7234e1adf795895aa1c6dd64cdb926357d478789ba0c690b15",
+      "sha256_lf_utf8": "9ba09de6b117fa7234e1adf795895aa1c6dd64cdb926357d478789ba0c690b15"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/tests/Unit/ExampleTest.php",
+      "size_bytes": 243,
+      "sha256_raw": "ffacae5c1a2a44c809420af5b3b404910da1b12167d58764dac6d10b8ba8cfaf",
+      "sha256_lf_utf8": "ffacae5c1a2a44c809420af5b3b404910da1b12167d58764dac6d10b8ba8cfaf"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/tests/Unit/TrustedProxyTest.php",
+      "size_bytes": 921,
+      "sha256_raw": "06cb921dc637467a41c478dcde1a354fe85a3b0ae1ff0e16d1c0b4983aea7daf",
+      "sha256_lf_utf8": "06cb921dc637467a41c478dcde1a354fe85a3b0ae1ff0e16d1c0b4983aea7daf"
+    },
+    {
+      "path": "EduArchive-Backend-Laravel/vite.config.js",
+      "size_bytes": 436,
+      "sha256_raw": "b981a284135bcb7da21ea5e1aaa2dc31c8daeef92d9b4e5c79538bdb8dfaf6f0",
+      "sha256_lf_utf8": "b981a284135bcb7da21ea5e1aaa2dc31c8daeef92d9b4e5c79538bdb8dfaf6f0"
+    },
+    {
+      "path": "EduArchive-Frontend-React/.env.example",
+      "size_bytes": 251,
+      "sha256_raw": "66671bd12b18ca5ea74ee9b7628701a8d895f673254802cea8c13ceea8c33e0d",
+      "sha256_lf_utf8": "66671bd12b18ca5ea74ee9b7628701a8d895f673254802cea8c13ceea8c33e0d"
+    },
+    {
+      "path": "EduArchive-Frontend-React/.gitignore",
+      "size_bytes": 306,
+      "sha256_raw": "772485ed8d9d5dafdfd174c938d1feb007e58ae4440c533f5989d977865e69ae",
+      "sha256_lf_utf8": "18ec027092b4093e1df41c661950622e26606a49b2d77e6235c2b944a055e9c0"
+    },
+    {
+      "path": "EduArchive-Frontend-React/README.md",
+      "size_bytes": 1173,
+      "sha256_raw": "0592a648101d2fb3057915284295c2c8b4cb794ad2e7fcb87caa2b67a6bbb0d3",
+      "sha256_lf_utf8": "7a6f004c103a2e323a5677758071ad4dfe22ea8a92883aadd5f5b39b46dd729d"
+    },
+    {
+      "path": "EduArchive-Frontend-React/eslint.config.js",
+      "size_bytes": 912,
+      "sha256_raw": "02f3d6265613630c8012d0cc7ae21780a57f1a8935e792817693e8da4a1c4c06",
+      "sha256_lf_utf8": "0dee8ce3373512aef1f97eadac5045c663095cc36f1739cc534a4825d66e76f4"
+    },
+    {
+      "path": "EduArchive-Frontend-React/index.html",
+      "size_bytes": 1563,
+      "sha256_raw": "d8625d1b77dc6d5c221b599aef43a6d7fac0f8ee1a32ae21c50ff5216b991604",
+      "sha256_lf_utf8": "056dd6c9e63d90bc76a3ae1e257124246f3b3084a10905695e73e78df1e54906"
+    },
+    {
+      "path": "EduArchive-Frontend-React/package-lock.json",
+      "size_bytes": 164911,
+      "sha256_raw": "ee2f675b066b73110decce0a58eb33c93caac5dda90b4aa9219371361b44c816",
+      "sha256_lf_utf8": "69906fdff814c4e530da7c074de50bebd5395d1ae726638ef29b3b42c6bc8b63"
+    },
+    {
+      "path": "EduArchive-Frontend-React/package.json",
+      "size_bytes": 889,
+      "sha256_raw": "d1f128da65e1c576fd928d0f7dc0f6fa62696e92368f16fb016600c36135c134",
+      "sha256_lf_utf8": "44a4e917eeb8ce7db7839ff7fb16e098a30ace0d793f519b05ab594039f202af"
+    },
+    {
+      "path": "EduArchive-Frontend-React/public/vite.svg",
+      "size_bytes": 1497,
+      "sha256_raw": "4a748afd443918bb16591c834c401dae33e87861ab5dbad0811c3a3b4a9214fb",
+      "sha256_lf_utf8": "4a748afd443918bb16591c834c401dae33e87861ab5dbad0811c3a3b4a9214fb"
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/App.css",
+      "size_bytes": 648,
+      "sha256_raw": "1b75716b5511ad178574cd3e3656e5e8dd94544456944b4ff1d253c9ecc614d4",
+      "sha256_lf_utf8": "a0715e0a09edbd0fbde65816a75e0fa0fc8b314c5260c0768c19bf3aac22621a"
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/App.jsx",
+      "size_bytes": 8993,
+      "sha256_raw": "f7d38924aa080ea5f50953ae4a0ce485ec4d075900474b8141370ac181c36aae",
+      "sha256_lf_utf8": "6d3f95a507a4be8231bb0c8e987f979b2193269d263e5ab39b4b6088963a1bf3"
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/api/admin.js",
+      "size_bytes": 11593,
+      "sha256_raw": "2e64f2fdc9253342cb7c6fb9844d3773a26a2f57df84b21ec6104ce22bd29068",
+      "sha256_lf_utf8": "de04df22f695562fbc71da58da83c63b816add7da4f2f3bf364fac48048bdcea"
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/api/axios.js",
+      "size_bytes": 1610,
+      "sha256_raw": "81130135382e362fcc85462c4e73514e6bdc1cd850f225a567581fe1d074f0ad",
+      "sha256_lf_utf8": "90cc4a08a4e24365aec85295fc3e36b8e2760d3df42d329b3d3ec9928ca60019"
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/api/baseUrl.js",
+      "size_bytes": 786,
+      "sha256_raw": "9579456a6a03cf9a63d5fcf5572d9fad94f741346d5310d306bf7520da70606f",
+      "sha256_lf_utf8": "9579456a6a03cf9a63d5fcf5572d9fad94f741346d5310d306bf7520da70606f"
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/api/faculty.js",
+      "size_bytes": 1589,
+      "sha256_raw": "d7e4d129a4bd92e2d46080f952654918c9f6d7d854968701850cf7360d5e6d38",
+      "sha256_lf_utf8": "d1127641adc0da5deae8754244b4bfdd9ec9b6f06d31e5972de7b4584675aad0"
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/api/visitor.js",
+      "size_bytes": 1805,
+      "sha256_raw": "9b555c37fb64278a890245c4b9d0c361e9e623be218367fb1f2ccdde8de47d0c",
+      "sha256_lf_utf8": "ae565d0e839af033483769cf8c053d5af88c7639654ab2af5852df5687cd2d82"
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/assets/react.svg",
+      "size_bytes": 4126,
+      "sha256_raw": "35ef61ed53b323ae94a16a8ec659b3d0af3880698791133f23b084085ab1c2e5",
+      "sha256_lf_utf8": "35ef61ed53b323ae94a16a8ec659b3d0af3880698791133f23b084085ab1c2e5"
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/components/About.jsx",
+      "size_bytes": 13870,
+      "sha256_raw": "8e0104ff397024aab3a7e225c68a987dafb638435eca004d9a67138d12dcad0b",
+      "sha256_lf_utf8": "0303d4c608d6b5d114bf2704312e08bc601530515fb781a5160a2726c9ae14c8"
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/components/AuthorDetailsModal.jsx",
+      "size_bytes": 11736,
+      "sha256_raw": "ff33667a46791c53a023da8ac8048925898a4606e40cb7c7be807cacf8ecfa2e",
+      "sha256_lf_utf8": "06c4f0c63467d06b6356137a40063824416ec95470d9edecda2efab948b157fa"
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/components/CTA.jsx",
+      "size_bytes": 4843,
+      "sha256_raw": "081974adcceca5c77586a50a75b116dafd883d6890c3a2b7c9a710fb1423e14a",
+      "sha256_lf_utf8": "7c2cc0bc80410b78f52a6389301a60dfb485ba9143c2dcbad90de46972be08f4"
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/components/CapstoneAnalyticsPanel.jsx",
+      "size_bytes": 15746,
+      "sha256_raw": "dfb34a40e38749eb0108619d4de28c872cdb3af46055d30f7b5e770f93e27c24",
+      "sha256_lf_utf8": "64b20797a6fdef5f2d306d5a4909976c93f8a88f977cd209f50c26a4371d22ec"
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/components/CategoryCombobox.jsx",
+      "size_bytes": 4553,
+      "sha256_raw": "14b07d1dab07fd178478236bc7860a166e3775ded21fb8a1e0caf0eef670ad8f",
+      "sha256_lf_utf8": "945c49530acc9056e26f3d8ad3262d74f16a97a4f15921b259b6237cb424f744"
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/components/ChangeEmailModal.jsx",
+      "size_bytes": 14022,
+      "sha256_raw": "844d6641eaa424ab72e66fe02ff402c7934c7c1d37d15bbd4687673b78ddc687",
+      "sha256_lf_utf8": "c018480b169d6dec29d6d49b14b07e4f5d118dcf9f24c4cbcd7902e5e34712cf"
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/components/ChangePasswordModal.jsx",
+      "size_bytes": 10175,
+      "sha256_raw": "d56015427aba975e4724ea266dde2b788826cdb0410bb1b014f4ce46965e721f",
+      "sha256_lf_utf8": "f20857ac032bff18bed39b1981f62803e098c56499b30a760a21555a327e6665"
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/components/Chatbot.jsx",
+      "size_bytes": 36783,
+      "sha256_raw": "a93ed77a5dbf54d7fb3eb3cb3e5356fb62d2e633b55a11d14c855752cf7b21ad",
+      "sha256_lf_utf8": "b08ce4a8ccc2785876e735700d024396fa0fb6516320dd715667865131673106"
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/components/CitationGenerator.jsx",
+      "size_bytes": 9936,
+      "sha256_raw": "d8dec603c469eebe5c493f6d766de6f130b3ab79c28056eca775590f2c301932",
+      "sha256_lf_utf8": "7329df2d8ea1e7e4ee744893cc849d651b28a5aef2f5a5b3c2b8dea32893aa74"
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/components/ConfirmDialog.jsx",
+      "size_bytes": 2540,
+      "sha256_raw": "f3d764cdb37e0e8290342cc88be60e1b63806bb551c85af8c4d273ba8d83d246",
+      "sha256_lf_utf8": "4a4c53c18fa24f548e73baed241a2db70dedd729366760546d7ce63c325081d4"
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/components/EmptyState.jsx",
+      "size_bytes": 513,
+      "sha256_raw": "831ad7ab9d7a0fe4450317e432b8c96fc7fc5d8763cb1eaa7d9a33766f83b068",
+      "sha256_lf_utf8": "d3bf436b78edc5075dc0e8a0593f5d5c2ff425542d3fdb47b7f6f25d5d60fcae"
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/components/Features.jsx",
+      "size_bytes": 8159,
+      "sha256_raw": "7b0470843dd7ff9815eb6afa46fff6ce5089d2f6c705be1bc5564f251beeca8d",
+      "sha256_lf_utf8": "6b61c689d7bc590f29fd968f16b9bf81040b59c97786b033ed323101370eacee"
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/components/Footer.jsx",
+      "size_bytes": 5778,
+      "sha256_raw": "f30e50d855b8dbb38def5c04159dbf0e56e75a2129436d651a6ceb5284f8b270",
+      "sha256_lf_utf8": "0c945d015e3a3d92f9895f7e1d127d635db73810346b9911545e54e87cb4c59c"
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/components/ForgotPasswordModal.jsx",
+      "size_bytes": 18339,
+      "sha256_raw": "f64b97f899e1a68d9d0b53ecad81fb75ee5196564c4e42fc59fa63e21c2a62d6",
+      "sha256_lf_utf8": "cb139ddf0d3573bca82b158e5c2094e2cca1bccf732a481cefd7d7a15b6ff2ce"
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/components/GuestRoute.jsx",
+      "size_bytes": 1012,
+      "sha256_raw": "dc5a9b22b0a6bbbd868c40becf164b7504ed19db3d6fb7678d2cce0afd09fea3",
+      "sha256_lf_utf8": "457b2eef2c565c6ccc83f3a22208893167df393dc7283ff100e8c45c9488efbe"
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/components/Hero.jsx",
+      "size_bytes": 13030,
+      "sha256_raw": "14d31d1974ccc115bab6f3670206015b0dc4ab7e85472919db3075620cc324d4",
+      "sha256_lf_utf8": "dca865e2bf4deb6ace2a427e75ed31f226ac3cbc9733bd01e72a011a00c5cdf9"
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/components/Loading.jsx",
+      "size_bytes": 1789,
+      "sha256_raw": "d41e226e2eab00336140105f5c21166b734b6ae793e7f06739a708183e5f177d",
+      "sha256_lf_utf8": "96ebcedb488047b3bca3f3e1a1a8b7d49f31e8ede618e6fb8c6bffe432d9230e"
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/components/Modal.jsx",
+      "size_bytes": 1407,
+      "sha256_raw": "de73c725cd14a99961cfe794a8d3275cf1cf7b815e2c723b810e6e930d55c5d0",
+      "sha256_lf_utf8": "ebe746974695ae4a8452107ad6ff4c11d3e885ea3b666c8fbc481f73a9a1eedb"
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/components/Navbar.jsx",
+      "size_bytes": 9807,
+      "sha256_raw": "a15cb73f91017eacacd804d0196ede4edc3f3dc4adfeda067775723ea52c8787",
+      "sha256_lf_utf8": "749780a0c9164c9aea67931a921abaef9e84656429522df14d86e710d0f89554"
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/components/Notification.jsx",
+      "size_bytes": 2583,
+      "sha256_raw": "acd80fca2f06bd529185f23110ea8490e4982f08e5f37b581f0eee8306bebf86",
+      "sha256_lf_utf8": "922eb4c46f15985a2c6f8b9d0534807bbdf94795e6d60b150c2114ef23d6e80b"
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/components/Pagination.jsx",
+      "size_bytes": 4553,
+      "sha256_raw": "e1e422728a56ffe4450e4531b065ed86daea21e8b4e549807e13ddd14b5b4610",
+      "sha256_lf_utf8": "7dd2df37dc087c62b50b39c0c5f0dfe88188771ba1cd4b0b56e7e4edf1ba875f"
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/components/ProfileModal.jsx",
+      "size_bytes": 11404,
+      "sha256_raw": "5e51467c788807cf516415b26d283786bd67e2791d5a50fc3444dd4ee808c0c4",
+      "sha256_lf_utf8": "f2a83eafb6b943eb1c4ef9b9006e8f524709273838a26332dcc65832873eaa1d"
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/components/ProtectedRoute.jsx",
+      "size_bytes": 985,
+      "sha256_raw": "115d8b6dc49955b29a27ff175b16d7abedda1095f5db9c29216b096117b51e79",
+      "sha256_lf_utf8": "7bb8d4fde4a7ca88d284841b7db4ae2c9b050d2df9fd65f8382a68599e655532"
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/components/RejectReasonModal.jsx",
+      "size_bytes": 7858,
+      "sha256_raw": "c5f863fdebe0697cf6fb20f758637badb5051a76e5f0eb3bad0441c9cdfa4039",
+      "sha256_lf_utf8": "dfd6607f4b307b5751254ea67681fe6040cf1a4eeedf7620e35035658ae1bff2"
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/components/ReviewExtractedDataPage.jsx",
+      "size_bytes": 22094,
+      "sha256_raw": "b529ed994c1ef0b94f47bbb2c7921c3df61b0a37139b902f45cbe1b0837479b5",
+      "sha256_lf_utf8": "7db9a5ffefcacd95e7d443fe77e98e8e7d58b450e9e31ec0dc7ac99bc3def2c1"
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/components/SearchWithSuggestions.jsx",
+      "size_bytes": 8905,
+      "sha256_raw": "810a43ffe874e2715f4a657114e656d2b561afe048a35478b2d68bd332927740",
+      "sha256_lf_utf8": "e0378fc6a6048d5102d33d9e046ae4fef6438ec663541f9858db50d7d43e104b"
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/components/VerifyAccountEmailModal.jsx",
+      "size_bytes": 2011,
+      "sha256_raw": "cf53b3e945f2f1997d61de2a74e05871f0c3db2f772e1eb2d1fa2d0d48c0fdeb",
+      "sha256_lf_utf8": "cf53b3e945f2f1997d61de2a74e05871f0c3db2f772e1eb2d1fa2d0d48c0fdeb"
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/components/admin/AdminLayout.jsx",
+      "size_bytes": 24488,
+      "sha256_raw": "e29443133e5864a77ee6190ed3cce98428154be134de528dadde5a05f1ebb9c3",
+      "sha256_lf_utf8": "f193ed6e79e4dc5bd96403046ba81fad29ac9c2bf2111e2433894e257cab11ad"
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/components/admin/CapstoneModal.jsx",
+      "size_bytes": 4157,
+      "sha256_raw": "2248d423d9073f71a6e4855b79301cf002ae077e64f29da3b9decdc297862714",
+      "sha256_lf_utf8": "6da4dea41c00c2852f6e4adba1d87e0ad6cd5f41b83b83ad47a3700ce7cc7c3c"
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/components/admin/EditCapstoneModal.jsx",
+      "size_bytes": 58230,
+      "sha256_raw": "0eb8f52019e91dc1864dee547047a8e21cce2ab8d98c3f8ac32d3df7016a8335",
+      "sha256_lf_utf8": "e7dced8f3bd21e67972f093aa11f2dc2a05e747551d94fb674bb7f20fc62d428"
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/components/admin/UploadCapstoneModal.jsx",
+      "size_bytes": 12725,
+      "sha256_raw": "b1dccee061da3c128d92a739c95e7b74718b3bc475798016c1e16704e0e7710f",
+      "sha256_lf_utf8": "810d380bf1b3f9d9d6b57a6ff01460eb7ad31f71e6a5aca7f4b40e7d252d5b24"
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/components/faculty/FacultyLayout.jsx",
+      "size_bytes": 12698,
+      "sha256_raw": "e4d3939783e75923279889d06b238424d653e5bd8e1fe7e977c5cfb1092dcdee",
+      "sha256_lf_utf8": "f3700b16ccafc90111d9fb168a2dc7092b2fee22fe32acf6dd8a34e9e6975616"
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/components/faculty/FacultyUploadCapstoneModal.jsx",
+      "size_bytes": 11418,
+      "sha256_raw": "3183c683c308a51442eb46c54e3224f5a1437020367bbe77c2b6fd3588a91268",
+      "sha256_lf_utf8": "73364aa164debd7b7b9dcd977654d8dfe79462fef1b66dfc53597ed996e83039"
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/components/inlineMarkdown.js",
+      "size_bytes": 549,
+      "sha256_raw": "9bdcbb3ff1dde889c72920bdf65d70b25c20aa8945c563a784710298896fa203",
+      "sha256_lf_utf8": "9bdcbb3ff1dde889c72920bdf65d70b25c20aa8945c563a784710298896fa203"
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/components/student/StudentLayout.jsx",
+      "size_bytes": 12484,
+      "sha256_raw": "00c1f03ddccebcaa32cda04ce1ff7d169b586367a42fc5f9950571f64b9b2022",
+      "sha256_lf_utf8": "3b5ca69b762882881d8c51c6413b362fdc0b306ce402dfd945129c444d7c3533"
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/components/student/StudentUploadCapstoneModal.jsx",
+      "size_bytes": 11404,
+      "sha256_raw": "dacc4d2119470b55d39925ea7b875585ccde0fe63a78cb5eba030d33e1196ecc",
+      "sha256_lf_utf8": "7118b78e72385a31adba675d0276e2c4e0c96b8ab27234f22e36d4549296c679"
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/components/useNotification.js",
+      "size_bytes": 179,
+      "sha256_raw": "ee885f3a77bb8156f20517c345b40c4252b67dc24282ba68776310b061b415c5",
+      "sha256_lf_utf8": "1f294bfbdc8df1401b70fa26e1fdf0bc7475fff6d4a0d788f3aa2e768ed6c58f"
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/components/visitor/VisitorLayout.jsx",
+      "size_bytes": 12343,
+      "sha256_raw": "c8849d1f45f2157c9a999874b298d2cf6bd6197ce472209333c9082158cc8f8e",
+      "sha256_lf_utf8": "3f0f3ca8695303fc2381f40c5c1299f32df12b57eea002dee9e5412aafac2269"
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/context/AuthContext.jsx",
+      "size_bytes": 1155,
+      "sha256_raw": "e2c727557a4b8be895fb8de16ddca318705e717aba96f638a81406d0d0b73a80",
+      "sha256_lf_utf8": "cdddaec46e8cec43d1e0263f494a24283e92f9bdd85a7d7c2594295519c7d58e"
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/context/ChatbotContext.jsx",
+      "size_bytes": 765,
+      "sha256_raw": "3909b431fe0a42333e366c3a82fa16ddd62d5aaa79976cde4f941fa0d5d979b3",
+      "sha256_lf_utf8": "b5e64374325186417ac49866f76d152df2b557d4b74f9bd5ad2dd58b159f130b"
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/context/ThemeContext.jsx",
+      "size_bytes": 790,
+      "sha256_raw": "3b621aa9bd2372ab42597cfef424e3d630c6dfa06612d71723a6c6e63b7b7caf",
+      "sha256_lf_utf8": "d714f21ba37a5a52eba686bc72494e6d287d7c1d4656f93c0f5f21073e7823a9"
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/context/useAuth.js",
+      "size_bytes": 261,
+      "sha256_raw": "c032c36d84177d66bb5a91385598aeda4b38dae219c66a6f494c8b23ca2a24ff",
+      "sha256_lf_utf8": "cc1c220569c8abef4198b045ba3797cf4403379bd3d8e1e2a8ac0d398c736846"
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/context/useChatbotContext.js",
+      "size_bytes": 296,
+      "sha256_raw": "f2220efe1526686f9f6c5deecce517878fa7b0d53e35e7d4fef2342f2bce57b7",
+      "sha256_lf_utf8": "2a7d2b45ec90871b75f91942662d98c0939a8076e9d04dd2057e9e494add21f1"
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/context/useTheme.js",
+      "size_bytes": 266,
+      "sha256_raw": "9d2e10f019611a2afde02e481f41e4b3a81990aeafb757c67049f736a8c27644",
+      "sha256_lf_utf8": "4550bff9651c2bf0e7c4ac4e24d06e9151182395b0d1705ee92cca1d7697060d"
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/index.css",
+      "size_bytes": 67085,
+      "sha256_raw": "bc9c6bff6b5c5a923920e8df8ab8216c5d137426ca74cf19c10c1753c93e52c7",
+      "sha256_lf_utf8": "511d974251c36bc52fdf51e501d539a86b80a4db16916a8a0e702cdb6010387d"
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/main.jsx",
+      "size_bytes": 239,
+      "sha256_raw": "ae81f1c01f2c8018a1ba5cf73171921c8982d90b049bb6b039ea82f8e1dec958",
+      "sha256_lf_utf8": "4b4b864dbe45253425d0c925337180ec07e204295179f80f59551216f466f618"
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/pages/Dashboard.jsx",
+      "size_bytes": 4777,
+      "sha256_raw": "c281590a9cf826adb5579d6a6d5761ed77e6086d8c0ddab56b41d4376ab68935",
+      "sha256_lf_utf8": "468be935dfde096afccfdd970d208c09317b30853738e13f3071d115739b1972"
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/pages/Landing.jsx",
+      "size_bytes": 543,
+      "sha256_raw": "0d5d25ad5167fee5e78addd399e13dfb343bc8adb02fa7230bd3d71fd8a34aa6",
+      "sha256_lf_utf8": "a9da03e263173b5186ada04bcd0e03ddb5f8f181b1dc9aba8bcad5ee41dc88d0"
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/pages/Login.jsx",
+      "size_bytes": 23567,
+      "sha256_raw": "4b4d873082f1f25dbbe595c8e12765e5762d9360b7b913915566d31e131050a2",
+      "sha256_lf_utf8": "8974c2cd4b96418a9666cd2f016f777c8632eebd5e785fe4c3a60f137dafef69"
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/pages/Register.jsx",
+      "size_bytes": 43420,
+      "sha256_raw": "642e8924e41526d3babdd33902c269e65990c154fd3fc54892381ff2ad2325c4",
+      "sha256_lf_utf8": "7568bb5358512091352d1a5e3e448b898e1d49bd4587bf4f476ec87693dda6e7"
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/pages/admin/ActivityLogs.jsx",
+      "size_bytes": 83534,
+      "sha256_raw": "38705ee5b07501d222142df372360bc07b62d697d487648cd246cd64e2885291",
+      "sha256_lf_utf8": "1239fd48f79609926f06f16c3eceb3d2cfa9447a44f11a2cd9b5ffa83c3254dd"
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/pages/admin/AdminCapstoneAdditionalInfoPage.jsx",
+      "size_bytes": 42273,
+      "sha256_raw": "43c931845ec795c4c66cbd0d682d9a376723a12b97384bf5b5981288376ddf28",
+      "sha256_lf_utf8": "749cbbec058af5e2480d19382d1abaf2d9e55ebc8f6d34e35a3aeb9d9cb9e6c3"
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/pages/admin/AdminDashboard.jsx",
+      "size_bytes": 19765,
+      "sha256_raw": "df0a7e9a5ac5fb4e8e62d80047b60a755af3ffb020d1487055b168d2f49aa589",
+      "sha256_lf_utf8": "81c87328a5fabc712a2ebf130143c50033247efed642fe9b05919b8ab39a68e0"
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/pages/admin/AdminProfile.jsx",
+      "size_bytes": 8151,
+      "sha256_raw": "78cc8c9529eb938cfb2f7979a02da9735da4467a7ec82c733c92c69aa1f228d0",
+      "sha256_lf_utf8": "ad3b91bedf5e13b40c5a563085a668a77913ecc7072841c2bdc24cea7c7d154c"
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/pages/admin/CapstoneApproval.jsx",
+      "size_bytes": 15658,
+      "sha256_raw": "c47eb80f749b0044d4ab2791753624af49a5e55ad9883042b736ec7cc9b1c082",
+      "sha256_lf_utf8": "9e7dce372f282aa412cdc2f0856316401750fc2193fbce6d8330bcf07f1a60fd"
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/pages/admin/CapstoneLibrary.jsx",
+      "size_bytes": 39944,
+      "sha256_raw": "11b6139a9ac09d3c4219e05688684b3eac0019628ef5087a485323f30a16575f",
+      "sha256_lf_utf8": "ce757113e99f4ff03a3ea7344122b65dfb8c1757c9e323d9794018cbc4a25719"
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/pages/admin/CapstoneMainPage.jsx",
+      "size_bytes": 34747,
+      "sha256_raw": "072741b2f7f1f337d969341fbc3e2b6140736996ea7bc9e3be2e7143370b0379",
+      "sha256_lf_utf8": "e5f684ff053f8bbe2772fb3d9512c0553cb4ce998e46df53a1e83de72e541e50"
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/pages/admin/PublishedCapstones.jsx",
+      "size_bytes": 35842,
+      "sha256_raw": "daee3016b2929c7814ef07d8197bd103de3bc16e79d46921658cbf9a36e22a98",
+      "sha256_lf_utf8": "07fb5aa75eb511cf33e7d57d5daf8e2793fd9cd2c25c2052413f56e30b201764"
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/pages/admin/UserManagement.jsx",
+      "size_bytes": 42141,
+      "sha256_raw": "8939c208e748716b5e72fa45fc2edf86a1484b57de51810b15f9f79640c11900",
+      "sha256_lf_utf8": "1a451c111c33189226379af884cb9c134814ff9f763aa64d092d2256d9c2c1f3"
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/pages/faculty/CapstoneAdditionalInfoPage.jsx",
+      "size_bytes": 44202,
+      "sha256_raw": "b16f317d714b916f476fd855e9a7ee54f6f4a9d8ef358c87de553502560efd35",
+      "sha256_lf_utf8": "7e637011de1fb53b19b3f9459aa71b3a637f1be100de628a6bc4fa540d6477e4"
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/pages/faculty/FacultyCapstoneApproval.jsx",
+      "size_bytes": 15581,
+      "sha256_raw": "24bd6ac2df89b398046277e26361add219324dcdf94d29c605a50280e73f8635",
+      "sha256_lf_utf8": "a49e8250775363374f7fafae7ba04855521794a12b2be6d62d4b3bfb8c1adfd1"
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/pages/faculty/FacultyCapstoneLibrary.jsx",
+      "size_bytes": 32165,
+      "sha256_raw": "2dc9804392465a725e5903788660e0b18f09ed1b13f7601fedcdc9eb9ae4e927",
+      "sha256_lf_utf8": "cb41a2d430d7f7479633095ad4a71e479016478315c20fa6aa160240d6c88f27"
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/pages/faculty/FacultyProfile.jsx",
+      "size_bytes": 7597,
+      "sha256_raw": "5eecaf8ca5c8d1c60d4054b8375428deda05efe56b0216b6db6deec88823575f",
+      "sha256_lf_utf8": "fb8fdaa700a1910f4d0d44a3c189243fd3f8d654a8c83af7c8b6ee182d68e57a"
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/pages/faculty/FacultyUploadedCapstones.jsx",
+      "size_bytes": 35938,
+      "sha256_raw": "802d2627f09a38adba0529260c03a906450d0e269d9719cba1334c018ae1b0d9",
+      "sha256_lf_utf8": "1932284e7ea61a140928fb15af8e1bef700ac2780f138619a2b8b1381a1d2c35"
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/pages/student/StudentBookmarks.jsx",
+      "size_bytes": 4813,
+      "sha256_raw": "8cb9c787b3fc4a7d322908fe8c9b840bfb535af5e6eb061474439e3e8ccf78cd",
+      "sha256_lf_utf8": "7410a90c733c6bbff8ec657047a7ffe1fd98454a16e7e7c7962e1ad182410a85"
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/pages/student/StudentBrowseCapstones.jsx",
+      "size_bytes": 12736,
+      "sha256_raw": "13d975832fa73041fa73086d539a1e896db989c4a67cd9e8bcb67aa31b2590aa",
+      "sha256_lf_utf8": "2e5f1e6948737e00dfc0b2ea984530d574278fcb1acc19330497dc64edb5e58c"
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/pages/student/StudentCapstoneAdditionalInfoPage.jsx",
+      "size_bytes": 45001,
+      "sha256_raw": "fd33655ff67eb0ef601fad3b14aa4b31ff3df9e71e7743c79f27d16a5a0908c0",
+      "sha256_lf_utf8": "03d4218132f4d42c2f103d2d56d881aadffde2739e665536d0cfe24ea9e4fadc"
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/pages/student/StudentCapstoneLibrary.jsx",
+      "size_bytes": 32471,
+      "sha256_raw": "180a5ddcabb062b422441d3f23e019627afc82ca67ad97c1bb520cd5cbd545eb",
+      "sha256_lf_utf8": "d1598660657d7153ecbd6335eb5105944c15a2d86e301684ad1fd77f2556387d"
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/pages/student/StudentCapstoneMainPage.jsx",
+      "size_bytes": 31187,
+      "sha256_raw": "a1e434ff8661304462832c80dd7355cf7de7e66cbb2e7f269a4ec3bc39d68413",
+      "sha256_lf_utf8": "66376d08df41833ec0b62fa74a8130e33aaf8dafe813a249016e79a8b7cbdae0"
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/pages/student/StudentDashboard.jsx",
+      "size_bytes": 4369,
+      "sha256_raw": "55683ee53fe9f442c5cc04ec74f3711f01419a30e9c8565708628928cec6c478",
+      "sha256_lf_utf8": "e59bd071f7885bc925025014f50cf323f8823c3a80d6a5a7653b59c8b825ec13"
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/pages/student/StudentProfile.jsx",
+      "size_bytes": 8080,
+      "sha256_raw": "cda84b97ad57f0f6970b7bfb47a586cf8435d10944d96147d9a5f32257cbe50d",
+      "sha256_lf_utf8": "3867e9abf3545603868d03d3341278feae5b0c72b9d73f40378a0469aed05d71"
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/pages/student/StudentUploadedCapstones.jsx",
+      "size_bytes": 35858,
+      "sha256_raw": "ec805d08e770d244cd8296bf70ac5361dc8c4c4bb8998c214b08f446adbea9d3",
+      "sha256_lf_utf8": "d5731da40af866582cb77a7985d53cadb07e175805d59866680cb18d38ceb3c5"
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/pages/visitor/VisitorCapstoneMainPage.jsx",
+      "size_bytes": 29772,
+      "sha256_raw": "a03ca66353e1a43dd1be6bd37ad714a412f18aabc4831174c1c0450384af376b",
+      "sha256_lf_utf8": "3c84aa930b8747739b907749c08d1067420f345f9fd0b3cc0d2377200e1fc49b"
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/pages/visitor/VisitorCapstones.jsx",
+      "size_bytes": 31298,
+      "sha256_raw": "1b3482a3c6588beebd864db39c13200d4deac17de43cdee97bc8889d34af06b9",
+      "sha256_lf_utf8": "0ff4157c1ab8b95465487efd64cac0dae3821bed35eb285de58c5dc30fd2ddac"
+    },
+    {
+      "path": "EduArchive-Frontend-React/src/pages/visitor/VisitorProfile.jsx",
+      "size_bytes": 9077,
+      "sha256_raw": "197e0889a4194709d5af184b1308d41eaf69d93285e9a3b64798a31d2bce98c2",
+      "sha256_lf_utf8": "2fb685f574fa9c6ed6d26f392c6948c77649864dff185cfbb3c21ad3926dabd2"
+    },
+    {
+      "path": "EduArchive-Frontend-React/tests/baseUrl.test.js",
+      "size_bytes": 866,
+      "sha256_raw": "7316b06a7b1d1142d81bb0f6118d539faf1bf25a823cae44a37d078dc3586ff5",
+      "sha256_lf_utf8": "7316b06a7b1d1142d81bb0f6118d539faf1bf25a823cae44a37d078dc3586ff5"
+    },
+    {
+      "path": "EduArchive-Frontend-React/tests/inlineMarkdown.test.js",
+      "size_bytes": 1283,
+      "sha256_raw": "2578b454682b6e4f15e07f36dc6490fa30192999c73695d27abeaf08e9e03994",
+      "sha256_lf_utf8": "2578b454682b6e4f15e07f36dc6490fa30192999c73695d27abeaf08e9e03994"
+    },
+    {
+      "path": "EduArchive-Frontend-React/vercel.json",
+      "size_bytes": 126,
+      "sha256_raw": "6860158a7f766c43ff65bab8c699470ceab780cf7d770f9e1ccbb70a55601eef",
+      "sha256_lf_utf8": "0a4c9767b1fc2f9055baae87c6f05b681f066c965768cb4cb15012edddfe0a3f"
+    },
+    {
+      "path": "EduArchive-Frontend-React/vite.config.js",
+      "size_bytes": 464,
+      "sha256_raw": "f0b28d45aee1d562a700e6d75a71e7aaf37af372aec4a6020721394aeccf3835",
+      "sha256_lf_utf8": "911b5db45ae94530b727a8b75b98fad73b4169d331f24bc8bee978ed33f04b04"
+    },
+    {
+      "path": "deploy/acadex-ocr.service.example",
+      "size_bytes": 984,
+      "sha256_raw": "da3a41655fc24dae484fcbdbd15969cbda0298f98feec02c95ee1d84f447a6c4",
+      "sha256_lf_utf8": "da3a41655fc24dae484fcbdbd15969cbda0298f98feec02c95ee1d84f447a6c4"
+    },
+    {
+      "path": "deploy/acadex-queue.service.example",
+      "size_bytes": 519,
+      "sha256_raw": "870523feff1ce0530d1298168d83360b127dee97497a8dddf61b5c6b9f1540b3",
+      "sha256_lf_utf8": "870523feff1ce0530d1298168d83360b127dee97497a8dddf61b5c6b9f1540b3"
+    },
+    {
+      "path": "scripts/check-handoff-source.py",
+      "size_bytes": 2384,
+      "sha256_raw": "3db1d9e158b3aaa152c9dd800e7e2f9562078753b702e73f86f7f3207a7f0de2",
+      "sha256_lf_utf8": "3db1d9e158b3aaa152c9dd800e7e2f9562078753b702e73f86f7f3207a7f0de2"
+    },
+    {
+      "path": "scripts/verify-release-manifest.py",
+      "size_bytes": 1188,
+      "sha256_raw": "712ad10758927dd2f3ae896f55c7cf79a22fd2209eed55a975120f8f1484fcd4",
+      "sha256_lf_utf8": "712ad10758927dd2f3ae896f55c7cf79a22fd2209eed55a975120f8f1484fcd4"
+    },
+    {
+      "path": "start-local.ps1",
+      "size_bytes": 2920,
+      "sha256_raw": "86b9a08ada222328c0f453dc7f62149ad5ebb618f15901f0e381519f94a244f7",
+      "sha256_lf_utf8": "86b9a08ada222328c0f453dc7f62149ad5ebb618f15901f0e381519f94a244f7"
+    },
+    {
+      "path": "stop-local.ps1",
+      "size_bytes": 1573,
+      "sha256_raw": "b33ccfa3212b76e53382c79364639dfebf6a716372afae006381e40056f00cb1",
+      "sha256_lf_utf8": "b33ccfa3212b76e53382c79364639dfebf6a716372afae006381e40056f00cb1"
+    }
+  ]
+}

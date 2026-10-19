@@ -10,6 +10,15 @@ class Keyword extends Model
 {
     use HasFactory;
 
+    protected static function booted(): void
+    {
+        static::addGlobalScope('request_access', function (\Illuminate\Database\Eloquent\Builder $query) {
+            if (app()->bound('request') && request()->is('api/*') && !request()->user()?->hasRole('admin')) {
+                $query->whereHas('capstones');
+            }
+        });
+    }
+
     protected $fillable = ['name'];
 
     public function capstones(): BelongsToMany

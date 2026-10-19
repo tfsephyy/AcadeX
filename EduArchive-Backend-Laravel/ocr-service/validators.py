@@ -8,7 +8,20 @@ import os
 # ── Limits ────────────────────────────────────────────────────────────────────
 MAX_FILE_SIZE_BYTES = 20 * 1024 * 1024   # 20 MB
 MAX_PDF_PAGES       = 50
+MAX_RENDER_PIXELS   = 20_000_000
+MAX_RENDER_SIDE     = 10_000
 ALLOWED_EXTENSIONS  = {".jpg", ".jpeg", ".png", ".pdf"}
+
+
+def planned_preprocess_size(width: int, height: int) -> tuple[int, int]:
+    """Validate every proposed resize before OpenCV can allocate its output."""
+    if width <= 0 or height <= 0 or width * height > MAX_RENDER_PIXELS:
+        raise ValueError("Image exceeds the safe rendering pixel limit.")
+    scale = 1200 / min(width, height) if min(width, height) < 600 else 1
+    target = (max(1, round(width * scale)), max(1, round(height * scale)))
+    if max(target) > MAX_RENDER_SIDE or target[0] * target[1] > MAX_RENDER_PIXELS:
+        raise ValueError("Image preprocessing exceeds the safe rendering limit.")
+    return target
 
 # Magic-byte signatures (first 8 bytes)
 _SIGNATURES = {

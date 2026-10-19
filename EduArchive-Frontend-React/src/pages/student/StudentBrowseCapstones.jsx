@@ -1,8 +1,8 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { HiOutlineFilter, HiOutlineBookmark, HiBookmark, HiOutlineDownload, HiOutlineEye } from 'react-icons/hi';
 import { getPublishedCapstones, getPublishedYears, getPublishedPrograms, getPublishedCategories, toggleBookmark } from '../../api/admin';
-import { useNotification } from '../../components/Notification';
+import { useNotification } from '../../components/useNotification';
 import Loading from '../../components/Loading';
 import EmptyState from '../../components/EmptyState';
 import SearchWithSuggestions from '../../components/SearchWithSuggestions';
@@ -39,7 +39,7 @@ export default function StudentBrowseCapstones() {
             setYears(yRes.data.data || []);
             setPrograms(pRes.data.data || []);
             setCategories(cRes.data.data || []);
-        } catch {}
+        } catch { /* Optional request failed; keep the current view. */ }
     };
 
     const fetchCapstones = useCallback(async () => {
@@ -54,7 +54,7 @@ export default function StudentBrowseCapstones() {
             const data = res.data.data;
             setCapstones(data?.data || []);
             setLastPage(data?.last_page || 1);
-        } catch (err) {
+        } catch {
             notify.error('Failed to load capstones.');
         } finally {
             setLoading(false);
@@ -148,7 +148,7 @@ export default function StudentBrowseCapstones() {
             ) : capstones.length === 0 ? (
                 <EmptyState
                     title="No capstones found"
-                    description={debouncedSearch || filters.year || filters.program || filters.category ? 'Try adjusting your search or filters.' : 'Published capstones will appear here.'}
+                    description={search || filters.year || filters.program || filters.category ? 'Try adjusting your search or filters.' : 'Published capstones will appear here.'}
                 />
             ) : (
                 <div className="space-y-3">

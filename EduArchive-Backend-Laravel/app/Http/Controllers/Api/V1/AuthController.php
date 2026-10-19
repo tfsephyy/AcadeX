@@ -17,6 +17,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use App\Services\EmailVerificationService;
 
 class AuthController extends Controller
 {
@@ -32,6 +33,8 @@ class AuthController extends Controller
     {
         $validated = $request->validated();
 
+        app(EmailVerificationService::class)->consume($request, $validated['email']);
+
         $role = Role::where('name', $validated['role'])->firstOrFail();
 
         $user = User::create([
@@ -42,6 +45,7 @@ class AuthController extends Controller
             'role_id'   => $role->id,
             'password'  => $validated['password'],
         ]);
+        $user->forceFill(['email_verified_at' => now()])->save();
 
         // Create student profile if role is student
         if ($role->name === 'student') {
@@ -135,6 +139,15 @@ class AuthController extends Controller
             return $this->errorResponse('The provided credentials are incorrect.', 401);
         }
 
+        if ($user->is_archived) {
+            $this->auditLogin($user, $request, 'failed');
+            return $this->errorResponse('Account unavailable. Contact the administrator for restoration.', 423);
+        }
+        if (!$user->email_verified_at) {
+            return response()->json(['success' => false, 'message' => 'Verify your email address before signing in.',
+                'email_verification_required' => true], 423);
+        }
+
         if (! $user->is_approved) {
             // Audit as failed login without incrementing attempts
             $this->auditLogin($user, $request, 'failed');
@@ -151,27 +164,18 @@ class AuthController extends Controller
         // Revoke old tokens
         $user->tokens()->delete();
 
-        $token = $user->createToken('auth-token')->plainTextToken;
+        Auth::guard('web')->login($user);
+        $request->session()->regenerate();
+        $request->session()->put('auth_version', (int) $user->auth_version);
 
         $this->auditLogin($user, $request, 'success');
 
         $user->load('role', 'studentProfile');
 
-        // Set token as HttpOnly cookie
-        $cookie = cookie(
-            name:     'auth_token',
-            value:    $token,
-            minutes:  (int) config('session.lifetime', 120),
-            path:     '/',
-            domain:   config('session.domain'),
-            secure:   config('session.secure', false),
-            httpOnly: true,
-            sameSite: 'Lax',
-        );
-
         return $this->successResponse([
             'user' => $this->formatUser($user),
-        ], 'Login successful.')->withCookie($cookie);
+            'csrf_token' => $request->session()->token(),
+        ], 'Login successful.')->withCookie(cookie()->forget('auth_token', '/', config('session.domain')));
     }
 
     /* ────────────────────────────────────────────────────
@@ -179,11 +183,13 @@ class AuthController extends Controller
      * ──────────────────────────────────────────────────── */
     public function logout(Request $request): JsonResponse
     {
-        $request->user()->currentAccessToken()->delete();
+        $request->user()->tokens()->delete();
+        Auth::guard('web')->logout();
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
 
-        $cookie = cookie()->forget('auth_token');
-
-        return $this->successResponse(null, 'Logged out successfully.')->withCookie($cookie);
+        return $this->successResponse(['csrf_token' => $request->session()->token()], 'Logged out successfully.')
+            ->withCookie(cookie()->forget('auth_token', '/', config('session.domain')));
     }
 
     /* ────────────────────────────────────────────────────
@@ -277,20 +283,21 @@ class AuthController extends Controller
             $newEmail = strtolower($request->email);
             $code = $request->email_code;
 
-            // Verify the code matches what was sent
-            // The code should have been generated and stored during the sendVerificationCode call
-            // For this implementation, we're assuming the code validation happened on the frontend
-            // In a real scenario, you'd want to store codes in cache or DB with TTL
+            app(EmailVerificationService::class)->consume($request, $newEmail);
         }
 
         $updates = [];
         if ($request->has('name')) $updates['name'] = $request->name;
         if ($request->has('username')) $updates['username'] = $request->username;
         if ($isEmailChange) $updates['email'] = strtolower($request->email);
-        if ($request->has('email_verified_at') && $isEmailChange) $updates['email_verified_at'] = now();
 
         if (! empty($updates)) {
             $user->update($updates);
+        }
+        if ($isEmailChange) {
+            $user->forceFill(['email_verified_at' => now()])->save();
+            $request->session()->regenerate();
+            $request->session()->put('auth_version', (int) $user->auth_version);
         }
 
         // Update student profile fields if applicable
@@ -311,6 +318,7 @@ class AuthController extends Controller
 
         return $this->successResponse([
             'user' => $this->formatUser($user),
+            'csrf_token' => $request->session()->token(),
         ], 'Profile updated successfully.');
     }
 }

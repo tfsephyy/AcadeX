@@ -16,7 +16,7 @@ import { HiOutlineChevronLeft, HiOutlineChevronRight } from 'react-icons/hi';
 export default function Pagination({ paginationData, page, onPageChange, perPage = 15 }) {
     if (!paginationData || paginationData.total === 0) return null;
     
-    const { current_page, last_page, total, from, to } = paginationData;
+    const { last_page, total, from, to } = paginationData;
     
     // Calculate page numbers to display (max 5 buttons)
     const getPageNumbers = () => {

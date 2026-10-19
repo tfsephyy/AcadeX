@@ -298,6 +298,7 @@ class ChatbotAnalyticsService
         if (str_contains($msg, 'keyword')) {
             $data['top_keywords'] = DB::table('keywords')
                 ->join('capstone_keyword', 'keywords.id', '=', 'capstone_keyword.keyword_id')
+                ->whereIn('capstone_keyword.capstone_id', Capstone::query()->select('capstones.id'))
                 ->selectRaw('keywords.name, COUNT(*) as total')
                 ->groupBy('keywords.name')->orderByDesc('total')->limit(10)->get()->toArray();
         }
@@ -310,7 +311,7 @@ class ChatbotAnalyticsService
 
         // Who uploaded the most
         if (str_contains($msg, 'uploaded the most') || str_contains($msg, 'upload the most')) {
-            $data['top_uploaders'] = DB::table('capstones')
+            $data['top_uploaders'] = Capstone::query()->toBase()
                 ->join('users', 'capstones.uploaded_by', '=', 'users.id')
                 ->selectRaw('users.name, COUNT(*) as total')
                 ->groupBy('users.id', 'users.name')->orderByDesc('total')->limit(8)->get()->toArray();
@@ -334,7 +335,7 @@ class ChatbotAnalyticsService
         }
 
         // Users who never logged in — return full list, not just count
-        if (str_contains($msg, 'never logged in')) {
+        if ($role === 'admin' && str_contains($msg, 'never logged in')) {
             $neverLoggedIn = User::whereNull('last_active_at')
                 ->get(['id', 'name', 'email'])->toArray();
             $data['never_logged_in_count'] = count($neverLoggedIn);
@@ -342,7 +343,7 @@ class ChatbotAnalyticsService
         }
 
         // Most active users this month — max 3, exclude admins
-        if (str_contains($msg, 'most active')) {
+        if ($role === 'admin' && str_contains($msg, 'most active')) {
             // Always set key so formatProgramStats can show "no activity" message
             $data['active_users'] = User::whereMonth('last_active_at', now()->month)
                 ->whereYear('last_active_at', now()->year)
@@ -360,7 +361,7 @@ class ChatbotAnalyticsService
         // Duplicate / repeated titles
         if (str_contains($msg, 'appear more than once') || str_contains($msg, 'duplicate')) {
             // Always set key so formatProgramStats can show "no duplicates" message
-            $data['duplicate_titles'] = DB::table('capstones')
+            $data['duplicate_titles'] = Capstone::query()->toBase()
                 ->selectRaw('title, COUNT(*) as total')
                 ->groupBy('title')->havingRaw('COUNT(*) > 1')
                 ->orderByDesc('total')->limit(10)->get()->toArray();
@@ -370,6 +371,7 @@ class ChatbotAnalyticsService
         if (str_contains($msg, 'overdone')) {
             $data['overdone_keywords'] = DB::table('keywords')
                 ->join('capstone_keyword', 'keywords.id', '=', 'capstone_keyword.keyword_id')
+                ->whereIn('capstone_keyword.capstone_id', Capstone::query()->select('capstones.id'))
                 ->selectRaw('keywords.name, COUNT(*) as total')
                 ->groupBy('keywords.name')->havingRaw('COUNT(*) > 3')
                 ->orderByDesc('total')->limit(8)->get()->toArray();
@@ -471,7 +473,7 @@ class ChatbotAnalyticsService
      */
     public function getTopAdvisers(int $limit = 10): Collection
     {
-        return DB::table('capstones')
+        return Capstone::query()->toBase()
             ->join('users', 'capstones.adviser_id', '=', 'users.id')
             ->selectRaw('users.id, users.name, COUNT(*) as total')
             ->whereNotNull('capstones.adviser_id')
@@ -489,6 +491,8 @@ class ChatbotAnalyticsService
     public function getMostReferencedCapstone(): ?array
     {
         $result = DB::table('capstone_references')
+            ->whereIn('capstone_id', Capstone::query()->select('capstones.id'))
+            ->whereIn('referenced_capstone_id', Capstone::query()->select('capstones.id'))
             ->select('referenced_capstone_id', DB::raw('COUNT(*) as reference_count'))
             ->groupBy('referenced_capstone_id')
             ->orderByDesc('reference_count')

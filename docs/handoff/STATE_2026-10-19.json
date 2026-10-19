@@ -1,0 +1,86 @@
+{
+  "document_date_asia_manila": "2026-10-19",
+  "purpose": "Portable handoff evidence, not a current healthy-server or release-acceptance assertion.",
+  "repository": {
+    "origin": "https://github.com/tfsephyy/AcadeX.git",
+    "branch": "main",
+    "head": "4560e3f32e6cd8b6f63e0c2a4373b8b94f241546",
+    "before_handoff_documents": {
+      "tracked_changed": 92,
+      "untracked_entries": 50
+    },
+    "root_github_workflow_directory_present": false,
+    "commit_push_pull_stage_reset_performed": false
+  },
+  "dns_observed": {
+    "veload.site": [
+      "54.153.196.115"
+    ],
+    "www.veload.site": [
+      "54.153.196.115"
+    ]
+  },
+  "ssh_observed": {
+    "target": "ubuntu@54.153.196.115",
+    "port": 22,
+    "result": "connection_timeout",
+    "server_inventory_refreshed": false,
+    "server_changes_performed": false
+  },
+  "public_https_observed": {
+    "checked_at_utc": "2026-10-19T02:44:23.748745+00:00",
+    "method": "ordinary HTTPS GET with certificate validation; no account credentials",
+    "checks": [
+      {
+        "name": "root",
+        "url": "https://veload.site/",
+        "expected_status": 200,
+        "passed": false,
+        "error_class": "URLError"
+      },
+      {
+        "name": "login",
+        "url": "https://veload.site/login",
+        "expected_status": 200,
+        "passed": false,
+        "error_class": "URLError"
+      },
+      {
+        "name": "www_redirect",
+        "url": "https://www.veload.site/login",
+        "expected_status": 301,
+        "passed": false,
+        "error_class": "URLError"
+      },
+      {
+        "name": "csrf_cookie",
+        "url": "https://veload.site/sanctum/csrf-cookie",
+        "expected_status": 204,
+        "passed": false,
+        "error_class": "URLError"
+      },
+      {
+        "name": "anonymous_user",
+        "url": "https://veload.site/api/v1/user",
+        "expected_status": 401,
+        "passed": false,
+        "error_class": "URLError"
+      }
+    ],
+    "all_passed": false
+  },
+  "focused_https_followup": {
+    "hostname": "veload.site",
+    "error_reason_class": "TimeoutError"
+  },
+  "unknowns": [
+    "current EC2 running/status-check state",
+    "current security-group source allowance",
+    "current services/database contents",
+    "current account credit balance",
+    "cause of connectivity timeouts"
+  ],
+  "historical_baseline_date": "2026-10-14",
+  "interpretation": "Use the owner console and an authorized network to establish current state. DNS resolution and connection timeouts alone do not identify the cause.",
+  "credentials_or_private_configuration_values_included": false
+}

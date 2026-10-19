@@ -2,7 +2,7 @@ import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { HiOutlineUpload, HiOutlineX, HiOutlineDocumentText, HiOutlineArrowRight } from 'react-icons/hi';
 import axios from '../../api/axios';
-import { useNotification } from '../../components/Notification';
+import { useNotification } from '../../components/useNotification';
 
 export default function FacultyUploadCapstoneModal({ open, onClose }) {
     const notify   = useNotification();

@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../../context/AuthContext';
 import {
     HiOutlineSearch, HiOutlineFilter, HiOutlineDocumentText,
     HiOutlineEye, HiOutlinePencil, HiOutlineTrash, HiOutlineUpload,
@@ -19,7 +18,7 @@ import {
     archiveFacultyCapstone,
     unarchiveFacultyCapstone,
 } from '../../api/admin';
-import { useNotification } from '../../components/Notification';
+import { useNotification } from '../../components/useNotification';
 import Loading from '../../components/Loading';
 import EmptyState from '../../components/EmptyState';
 import ConfirmDialog from '../../components/ConfirmDialog';
@@ -28,7 +27,6 @@ import EditCapstoneModal from '../../components/admin/EditCapstoneModal';
 import FacultyUploadCapstoneModal from '../../components/faculty/FacultyUploadCapstoneModal';
 
 export default function FacultyCapstoneLibrary() {
-    const { user } = useAuth();
     const navigate = useNavigate();
     const notify = useNotification();
     const [capstones, setCapstones] = useState([]);
@@ -93,7 +91,7 @@ export default function FacultyCapstoneLibrary() {
             const data = res.data.data;
             setCapstones(data?.data || data || []);
             setLastPage(data?.last_page || 1);
-        } catch (err) {
+        } catch {
             notify.error('Failed to load capstones.');
         } finally {
             setLoading(false);

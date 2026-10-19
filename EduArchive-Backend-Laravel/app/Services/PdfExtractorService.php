@@ -4,6 +4,7 @@ namespace App\Services;
 
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\ValidationException;
 
 class PdfExtractorService
 {
@@ -178,12 +179,14 @@ class PdfExtractorService
      */
     protected function extractPagesViaPaddleOcr(string $filePath): array
     {
-        $serviceUrl = rtrim(env('OCR_SERVICE_URL', 'http://localhost:8001'), '/') . '/api/ocr';
+        $serviceUrl = rtrim(config('acadex.ocr_service_url'), '/') . '/api/ocr';
 
         try {
             // Prepare multipart/form-data POST with the PDF file
             $boundary = '----EduArchiveBoundary' . bin2hex(random_bytes(8));
-            $fileName = basename($filePath);
+            // PHP upload temporary paths normally have no extension. The
+            // multipart name describes the content and never exposes that path.
+            $fileName = 'document.pdf';
             $fileContent = file_get_contents($filePath);
 
             if ($fileContent === false) {
@@ -219,8 +222,12 @@ class PdfExtractorService
 
             // Check HTTP status code
             $statusLine = $http_response_header[0] ?? '';
+            if (preg_match('/^HTTP\/\S+\s+422\b/', $statusLine)) {
+                throw ValidationException::withMessages(['pdf' =>
+                    'This PDF exceeds OCR safety limits or cannot be processed. Use a smaller document or skip automatic extraction.']);
+            }
             if (!str_contains($statusLine, '200')) {
-                Log::warning('PaddleOCR: non-200 response: ' . $statusLine . ' — ' . substr($raw, 0, 200));
+                Log::warning('PaddleOCR: non-200 response: ' . $statusLine);
                 return [''];
             }
 
@@ -243,6 +250,9 @@ class PdfExtractorService
             Log::info('PaddleOCR: extracted ' . count($pages) . ' page(s) from ' . basename($filePath));
             return $pages;
 
+        } catch (ValidationException $e) {
+            // A parser or resource rejection must never select another renderer.
+            throw $e;
         } catch (\Throwable $e) {
             Log::warning('PaddleOCR: exception — ' . $e->getMessage());
             return [''];
@@ -258,67 +268,9 @@ class PdfExtractorService
      */
     protected function extractPagesViaTesseract(string $filePath): array
     {
-        $gs   = $this->findBinary(self::GS_PATHS, 'Ghostscript');
+        $gs = $this->findBinary(self::GS_PATHS, 'Ghostscript');
         $tess = $this->findBinary(self::TESS_PATHS, 'Tesseract');
-
-        if (!$gs || !$tess) {
-            return [''];
-        }
-
-        $tmpDir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'eduocr_' . uniqid('', true);
-        @mkdir($tmpDir, 0777, true);
-
-        try {
-            // Render PDF → PNG (300 DPI, one file per page)
-            $outPattern = $tmpDir . DIRECTORY_SEPARATOR . 'page_%04d.png';
-            $gsCmd = sprintf(
-                '"%s" -dNOPAUSE -dBATCH -dSAFER -sDEVICE=png16m -r300 -dTextAlphaBits=4 -dGraphicsAlphaBits=4 -sOutputFile="%s" "%s" 2>&1',
-                $gs, $outPattern, $filePath
-            );
-            exec($gsCmd, $gsOut, $gsCode);
-
-            if ($gsCode !== 0) {
-                Log::warning('OCR: Ghostscript failed (code ' . $gsCode . '): ' . implode(' ', $gsOut));
-                return [''];
-            }
-
-            $images = glob($tmpDir . DIRECTORY_SEPARATOR . 'page_*.png') ?: [];
-            sort($images);
-
-            if (empty($images)) {
-                Log::warning('OCR: Ghostscript produced no images.');
-                return [''];
-            }
-
-            $pages = [];
-            foreach (array_slice($images, 0, 60) as $imgPath) {
-                $outBase = $imgPath . '_ocr';
-                $tessCmd = sprintf(
-                    '"%s" "%s" "%s" -l eng --psm 6 2>&1',
-                    $tess, $imgPath, $outBase
-                );
-                exec($tessCmd, $tessOut, $tessCode);
-
-                $txtFile  = $outBase . '.txt';
-                $pageText = '';
-                if (file_exists($txtFile)) {
-                    $pageText = trim(file_get_contents($txtFile));
-                    @unlink($txtFile);
-                }
-                $pages[] = $pageText;
-            }
-
-            return $pages;
-
-        } catch (\Throwable $e) {
-            Log::error('OCR pipeline error: ' . $e->getMessage());
-            return [''];
-        } finally {
-            foreach (glob($tmpDir . DIRECTORY_SEPARATOR . '*') ?: [] as $f) {
-                @unlink($f);
-            }
-            @rmdir($tmpDir);
-        }
+        return $gs && $tess ? app(BoundedPdfOcr::class)->extract($gs, $tess, $filePath) : [''];
     }
 
     /**
@@ -353,7 +305,7 @@ class PdfExtractorService
 
     private function onPath(string $bin): bool
     {
-        $cmd  = PHP_OS_FAMILY === 'Windows' ? "where \"{$bin}" : "which \"{$bin}\"";
+        $cmd = PHP_OS_FAMILY === 'Windows' ? 'where '.escapeshellarg($bin) : 'command -v '.escapeshellarg($bin);
         exec($cmd . ' 2>&1', $out, $code);
         return $code === 0;
     }

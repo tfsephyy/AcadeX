@@ -10,6 +10,59 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Capstone extends Model
 {
+    protected $hidden = ['pdf_text', 'pdf_path', 'imrad_path'];
+    protected $appends = ['pdf_available', 'imrad_available', 'imrad_reference'];
+
+    protected static function booted(): void
+    {
+        // One request boundary also covers route binding, related references,
+        // search/filter queries and chatbot aggregate helpers. CLI maintenance
+        // has no browser request and is not accidentally scoped to a web user.
+        static::addGlobalScope('request_access', function (\Illuminate\Database\Eloquent\Builder $query) {
+            if (app()->bound('request') && request()->is('api/*')) {
+                app(\App\Services\CapstoneAccess::class)->scope($query, request()->user());
+            }
+        });
+    }
+
+    public function resolveRouteBinding($value, $field = null)
+    {
+        $method = request()->route()?->getActionMethod();
+        if (in_array($method, ['unarchive', 'destroy'], true)) {
+            $user = request()->user();
+            $query = static::withoutGlobalScope('request_access')->where($field ?? $this->getRouteKeyName(), $value);
+            if (!$user || !app(\App\Services\CapstoneAccess::class)->active($user)) return null;
+            if (!$user->hasRole('admin')) $query->where('uploaded_by', $user->id);
+            return $query->first();
+        }
+        return parent::resolveRouteBinding($value, $field);
+    }
+
+    public function getPdfAvailableAttribute(): bool
+    {
+        return !empty($this->pdf_path);
+    }
+
+    public function getImradAvailableAttribute(): bool
+    {
+        return !empty($this->imrad_path);
+    }
+
+    public function getImradReferenceAttribute(): ?string
+    {
+        return $this->imrad_path ? 'imrad:'.$this->id : null;
+    }
+
+    public function toArray(): array
+    {
+        $data = parent::toArray();
+        $user = app()->bound('request') ? request()->user() : null;
+        $access = app(\App\Services\CapstoneAccess::class);
+        if (!$user || !($access->manage($user, $this) || $access->reviewer($user, $this))) {
+            unset($data['author_details'], $data['imrad_reference']);
+        }
+        return $data;
+    }
     use HasFactory;
 
     protected $fillable = [
@@ -127,7 +180,7 @@ class Capstone extends Model
     {
         // A capstone is considered published when publication_status = 'published'
         // and it is not archived.
-        return $query->where('publication_status', 'published')
+        return $query->where('publication_status', 'published')->where('status', 'approved')->where('approval_status', 'approved')
                      ->where('is_archived', false);
     }
 

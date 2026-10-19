@@ -1,4 +1,6 @@
-@import "tailwindcss";
+@import "tailwindcss" source(none);
+@source "./";
+@source "../index.html";
 
 /* ═══════════════════════════════════════════════════════════════
    ACADEX DESIGN SYSTEM — CSS Custom Properties

@@ -4,6 +4,7 @@ namespace App\Services;
 
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
 
 /**
  * PdfEncryptorService
@@ -19,11 +20,19 @@ class PdfEncryptorService
      */
     public function encryptAndStore(string $directory, \Illuminate\Http\UploadedFile $file, string $disk = 'local'): string
     {
+        $filesystem = Storage::disk($disk);
+        $free = @disk_free_space($filesystem->path(''));
+        $reserve = max(0, (int) config('acadex.min_free_storage_bytes', 2147483648));
+        if ($free === false || $free < $reserve + ($file->getSize() * 2) + 4096) {
+            throw ValidationException::withMessages(['documents' => 'Document storage is temporarily unavailable. Contact the administrator.']);
+        }
         $raw        = file_get_contents($file->getRealPath());
         $encrypted  = Crypt::encryptString($raw);
-        $filename   = $directory . '/' . uniqid('', true) . '.enc';
+        $filename   = $directory . '/' . bin2hex(random_bytes(16)) . '.enc';
 
-        Storage::disk($disk)->put($filename, $encrypted);
+        if (!$filesystem->put($filename, $encrypted)) {
+            throw new \RuntimeException('Encrypted file could not be stored.');
+        }
 
         return $filename;
     }
@@ -33,7 +42,9 @@ class PdfEncryptorService
      */
     public function encryptRawAndStore(string $path, string $rawBytes, string $disk = 'local'): void
     {
-        Storage::disk($disk)->put($path, Crypt::encryptString($rawBytes));
+        if (!Storage::disk($disk)->put($path, Crypt::encryptString($rawBytes))) {
+            throw new \RuntimeException('Encrypted file could not be stored.');
+        }
     }
 
     /**
@@ -50,8 +61,9 @@ class PdfEncryptorService
             $ciphertext = Storage::disk($disk)->get($path);
             return Crypt::decryptString($ciphertext);
         } catch (\Illuminate\Contracts\Encryption\DecryptException) {
-            // File was stored before encryption was implemented — serve as-is (raw PDF)
-            return $ciphertext;
+            // Never reinterpret corrupt ciphertext or a wrong encryption key as
+            // a valid document. Legacy plaintext requires an explicit transition.
+            return config('acadex.allow_legacy_plaintext') && !str_ends_with($path, '.enc') ? $ciphertext : null;
         }
     }
 
