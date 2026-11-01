@@ -256,33 +256,30 @@ class CapstoneController extends Controller
         $skipExtraction = $request->boolean('skip_extraction', false);
         $this->prepareUploadEnvironment($file);
 
-        // Only run the expensive OCR/parsing step when not skipped
-        if ($skipExtraction) {
-            $extracted = [
-                'title'          => null,
-                'year'           => null,
-                'author'         => null,
-                'author_details' => [],
-                'program'        => null,
-                'abstract'       => null,
-                'keywords'       => [],
-            ];
-        } else {
-            // Extract text BEFORE encrypting (extractor needs the real file)
-            $extractor = new PdfExtractorService();
-            $extracted = $extractor->extract($file);
-        }
-
-        // Encrypt and store
+        // Persist securely first. Metadata extraction is optional and can never
+        // send a large accepted capstone into an unbounded parser/OCR path.
         $encryptor = new PdfEncryptorService();
         $path = $encryptor->encryptAndStore('capstones', $file);
         $reference = app(\App\Services\DocumentUploads::class)->stage($request->user(), 'pdf', $path);
+        $extracted = PdfExtractorService::emptyMetadata();
+        $extractionStatus = $skipExtraction ? 'skipped' : 'manual_required';
+        if (!$skipExtraction && $file->getSize() <= PdfExtractorService::maxAutomaticBytes()) {
+            try {
+                $extracted = app(PdfExtractorService::class)->extract($file);
+                $extractionStatus = array_filter($extracted) ? 'complete' : 'unavailable';
+            } catch (\Throwable $error) {
+                // Do not include PDF contents or private exception details.
+                \Log::warning('Automatic capstone extraction unavailable.', ['type' => get_class($error)]);
+                $extractionStatus = 'unavailable';
+            }
+        }
 
         return $this->successResponse([
             'pdf_path'          => $reference,
             'pdf_original_name' => $file->getClientOriginalName(),
             'extracted'         => $extracted,
-        ], 'PDF uploaded and data extracted.');
+            'extraction_status' => $extractionStatus,
+        ], 'PDF uploaded. Review or enter the document details.');
     }
 
 
@@ -1108,11 +1105,11 @@ class CapstoneController extends Controller
             return $this->errorResponse('PDF file not found.', 404);
         }
 
-        // Decrypt in memory
+        // Verify authentication before recording or returning any document bytes
         $encryptor = new PdfEncryptorService();
-        $rawBytes  = $encryptor->decryptFromDisk($capstone->pdf_path);
+        $document = $encryptor->openVerifiedDocument($capstone->pdf_path);
 
-        if ($rawBytes === null) {
+        if ($document === null) {
             return $this->errorResponse('PDF could not be decrypted.', 500);
         }
 
@@ -1133,24 +1130,19 @@ class CapstoneController extends Controller
         );
 
         $filename = $capstone->pdf_original_name ?? $capstone->title . '.pdf';
-        $size     = strlen($rawBytes);
 
-        return response()->stream(
-            function () use ($rawBytes) { echo $rawBytes; },
-            200,
-            [
+
+        return $document->response([
                 'Content-Type'              => 'application/pdf',
                 'Content-Disposition'       => 'attachment; filename="' . addslashes($filename) . '"',
-                'Content-Length'            => $size,
                 'Cache-Control'             => 'no-store, no-cache, must-revalidate, max-age=0',
                 'Pragma'                    => 'no-cache',
                 'X-Content-Type-Options'    => 'nosniff',
-            ]
-        );
+            ]);
     }
 
     /**
-     * Serve PDF for viewing (in-memory decryption, no file written to disk).
+     * Serve PDF from an authenticated stream without plaintext disk storage.
      */
     public function servePdf(Request $request, Capstone $capstone): \Symfony\Component\HttpFoundation\StreamedResponse|JsonResponse
     {
@@ -1165,30 +1157,24 @@ class CapstoneController extends Controller
         }
 
         $encryptor = new PdfEncryptorService();
-        $rawBytes  = $encryptor->decryptFromDisk($capstone->pdf_path);
+        $document = $encryptor->openVerifiedDocument($capstone->pdf_path);
 
-        if ($rawBytes === null) {
+        if ($document === null) {
             return $this->errorResponse('PDF could not be decrypted.', 500);
         }
 
-        $size = strlen($rawBytes);
 
-        return response()->stream(
-            function () use ($rawBytes) { echo $rawBytes; },
-            200,
-            [
+        return $document->response([
                 'Content-Type'              => 'application/pdf',
                 'Content-Disposition'       => 'inline',
-                'Content-Length'            => $size,
                 'Cache-Control'             => 'no-store, no-cache, must-revalidate, max-age=0',
                 'Pragma'                    => 'no-cache',
                 'X-Content-Type-Options'    => 'nosniff',
-            ]
-        );
+            ]);
     }
 
     /**
-     * Serve IMRAD PDF (decrypted in-memory, no raw file exposed).
+     * Serve IMRAD PDF from an authenticated stream; no raw file is exposed.
      * Available to all authenticated users (same auth as servePdf).
      */
     public function serveImrad(Request $request, Capstone $capstone): \Symfony\Component\HttpFoundation\StreamedResponse|JsonResponse
@@ -1199,26 +1185,20 @@ class CapstoneController extends Controller
         }
 
         $encryptor = new PdfEncryptorService();
-        $rawBytes  = $encryptor->decryptFromDisk($capstone->imrad_path);
+        $document = $encryptor->openVerifiedDocument($capstone->imrad_path);
 
-        if ($rawBytes === null) {
+        if ($document === null) {
             return $this->errorResponse('IMRAD file could not be decrypted.', 500);
         }
 
-        $size = strlen($rawBytes);
 
-        return response()->stream(
-            function () use ($rawBytes) { echo $rawBytes; },
-            200,
-            [
+        return $document->response([
                 'Content-Type'           => 'application/pdf',
                 'Content-Disposition'    => 'inline',
-                'Content-Length'         => $size,
                 'Cache-Control'          => 'no-store, no-cache, must-revalidate, max-age=0',
                 'Pragma'                 => 'no-cache',
                 'X-Content-Type-Options' => 'nosniff',
-            ]
-        );
+            ]);
     }
 
     /**
@@ -1238,9 +1218,9 @@ class CapstoneController extends Controller
         }
 
         $encryptor = new PdfEncryptorService();
-        $rawBytes  = $encryptor->decryptFromDisk($resource->file_path);
+        $document = $encryptor->openVerifiedDocument($resource->file_path);
 
-        if ($rawBytes === null) {
+        if ($document === null) {
             return $this->errorResponse('Resource file could not be decrypted.', 500);
         }
 
@@ -1269,20 +1249,15 @@ class CapstoneController extends Controller
         if (!in_array($mimeType, ['application/pdf', 'text/plain', 'image/png', 'image/jpeg', 'image/gif'], true)) {
             $this->authorize('download', $capstone);
         }
-        $size     = strlen($rawBytes);
 
-        return response()->stream(
-            function () use ($rawBytes) { echo $rawBytes; },
-            200,
-            [
+
+        return $document->response([
                 'Content-Type'           => $mimeType,
                 'Content-Disposition'    => 'inline; filename="' . addslashes($originalName) . '"',
-                'Content-Length'         => $size,
                 'Cache-Control'          => 'no-store, no-cache, must-revalidate, max-age=0',
                 'Pragma'                 => 'no-cache',
                 'X-Content-Type-Options' => 'nosniff',
-            ]
-        );
+            ]);
     }
 
     /**
@@ -1308,14 +1283,14 @@ class CapstoneController extends Controller
         }
 
         $encryptor = new PdfEncryptorService();
-        $rawBytes  = $encryptor->decryptFromDisk($resource->file_path);
+        $document = $encryptor->openVerifiedDocument($resource->file_path);
 
-        if ($rawBytes === null) {
+        if ($document === null) {
             return $this->errorResponse('Resource file could not be decrypted.', 500);
         }
 
         $filename = $resource->file_original_name ?? $resource->name;
-        $size     = strlen($rawBytes);
+
 
         AuditLog::log(
             'download_resource',
@@ -1326,18 +1301,13 @@ class CapstoneController extends Controller
             ['resource' => $filename]
         );
 
-        return response()->stream(
-            function () use ($rawBytes) { echo $rawBytes; },
-            200,
-            [
+        return $document->response([
                 'Content-Type'           => 'application/octet-stream',
                 'Content-Disposition'    => 'attachment; filename="' . addslashes($filename) . '"',
-                'Content-Length'         => $size,
                 'Cache-Control'          => 'no-store, no-cache, must-revalidate, max-age=0',
                 'Pragma'                 => 'no-cache',
                 'X-Content-Type-Options' => 'nosniff',
-            ]
-        );
+            ]);
     }
 
     /**

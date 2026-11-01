@@ -24,6 +24,7 @@ class CheckProduction extends Command
             'SESSION_HTTP_ONLY' => config('session.http_only') === true,
             'SESSION_DRIVER' => !in_array(config('session.driver'), ['array', 'null'], true),
             'ALLOW_LEGACY_PLAINTEXT_DOCUMENTS' => config('acadex.allow_legacy_plaintext') === false,
+            'SODIUM_STREAM_ENCRYPTION' => function_exists('sodium_crypto_secretstream_xchacha20poly1305_init_push'),
         ];
         $connection = config('queue.default');
         if (in_array($connection, ['database', 'redis', 'beanstalkd'], true)) {

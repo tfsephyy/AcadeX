@@ -8,6 +8,16 @@ use Illuminate\Validation\ValidationException;
 
 class PdfExtractorService
 {
+    public static function maxAutomaticBytes(): int
+    {
+        return max(0, min(20 * 1024 * 1024, (int) config('acadex.max_automatic_extraction_bytes', 20 * 1024 * 1024)));
+    }
+
+    public static function emptyMetadata(): array
+    {
+        return ['title' => null, 'year' => null, 'author' => null, 'author_details' => [],
+            'program' => null, 'abstract' => null, 'keywords' => []];
+    }
     /**
      * Number of lines to trim from the top (header zone ~1.25 cm).
      * Typically includes university name, address, and separator lines.
@@ -57,6 +67,8 @@ class PdfExtractorService
      */
     public function extract(UploadedFile $file): array
     {
+        // Guard before pdfparser, which can allocate in proportion to the PDF.
+        if ($file->getSize() > self::maxAutomaticBytes()) return self::emptyMetadata();
         $filePath = $file->getRealPath();
 
         // Parse PDF — get raw pages (no trimming)

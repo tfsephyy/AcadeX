@@ -232,24 +232,19 @@ class VisitorCapstoneController extends Controller
         }
 
         $encryptor = new PdfEncryptorService();
-        $rawBytes  = $encryptor->decryptFromDisk($capstone->pdf_path);
+        $document = $encryptor->openVerifiedDocument($capstone->pdf_path);
 
-        if ($rawBytes === null) {
+        if ($document === null) {
             return $this->errorResponse('PDF could not be decrypted.', 500);
         }
 
-        return response()->stream(
-            fn() => print($rawBytes),
-            200,
-            [
+        return $document->response([
                 'Content-Type'           => 'application/pdf',
                 'Content-Disposition'    => 'inline',
-                'Content-Length'         => strlen($rawBytes),
                 'Cache-Control'          => 'no-store, no-cache, must-revalidate, max-age=0',
                 'Pragma'                 => 'no-cache',
                 'X-Content-Type-Options' => 'nosniff',
-            ]
-        );
+            ]);
     }
 
     /**
@@ -269,24 +264,19 @@ class VisitorCapstoneController extends Controller
         }
 
         $encryptor = new PdfEncryptorService();
-        $rawBytes  = $encryptor->decryptFromDisk($capstone->imrad_path);
+        $document = $encryptor->openVerifiedDocument($capstone->imrad_path);
 
-        if ($rawBytes === null) {
+        if ($document === null) {
             return $this->errorResponse('IMRAD file could not be decrypted.', 500);
         }
 
-        return response()->stream(
-            fn() => print($rawBytes),
-            200,
-            [
+        return $document->response([
                 'Content-Type'           => 'application/pdf',
                 'Content-Disposition'    => 'inline',
-                'Content-Length'         => strlen($rawBytes),
                 'Cache-Control'          => 'no-store, no-cache, must-revalidate, max-age=0',
                 'Pragma'                 => 'no-cache',
                 'X-Content-Type-Options' => 'nosniff',
-            ]
-        );
+            ]);
     }
 
     // ──────────────────────────────────────────────────────────────

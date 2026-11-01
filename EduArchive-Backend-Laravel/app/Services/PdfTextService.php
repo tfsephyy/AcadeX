@@ -62,23 +62,20 @@ class PdfTextService
      */
     public function extractFromEncryptedPath(string $encryptedPath): ?string
     {
-        // 1. Decrypt to raw bytes
+        // Large capstones remain available without synchronous full-text parsing.
         $encryptor = new PdfEncryptorService();
-        $rawBytes  = $encryptor->decryptFromDisk($encryptedPath);
-
-        if (empty($rawBytes)) {
-            Log::warning("PdfTextService: could not decrypt [{$encryptedPath}]");
-            return null;
-        }
-
-        // Write to a temp PDF file
-        $tmpPdf = $this->tempFile('.pdf');
-
+        $document = $encryptor->openVerifiedDocument($encryptedPath);
+        if (!$document) return null;
+        $tmpPdf = null;
         try {
-            file_put_contents($tmpPdf, $rawBytes);
+            if ($document->size() > PdfExtractorService::maxAutomaticBytes()) return null;
+            $tmpPdf = $this->tempFile('.pdf');
+            $output = fopen($tmpPdf, 'wb');
+            try { $document->copyTo($output); } finally { fclose($output); }
             return $this->extractFromFile($tmpPdf);
         } finally {
-            $this->deleteSafe($tmpPdf);
+            $document->close();
+            if ($tmpPdf) $this->deleteSafe($tmpPdf);
         }
     }
 
@@ -87,6 +84,7 @@ class PdfTextService
      */
     public function extractFromFile(string $pdfPath): ?string
     {
+        if (filesize($pdfPath) > PdfExtractorService::maxAutomaticBytes()) return null;
         // ── Step 1: Try text-layer extraction (fast) ──────────────────────
         $text = $this->extractTextLayer($pdfPath);
 

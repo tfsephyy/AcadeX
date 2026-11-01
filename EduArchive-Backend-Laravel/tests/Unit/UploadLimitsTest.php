@@ -12,6 +12,24 @@ use Tests\TestCase;
 
 class UploadLimitsTest extends TestCase
 {
+    public function test_php_rejected_upload_returns_413_without_reading_a_missing_temporary_file(): void
+    {
+        $file = new UploadedFile('', 'too-large.pdf', 'application/pdf', UPLOAD_ERR_INI_SIZE, true);
+        $request = Request::create('/api/v1/student/capstones/upload', 'POST', [], [], ['pdf' => $file]);
+        $middleware = new RejectOversizedUploads(new UploadLimits());
+        $response = $middleware->handle($request, fn () => response('unexpected', 599));
+        self::assertSame(413, $response->getStatusCode());
+        self::assertStringContainsString('maximum allowed size', $response->getData()->message);
+    }
+
+    public function test_partial_upload_is_rejected_without_creating_or_reading_a_document(): void
+    {
+        $file = new UploadedFile('', 'partial.pdf', 'application/pdf', UPLOAD_ERR_PARTIAL, true);
+        $request = Request::create('/api/v1/student/capstones/upload', 'POST', [], [], ['pdf' => $file]);
+        $response = (new RejectOversizedUploads(new UploadLimits()))->handle($request, fn () => response('unexpected', 599));
+        self::assertSame(422, $response->getStatusCode());
+    }
+
     public function test_php_ini_sizes_are_converted_to_bytes(): void
     {
         self::assertSame(64 * 1024 * 1024, UploadLimits::bytesFromIni('64M'));
@@ -26,27 +44,25 @@ class UploadLimitsTest extends TestCase
         self::assertSame(0, UploadLimits::bytesFromIni(false));
     }
 
-    public function test_512_mib_memory_produces_effective_ceiling_no_greater_than_64_mib(): void
+    public function test_512_mib_memory_allows_128_mib_streamed_uploads(): void
     {
         $ceiling = UploadLimits::calculateMemorySafeCeiling(512 * 1024 * 1024);
 
-        self::assertLessThanOrEqual(64 * 1024 * 1024, $ceiling);
-        self::assertSame(64 * 1024 * 1024, $ceiling);
+        self::assertSame(128 * 1024 * 1024, $ceiling);
     }
 
-    public function test_256_mib_memory_produces_approximately_26_point_66_mib_ceiling(): void
+    public function test_128_and_256_mib_memory_allow_streams_but_insufficient_headroom_fails_closed(): void
     {
         $ceiling = UploadLimits::calculateMemorySafeCeiling(256 * 1024 * 1024);
-        $expected = (int) floor((160 * 1024 * 1024) / 6.0); // 27,962,026 bytes (~26.66 MiB)
-
-        self::assertSame($expected, $ceiling);
-        self::assertSame(27962026, $ceiling);
+        self::assertSame(134217728, $ceiling);
+        self::assertSame(134217728, UploadLimits::calculateMemorySafeCeiling(134217728));
+        self::assertSame(0, UploadLimits::calculateMemorySafeCeiling(134217727));
     }
 
-    public function test_unlimited_memory_still_produces_no_more_than_64_mib(): void
+    public function test_unlimited_memory_still_enforces_128_mib_maximum(): void
     {
-        self::assertSame(64 * 1024 * 1024, UploadLimits::calculateMemorySafeCeiling(-1));
-        self::assertSame(64 * 1024 * 1024, UploadLimits::calculateMemorySafeCeiling(0));
+        self::assertSame(128 * 1024 * 1024, UploadLimits::calculateMemorySafeCeiling(-1));
+        self::assertSame(128 * 1024 * 1024, UploadLimits::calculateMemorySafeCeiling(0));
     }
 
     public function test_memory_at_or_below_baseline_reports_no_safe_capacity_and_fails_closed(): void

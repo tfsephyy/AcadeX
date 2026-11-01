@@ -37,7 +37,7 @@ foreach ($pdo->query('SHOW GRANTS')->fetchAll(PDO::FETCH_COLUMN) as $grant) {
 }
 echo 'Verified disposable MySQL connection: '.$database.PHP_EOL;
 chdir($base);
-if (in_array($argv[1] ?? '', ['--migrate', '--inspect', '--http-check', '--ocr-check'], true)) {
+if (in_array($argv[1] ?? '', ['--migrate', '--inspect', '--http-check', '--large-http-check', '--ocr-check'], true)) {
     $app = require $base.'/bootstrap/app.php';
     $kernel = $app->make(Illuminate\Contracts\Console\Kernel::class);
     $kernel->bootstrap();
@@ -46,7 +46,7 @@ if (in_array($argv[1] ?? '', ['--migrate', '--inspect', '--http-check', '--ocr-c
         throw new RuntimeException('Laravel database guard failed.');
     }
     if ($argv[1] === '--migrate') exit($kernel->call('migrate', ['--force' => true], new Symfony\Component\Console\Output\ConsoleOutput));
-    if ($argv[1] === '--http-check') {
+    if (in_array($argv[1], ['--http-check', '--large-http-check'], true)) {
         require __DIR__.'/http-security-probe.php';
         exit(0);
     }
@@ -88,7 +88,13 @@ if (in_array($argv[1] ?? '', ['--migrate', '--inspect', '--http-check', '--ocr-c
     exit(0);
 }
 $args = array_slice($argv, 1);
-$command = array_merge([PHP_BINARY, $base.'/vendor/phpunit/phpunit/phpunit', '--do-not-cache-result'], $args);
+$command = [PHP_BINARY];
+// Preserve explicit CLI test ceilings in the child; never change local php.ini.
+foreach (['memory_limit', 'upload_max_filesize', 'post_max_size'] as $setting) {
+    $command[] = '-d';
+    $command[] = $setting.'='.ini_get($setting);
+}
+$command = array_merge($command, [$base.'/vendor/phpunit/phpunit/phpunit', '--do-not-cache-result'], $args);
 $process = proc_open($command, [0 => STDIN, 1 => STDOUT, 2 => STDERR], $pipes, $base);
 exit(proc_close($process));
 } catch (Throwable $error) {

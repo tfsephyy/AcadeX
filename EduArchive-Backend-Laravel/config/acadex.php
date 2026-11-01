@@ -6,12 +6,11 @@ return [
     'private_temp_path' => env('PRIVATE_TEMP_PATH', storage_path('framework/private-tmp')),
     'max_pending_uploads' => (int) env('MAX_PENDING_UPLOADS', 20),
     'max_pending_upload_bytes' => (int) env('MAX_PENDING_UPLOAD_BYTES', 268435456),
-    // Application upload ceiling in bytes. 0 means automatic memory-safe ceiling
-    // (capped at 64 MiB under current whole-file encryption with 512M memory_limit).
+    // 0 means automatic 128 MiB ceiling with bounded stream encryption.
     // A positive value can only lower the automatic ceiling, never exceed it.
-    // Supporting a genuine 128 MiB limit requires a reviewed streaming/chunked encryption
-    // design or separately validated server capacity; not supported by current whole-file encryption.
     'max_upload_bytes' => (int) env('ACADEX_MAX_UPLOAD_BYTES', 0),
+    // Bounds automatic parser/OCR work independently of accepted document size.
+    'max_automatic_extraction_bytes' => (int) env('MAX_AUTOMATIC_EXTRACTION_BYTES', 20971520),
     'min_free_storage_bytes' => (int) env('MIN_FREE_STORAGE_BYTES', 2147483648),
     // Explicitly opt into legacy plaintext only during an approved transition.
     'allow_legacy_plaintext' => (bool) env('ALLOW_LEGACY_PLAINTEXT_DOCUMENTS', false),

@@ -62,6 +62,17 @@ class RejectOversizedUploads
             foreach ($request->allFiles() as $field => $file) {
                 $files = is_array($file) ? $file : [$file];
                 foreach ($files as $f) {
+                    // PHP can reject a file before creating its temporary path.
+                    // Do not stat that path or let an incomplete upload proceed.
+                    if ($f instanceof UploadedFile && !$f->isValid()) {
+                        $tooLarge = in_array($f->getError(), [UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_FORM_SIZE], true);
+                        return new JsonResponse([
+                            'success' => false,
+                            'message' => $tooLarge
+                                ? 'The upload exceeds the maximum allowed size of '.$this->limits->humanBytes($effectiveMax).'.'
+                                : 'The file upload was incomplete or could not be saved. Please try uploading it again.',
+                        ], $tooLarge ? 413 : 422);
+                    }
                     if ($f instanceof UploadedFile && $f->getSize() > $effectiveMax) {
                         Log::warning('Rejected an uploaded file larger than effective application ceiling.', [
                             'field' => $field,

@@ -33,7 +33,20 @@ $socket = @stream_socket_server("tcp://127.0.0.1:$port", $errno, $errstr);
 if (!$socket) throw new RuntimeException('The isolated probe port is occupied; no process will be stopped.');
 fclose($socket);
 $log = $private.'/http-server.log';
-$process = proc_open([PHP_BINARY, '-S', "127.0.0.1:$port", '-t', $base.'/public', $base.'/public/index.php'],
+$serverCommand = [PHP_BINARY];
+foreach (['memory_limit', 'upload_max_filesize', 'post_max_size'] as $setting) {
+    $serverCommand[] = '-d'; $serverCommand[] = $setting.'='.ini_get($setting);
+}
+$router = $base.'/public/index.php';
+if (($argv[1] ?? '') === '--large-http-check') {
+    $router = $private.'/large-http-router.php';
+    $metricPath = var_export($private.'/large-http-metrics.jsonl', true);
+    file_put_contents($router, '<?php ' .
+        'file_put_contents('.$metricPath.', json_encode(["phase"=>"start", "time"=>microtime(true), "uri"=>$_SERVER["REQUEST_URI"], "files"=>array_map(fn($f)=>$f["size"]??null,$_FILES)]).PHP_EOL, FILE_APPEND);' .
+        'register_shutdown_function(function(){file_put_contents('.$metricPath.', json_encode(["phase"=>"end", "time"=>microtime(true), "peak"=>memory_get_peak_usage(true)]).PHP_EOL, FILE_APPEND);});' .
+        'require '.var_export($base.'/public/index.php', true).';');
+}
+$process = proc_open(array_merge($serverCommand, ['-S', "127.0.0.1:$port", '-t', $base.'/public', $router]),
     [0 => ['pipe', 'r'], 1 => ['file', $log, 'a'], 2 => ['file', $log, 'a']], $pipes, $base);
 $curl = curl_init();
 curl_setopt_array($curl, [CURLOPT_RETURNTRANSFER => true, CURLOPT_COOKIEFILE => '', CURLOPT_TIMEOUT => 15]);
@@ -73,6 +86,7 @@ try {
     [$status, , , $pdf] = $request('GET', "/capstones/$capstone->id/pdf");
     $expect($status, 200, 'Live authorized encrypted document retrieval');
     if ($pdf !== $bytes) throw new RuntimeException('Encrypted retrieval bytes differ.');
+    if (($argv[1] ?? '') === '--large-http-check') require __DIR__.'/large-upload-http-check.php';
     $expect($request('POST', '/logout', [], $csrf)[0], 200, 'Live CSRF logout');
     $expect($request('GET', '/user')[0], 401, 'Live logout revocation');
 } finally {

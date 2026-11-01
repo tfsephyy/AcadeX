@@ -3,14 +3,13 @@
 namespace App\Services;
 
 /**
- * Reads the PHP request/upload ceilings and calculates memory-safe upload limits
- * for whole-file encryption.
+ * Reads PHP ceilings and enforces the bounded-stream file limit.
  */
 class UploadLimits
 {
-    public const CURRENT_ENCRYPTION_MAX_BYTES = 64 * 1024 * 1024; // 64 MiB maximum for whole-file encryption
+    public const CURRENT_ENCRYPTION_MAX_BYTES = 128 * 1024 * 1024;
     public const MEMORY_BASELINE_BYTES = 96 * 1024 * 1024;         // 96 MiB framework/runtime baseline overhead
-    public const WHOLE_FILE_ENCRYPTION_FACTOR = 6.0;               // Conservative ratio of peak memory to file size
+    public const STREAM_MEMORY_HEADROOM_BYTES = 32 * 1024 * 1024;
 
     /**
      * Convert a PHP ini shorthand size (64M, 1G, 512K, -1) to bytes.
@@ -84,12 +83,8 @@ class UploadLimits
     }
 
     /**
-     * Pure calculation of the memory-safe upload ceiling from a given memory_limit (in bytes).
-     *
-     * - If memory_limit is unlimited (<= 0), returns at most 64 MiB.
-     * - If memory_limit is above baseline, calculates floor((memoryLimit - baseline) / factor) clamped to 64 MiB.
-     * - Does not force a 10 MiB minimum.
-     * - If memory_limit is at or below baseline, returns 0 (fails closed, no safe capacity).
+     * Streaming needs fixed headroom instead of a multiple of the file size.
+     * Never bypass the application limit, including with unlimited PHP memory.
      */
     public static function calculateMemorySafeCeiling(int $memoryLimitBytes): int
     {
@@ -97,19 +92,15 @@ class UploadLimits
             return self::CURRENT_ENCRYPTION_MAX_BYTES;
         }
 
-        if ($memoryLimitBytes <= self::MEMORY_BASELINE_BYTES) {
+        if ($memoryLimitBytes < self::MEMORY_BASELINE_BYTES + self::STREAM_MEMORY_HEADROOM_BYTES) {
             return 0;
         }
 
-        $available = $memoryLimitBytes - self::MEMORY_BASELINE_BYTES;
-        $calculated = (int) floor($available / self::WHOLE_FILE_ENCRYPTION_FACTOR);
-
-        return min($calculated, self::CURRENT_ENCRYPTION_MAX_BYTES);
+        return self::CURRENT_ENCRYPTION_MAX_BYTES;
     }
 
     /**
-     * Calculate a conservative maximum upload ceiling from the configured memory_limit
-     * so that uploads never exceed the server's memory budget or trigger OOM kills.
+     * Check the fixed memory envelope needed by streamed upload processing.
      */
     public function memorySafeUploadCeiling(): int
     {

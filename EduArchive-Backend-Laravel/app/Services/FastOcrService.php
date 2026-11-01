@@ -29,17 +29,14 @@ class FastOcrService
     public function extractText(string $encryptedPath): ?string
     {
         $encryptor = new PdfEncryptorService();
-        $rawBytes  = $encryptor->decryptFromDisk($encryptedPath);
-
-        if (empty($rawBytes)) {
-            Log::warning("FastOcrService: could not decrypt [{$encryptedPath}]");
-            return null;
-        }
-
-        $tmpPdf = PrivateTemp::file();
-
+        $document = $encryptor->openVerifiedDocument($encryptedPath);
+        if (!$document) return null;
+        $tmpPdf = null;
         try {
-            file_put_contents($tmpPdf, $rawBytes);
+            if ($document->size() > PdfExtractorService::maxAutomaticBytes()) return null;
+            $tmpPdf = PrivateTemp::file();
+            $output = fopen($tmpPdf, 'wb');
+            try { $document->copyTo($output); } finally { fclose($output); }
 
             // Try text extraction first (fast path)
             $text = $this->extractTextLayer($tmpPdf);
@@ -58,7 +55,8 @@ class FastOcrService
             return !empty($ocrText) ? $this->truncate($ocrText) : $this->truncate($text);
 
         } finally {
-            @unlink($tmpPdf);
+            $document->close();
+            if ($tmpPdf) @unlink($tmpPdf);
         }
     }
 
