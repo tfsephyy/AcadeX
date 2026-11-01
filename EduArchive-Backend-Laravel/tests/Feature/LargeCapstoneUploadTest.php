@@ -38,8 +38,8 @@ class LargeCapstoneUploadTest extends SecurityTestCase
         $file = $this->pdf(100 * 1024 * 1024);
         try {
             $expectedHash = hash_file('sha256', $file->getPathname());
-            $upload = $this->post('/api/v1/student/capstones/upload', ['pdf' => $file], ['Accept' => 'application/json'])
-                ->assertOk()->assertJsonPath('data.extraction_status', 'manual_required');
+            $upload = $this->post('/api/v1/student/capstones/upload', ['pdf' => $file, 'skip_extraction' => 1], ['Accept' => 'application/json'])
+                ->assertOk()->assertJsonPath('data.extraction_status', 'skipped');
             $record = $this->postJson('/api/v1/student/capstones', [
                 'title' => 'Synthetic large '.bin2hex(random_bytes(5)), 'author' => 'Synthetic',
                 'pdf_path' => $upload->json('data.pdf_path'),
@@ -64,8 +64,8 @@ class LargeCapstoneUploadTest extends SecurityTestCase
         try {
             foreach (['admin', 'faculty'] as $role) {
                 $this->asUser($this->user($role));
-                $this->post('/api/v1/'.$role.'/capstones/upload', ['pdf' => $file], ['Accept' => 'application/json'])
-                    ->assertOk()->assertJsonPath('data.extraction_status', 'manual_required')
+                $this->post('/api/v1/'.$role.'/capstones/upload', ['pdf' => $file, 'skip_extraction' => 1], ['Accept' => 'application/json'])
+                    ->assertOk()->assertJsonPath('data.extraction_status', 'skipped')
                     ->assertJsonPath('data.extracted.title', null);
             }
         } finally { @unlink($file->getPathname()); }

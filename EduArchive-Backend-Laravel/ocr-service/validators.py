@@ -13,6 +13,16 @@ MAX_RENDER_SIDE     = 10_000
 ALLOWED_EXTENSIONS  = {".jpg", ".jpeg", ".png", ".pdf"}
 
 
+def has_usable_embedded_text(text: str) -> bool:
+    """A watermark/page number alone is not a readable document text layer."""
+    return len(text.strip()) >= 80
+
+
+def choose_page_text(embedded: str, recognized: str) -> str:
+    """Prefer recognized content, retaining existing short text if OCR is empty."""
+    return recognized.strip() or embedded.strip()
+
+
 def planned_preprocess_size(width: int, height: int) -> tuple[int, int]:
     """Validate every proposed resize before OpenCV can allocate its output."""
     if width <= 0 or height <= 0 or width * height > MAX_RENDER_PIXELS:

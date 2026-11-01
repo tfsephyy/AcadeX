@@ -57,7 +57,7 @@ import numpy as np
 from paddleocr import PaddleOCR
 from PIL import Image
 
-from validators import MAX_PDF_PAGES, MAX_RENDER_PIXELS, planned_preprocess_size
+from validators import MAX_PDF_PAGES, MAX_RENDER_PIXELS, planned_preprocess_size, has_usable_embedded_text, choose_page_text
 
 logger = logging.getLogger(__name__)
 
@@ -340,7 +340,7 @@ def extract_text_from_pdf(raw: bytes) -> dict[str, Any]:
 
             # ── Fast path: embedded text ───────────────────────────────────
             embedded = page.get_text("text").strip()
-            if embedded:
+            if has_usable_embedded_text(embedded):
                 pages_out.append({"page": page_num, "text": embedded})
                 full_parts.append(f"--- Page {page_num} ---\n{embedded}")
                 continue
@@ -357,7 +357,7 @@ def extract_text_from_pdf(raw: bytes) -> dict[str, Any]:
 
             preprocessed = _preprocess(arr)
             result       = _get_ocr().ocr(preprocessed, cls=False)
-            page_text    = _reconstruct_text(result)
+            page_text    = choose_page_text(embedded, _reconstruct_text(result))
 
             pages_out.append({"page": page_num, "text": page_text})
             if page_text:

@@ -6,6 +6,7 @@ import {
 } from 'react-icons/hi';
 import CategoryCombobox from './CategoryCombobox';
 import { useNotification } from './useNotification';
+import { getExtractionNotice } from './extractionNotice';
 
 export default function ReviewExtractedDataPage({ nextPath, backPath }) {
     const navigate = useNavigate();
@@ -138,7 +139,7 @@ export default function ReviewExtractedDataPage({ nextPath, backPath }) {
                     {/* Notice */}
                     <div className="p-3.5 rounded-xl border" style={{ background: 'rgba(245,158,11,0.1)', borderColor: 'rgba(245,158,11,0.3)' }}>
                         <p className="text-sm font-medium" style={{ color: '#d97706' }}>
-                            📋 Metadata auto-extracted from your PDF — please review and correct before proceeding.
+                            {getExtractionNotice(location.state)}
                         </p>
                     </div>
 

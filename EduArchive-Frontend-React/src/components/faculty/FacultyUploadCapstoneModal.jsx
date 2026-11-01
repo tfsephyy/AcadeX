@@ -77,6 +77,8 @@ export default function FacultyUploadCapstoneModal({ open, onClose }) {
                 state: {
                     pdfInfo: { pdf_path: data.pdf_path, pdf_original_name: data.pdf_original_name },
                     extracted: data.extracted || {},
+                    extractionStatus: data.extraction_status,
+                    extractionScope: data.extraction_scope,
                     skipped: false,
                 },
             });

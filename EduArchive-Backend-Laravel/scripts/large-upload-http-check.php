@@ -22,7 +22,7 @@ try {
 } finally { fclose($output); }
 $upload = function () use ($curl, $fixture, $port, $csrf) {
     curl_setopt_array($curl, [CURLOPT_URL => "http://127.0.0.1:$port/api/v1/student/capstones/upload",
-        CURLOPT_CUSTOMREQUEST => 'POST', CURLOPT_POSTFIELDS => ['pdf' => new CURLFile($fixture, 'application/pdf', 'synthetic-large.pdf')],
+        CURLOPT_CUSTOMREQUEST => 'POST', CURLOPT_POSTFIELDS => ['pdf' => new CURLFile($fixture, 'application/pdf', 'synthetic-large.pdf'), 'skip_extraction' => '1'],
         // Windows' development server buffers large request bodies before the
         // router runs. Allow the slow synthetic transfer without relaxing app limits.
         CURLOPT_RETURNTRANSFER => true, CURLOPT_HEADER => false, CURLOPT_TIMEOUT => 600,
@@ -37,7 +37,7 @@ $upload = function () use ($curl, $fixture, $port, $csrf) {
 try {
     [$status, $data] = $upload();
     $expect($status, 200, 'Real HTTP '.round($fixtureBytes/1048576).' MiB multipart upload');
-    if (($data['data']['extraction_status'] ?? '') !== 'manual_required') throw new RuntimeException('Large upload reached extraction.');
+    if (($data['data']['extraction_status'] ?? '') !== 'skipped') throw new RuntimeException('Storage probe unexpectedly reached extraction.');
     $reference = $data['data']['pdf_path'];
     $allocation = \App\Models\DocumentUpload::findOrFail(substr($reference, 7));
     $largePath = $allocation->path;

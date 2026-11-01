@@ -67,8 +67,17 @@ class PdfExtractorService
      */
     public function extract(UploadedFile $file): array
     {
-        // Guard before pdfparser, which can allocate in proportion to the PDF.
-        if ($file->getSize() > self::maxAutomaticBytes()) return self::emptyMetadata();
+        // Never hand a large original to PHP's whole-document parser. Extract
+        // from a bounded front-matter copy using the existing metadata pipeline.
+        if ($file->getSize() > self::maxAutomaticBytes()) {
+            if (self::maxAutomaticBytes() < 1) return self::emptyMetadata();
+            $sample = app(PdfMetadataSampler::class)->create($file);
+            try {
+                return $this->extract(new UploadedFile($sample, 'metadata-sample.pdf', 'application/pdf', null, true));
+            } finally {
+                @unlink($sample);
+            }
+        }
         $filePath = $file->getRealPath();
 
         // Parse PDF — get raw pages (no trimming)
@@ -117,12 +126,14 @@ class PdfExtractorService
         }
 
         $authorField   = $this->extractAuthor($firstPageText, $fullText);
+        if ($authorField === 'Unknown Author') $authorField = '';
         $authorDetails = $this->extractAuthorDetails($fullText, $authorField);
+        $title = $this->extractTitle($firstPageText, $fullText);
 
         return [
-            'title'          => $this->extractTitle($firstPageText, $fullText),
+            'title'          => $title === 'Untitled' ? null : $title,
             'year'           => $this->extractYear($rawFirstPage),
-            'author'         => $authorField,
+            'author'         => $authorField !== '' ? $authorField : null,
             'author_details' => $authorDetails,
             'program'        => $this->extractProgram($fullText),
             'abstract'       => $abstract,

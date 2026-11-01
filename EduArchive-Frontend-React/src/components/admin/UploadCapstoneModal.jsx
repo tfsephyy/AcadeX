@@ -93,6 +93,8 @@ export default function UploadCapstoneModal({ open, onClose }) {
                         pdf_original_name: data.pdf_original_name,
                     },
                     extracted: data.extracted || {},
+                    extractionStatus: data.extraction_status,
+                    extractionScope: data.extraction_scope,
                     skipped:   false,
                 },
             });

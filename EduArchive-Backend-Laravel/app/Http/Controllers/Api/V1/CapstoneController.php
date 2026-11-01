@@ -263,7 +263,7 @@ class CapstoneController extends Controller
         $reference = app(\App\Services\DocumentUploads::class)->stage($request->user(), 'pdf', $path);
         $extracted = PdfExtractorService::emptyMetadata();
         $extractionStatus = $skipExtraction ? 'skipped' : 'manual_required';
-        if (!$skipExtraction && $file->getSize() <= PdfExtractorService::maxAutomaticBytes()) {
+        if (!$skipExtraction && PdfExtractorService::maxAutomaticBytes() > 0) {
             try {
                 $extracted = app(PdfExtractorService::class)->extract($file);
                 $extractionStatus = array_filter($extracted) ? 'complete' : 'unavailable';
@@ -279,6 +279,7 @@ class CapstoneController extends Controller
             'pdf_original_name' => $file->getClientOriginalName(),
             'extracted'         => $extracted,
             'extraction_status' => $extractionStatus,
+            'extraction_scope'  => $file->getSize() > PdfExtractorService::maxAutomaticBytes() ? 'first_12_pages' : 'full_document',
         ], 'PDF uploaded. Review or enter the document details.');
     }
 

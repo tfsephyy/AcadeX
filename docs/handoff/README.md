@@ -4,6 +4,7 @@ These files accompany [the main client/AI handoff](../../ACADEX_CLIENT_AI_HANDOF
 
 | File | Purpose |
 | --- | --- |
+| [METADATA_AUTOFILL_2026-11-01.md](METADATA_AUTOFILL_2026-11-01.md) | Current release: bounded first-12-page metadata sampling, sparse-watermark OCR correction, actual reported-PDF verification, preserved data and rollback |
 | [UPLOADS_128MIB_2026-11-01.md](UPLOADS_128MIB_2026-11-01.md) | Deployed 128 MiB bounded-stream upload/retrieval behavior, preserved data, tests, rollback compatibility, and pending Cloudflare delegation |
 | [STATE_2026-10-19.json](STATE_2026-10-19.json) | Current local Git context, DNS results, failed public/SSH connectivity observations, and explicit runtime unknowns |
 | [LOCAL_SOURCE_SNAPSHOT_2026-10-19.json](LOCAL_SOURCE_SNAPSHOT_2026-10-19.json) | File paths and hashes for eligible local application/deployment source, including uncommitted fixes |
