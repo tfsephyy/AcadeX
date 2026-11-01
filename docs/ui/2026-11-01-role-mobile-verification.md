@@ -2,7 +2,7 @@
 
 ## Scope and current state
 
-This continues [the earlier local UI review](2026-11-01-review.md). The user approved the landing charcoal dark theme for the entire application, requested continued review of all roles/mobile, and reported a local MySQL 1049 session error. **No deployment, push, AWS, DNS, paid service or production mutation was performed.** Work remains uncommitted on `codex/ui-refinement`; the book hero, green identity, light palette, existing functionality and server authorization rules are retained. No dependency was added.
+This continues [the earlier local UI review](2026-11-01-review.md). The user approved the landing charcoal dark theme for the entire application, requested continued review of all roles/mobile, and reported a local MySQL 1049 session error. **No deployment, push, AWS, DNS, paid service or production mutation was performed at this checkpoint.** Work was then uncommitted on the interface refinement branch; the book hero, green identity, light palette, existing functionality and server authorization rules are retained. No dependency was added.
 
 ## Changes made during the continuation
 

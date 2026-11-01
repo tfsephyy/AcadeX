@@ -13,7 +13,7 @@ Deployed to the existing `https://veload.site` installation on **November 1, 202
 | Persistent configuration | Existing shared `config/laravel.env` retained through the original symlink |
 | Private storage | Existing shared `storage` retained through the original symlink |
 | Runtime/source manifest | `ACADEX_UI_MANIFEST.json` in the release; records the deployed file hashes and source publication identity |
-| Publication branch | `codex/ui-refinement` in the client-owned GitHub repository; the final commit is also recorded in the deployment manifest after publication |
+| Publication branch | `release/ui-refinement` in the client-owned GitHub repository; the final commit is also recorded in the deployment manifest after publication |
 
 The backend matched **120 source files** against the serving metadata release before preparation. The candidate cloned that working backend/dependencies and overlaid only the verified frontend and documentation. No backend code change, schema migration, seeder, key generation, database import or OCR restart was needed. Apache and PHP-FPM were gracefully reloaded. MySQL and the existing OCR worker were retained.
 
