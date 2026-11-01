@@ -299,14 +299,14 @@ export default function UserManagement() {
     return (
         <div className="flex flex-col h-full">
             {/* ── Sticky Header ── */}
-            <div className="sticky top-0 z-40 bg-gray-50 pb-4 space-y-4 -mx-4 lg:-mx-8 px-4 lg:px-8 -mt-4 lg:-mt-8 pt-4 lg:pt-8 border-b border-gray-200 shadow-sm">
+            <div className="sticky top-0 z-40 bg-gray-50 pb-4 space-y-4 pt-2 border-b border-gray-200 shadow-sm">
                 <div>
                     <h1 className="text-2xl font-bold text-gray-900">User Management</h1>
                     <p className="text-sm text-gray-500 mt-1">Manage system users and registrations</p>
                 </div>
 
                 {/* Tabs */}
-                <div className="flex gap-2 border-b border-gray-200 overflow-x-auto scrollbar-hide -mx-4 px-4 lg:mx-0 lg:px-0">
+                <div className="flex gap-2 border-b border-gray-200 overflow-x-auto">
                     {tabs.map((tab) => (
                         <button
                             key={tab.id}
@@ -348,7 +348,7 @@ export default function UserManagement() {
 
                 {/* Search & Filter */}
                 <div className="flex gap-2">
-                    <div className="relative flex-1">
+                    <div className="relative flex-1 min-w-0">
                         <HiOutlineSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                         <input
                             type="text"
@@ -429,7 +429,7 @@ export default function UserManagement() {
                 />
             ) : (
                 <div className="bg-white rounded-xl shadow-sm border border-gray-100 flex flex-col overflow-hidden" style={{ maxHeight: 'calc(100vh - 18rem)' }}>
-                    <div className="overflow-auto custom-scrollbar">
+                    <div className="table-scroll overflow-auto custom-scrollbar" role="region" aria-label="Scrollable data table" tabIndex={0}>
                         <table className="w-full text-sm">
                             <thead className="bg-gray-50 border-b border-gray-100 sticky top-0 z-10">
                                 {activeTab === 'new' && (
@@ -552,30 +552,30 @@ export default function UserManagement() {
                                         )}
                                         <td className="py-3 px-4">
                                             <div className="flex items-center justify-end gap-2">
-                                                <button onClick={() => setViewUser(user)} className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="View">
+                                                <button aria-label="View" onClick={() => setViewUser(user)} className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="View">
                                                     <HiOutlineEye className="w-4 h-4" />
                                                 </button>
                                                 {activeTab === 'new' && (
                                                     <>
-                                                        <button onClick={() => handleAcceptUser(user)} className="p-1.5 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors" title="Accept">
+                                                        <button aria-label="Accept" onClick={() => handleAcceptUser(user)} className="p-1.5 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors" title="Accept">
                                                             <HiOutlineCheck className="w-4 h-4" />
                                                         </button>
-                                                        <button onClick={() => handleDenyUser(user)} className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Deny">
+                                                        <button aria-label="Deny" onClick={() => handleDenyUser(user)} className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Deny">
                                                             <HiOutlineX className="w-4 h-4" />
                                                         </button>
                                                     </>
                                                 )}
                                                 {(activeTab === 'students' || activeTab === 'faculty' || activeTab === 'visitors') && (
-                                                    <button onClick={() => handleArchiveUser(user)} className="p-1.5 text-gray-400 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition-colors" title="Archive">
+                                                    <button aria-label="Archive" onClick={() => handleArchiveUser(user)} className="p-1.5 text-gray-400 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition-colors" title="Archive">
                                                         <HiOutlineArchiveBoxArrowDown className="w-4 h-4" />
                                                     </button>
                                                 )}
                                                 {activeTab === 'archived' && (
                                                     <>
-                                                        <button onClick={() => handleUnarchiveUser(user)} className="p-1.5 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors" title="Restore">
+                                                        <button aria-label="Restore" onClick={() => handleUnarchiveUser(user)} className="p-1.5 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors" title="Restore">
                                                             <HiOutlineArchiveBoxXMark className="w-4 h-4" />
                                                         </button>
-                                                        <button onClick={() => handleDeleteUser(user)} className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Delete Permanently">
+                                                        <button aria-label="Delete Permanently" onClick={() => handleDeleteUser(user)} className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Delete Permanently">
                                                             <HiOutlineTrash className="w-4 h-4" />
                                                         </button>
                                                     </>

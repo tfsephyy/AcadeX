@@ -1,8 +1,11 @@
+import { createPortal } from 'react-dom';
+import { useDialogFocus } from './useDialogFocus';
 import { useState } from 'react';
 import { HiOutlineX, HiOutlineKey, HiOutlineCheckCircle } from 'react-icons/hi';
 import { changePassword } from '../api/admin';
 
 export default function ChangePasswordModal({ open, onClose }) {
+    const dialogRef = useDialogFocus(open, () => handleClose());
     const [currentPassword, setCurrentPassword] = useState('');
     const [password, setPassword] = useState('');
     const [passwordConfirmation, setPasswordConfirmation] = useState('');
@@ -80,14 +83,14 @@ export default function ChangePasswordModal({ open, onClose }) {
     );
 
     return (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+        createPortal(<div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
             <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={handleClose} />
-            <div className="relative w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden animate-scale-in">
+            <div ref={dialogRef} tabIndex={-1} role="dialog" aria-modal="true" aria-label="Change password" className="ui-dialog relative w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden animate-scale-in">
                 <div className="bg-[#1B5E20] px-6 py-4 flex items-center justify-between">
                     <h2 className="text-white font-semibold text-lg flex items-center gap-2">
                         <HiOutlineKey className="w-5 h-5" /> Change Password
                     </h2>
-                    <button onClick={handleClose} className="text-white/70 hover:text-white transition-colors">
+                    <button aria-label="Close" onClick={handleClose} className="text-white/70 hover:text-white transition-colors">
                         <HiOutlineX className="w-5 h-5" />
                     </button>
                 </div>
@@ -157,7 +160,7 @@ export default function ChangePasswordModal({ open, onClose }) {
                     )}
                 </div>
             </div>
-        </div>
+        </div>, document.body)
     );
 }
 

@@ -1,8 +1,11 @@
+import { createPortal } from 'react-dom';
+import { useDialogFocus } from './useDialogFocus';
 import { useState, useEffect, useRef } from 'react';
 import { HiOutlineX, HiOutlineMail, HiOutlineKey, HiOutlineShieldCheck, HiOutlineCheckCircle } from 'react-icons/hi';
 import { sendForgotPasswordCode, resetPassword } from '../api/admin';
 
 export default function ForgotPasswordModal({ open, onClose }) {
+    const dialogRef = useDialogFocus(open, () => handleClose());
     const [step, setStep] = useState(1); // 1=email, 2=code+password, 3=success
     const [email, setEmail] = useState('');
     const [code, setCode] = useState('');
@@ -125,9 +128,9 @@ export default function ForgotPasswordModal({ open, onClose }) {
     };
 
     return (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+        createPortal(<div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
             <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={handleClose} />
-            <div className="relative w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden animate-scale-in">
+            <div ref={dialogRef} tabIndex={-1} role="dialog" aria-modal="true" aria-label="Reset password" className="ui-dialog relative w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden animate-scale-in">
                 {/* Header */}
                 <div className="bg-[#1B5E20] px-6 py-4 flex items-center justify-between">
                     <h2 className="text-white font-semibold text-lg flex items-center gap-2">
@@ -135,7 +138,7 @@ export default function ForgotPasswordModal({ open, onClose }) {
                         {step === 2 && <><HiOutlineKey className="w-5 h-5" /> Verify & Reset</>}
                         {step === 3 && <><HiOutlineCheckCircle className="w-5 h-5" /> Success</>}
                     </h2>
-                    <button onClick={handleClose} className="text-white/70 hover:text-white transition-colors">
+                    <button aria-label="Close" onClick={handleClose} className="text-white/70 hover:text-white transition-colors">
                         <HiOutlineX className="w-5 h-5" />
                     </button>
                 </div>
@@ -154,8 +157,8 @@ export default function ForgotPasswordModal({ open, onClose }) {
                                 Enter your email address and we'll send you a verification code to reset your password.
                             </p>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
-                                <input
+                                <label htmlFor="field-forgotpasswordmodal-6035" className="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
+                                <input id="field-forgotpasswordmodal-6035"
                                     type="email"
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
@@ -184,8 +187,8 @@ export default function ForgotPasswordModal({ open, onClose }) {
 
                             {/* Verification Code */}
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Verification Code</label>
-                                <input
+                                <label htmlFor="field-forgotpasswordmodal-8010" className="block text-sm font-medium text-gray-700 mb-1">Verification Code</label>
+                                <input id="field-forgotpasswordmodal-8010"
                                     type="text"
                                     value={code}
                                     onChange={(e) => setCode(e.target.value.toUpperCase())}
@@ -311,7 +314,7 @@ export default function ForgotPasswordModal({ open, onClose }) {
                     )}
                 </div>
             </div>
-        </div>
+        </div>, document.body)
     );
 }
 

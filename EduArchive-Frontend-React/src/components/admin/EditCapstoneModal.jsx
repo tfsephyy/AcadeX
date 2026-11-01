@@ -1,3 +1,5 @@
+import { createPortal } from 'react-dom';
+import { useDialogFocus } from '../useDialogFocus';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import {
     HiOutlineX, HiOutlineCheck, HiOutlineSearch, HiOutlineUser,
@@ -61,6 +63,7 @@ function SectionLabel({ children }) {
 
 /* ─── Component ─────────────────────────────────────────────── */
 export default function EditCapstoneModal({ capstone, onClose, onSuccess, updateFn }) {
+    const dialogRef = useDialogFocus(Boolean(capstone), onClose);
     const actualUpdate = updateFn || updateCapstone;
     const notify = useNotification();
     const [saving, setSaving] = useState(false);
@@ -246,9 +249,9 @@ export default function EditCapstoneModal({ capstone, onClose, onSuccess, update
     ];
 
     return (
-        <div className="fixed inset-0 bg-black/60 flex items-end sm:items-center justify-center z-50 p-0 sm:p-4">
+        createPortal(<div className="fixed inset-0 bg-black/60 flex items-end sm:items-center justify-center z-50 p-0 sm:p-4">
             {saving && <LoadingOverlay text="Saving changes…" />}
-            <div className="w-full sm:max-w-3xl rounded-t-2xl sm:rounded-2xl shadow-2xl flex flex-col max-h-[92vh] border"
+            <div ref={dialogRef} tabIndex={-1} role="dialog" aria-modal="true" aria-label="Edit capstone" className="ui-dialog w-full sm:max-w-3xl rounded-t-2xl sm:rounded-2xl shadow-2xl flex flex-col max-h-[92vh] border"
                 style={{ background: 'var(--color-bg-secondary)', borderColor: 'var(--color-border-strong)', isolation: 'isolate', boxShadow: 'var(--shadow-lg)' }}>
 
                 {/* ── Header ── */}
@@ -258,7 +261,7 @@ export default function EditCapstoneModal({ capstone, onClose, onSuccess, update
                         <h2 className="text-lg font-bold" style={{ color: 'var(--color-text)' }}>Edit Capstone</h2>
                         <p className="text-xs mt-0.5 truncate" style={{ color: 'var(--color-text-muted)' }} title={capstone?.title}>{capstone?.title}</p>
                     </div>
-                    <button onClick={onClose}
+                    <button aria-label="Close" onClick={onClose}
                         className="p-2 rounded-lg transition-colors flex-shrink-0"
                         style={{ color: 'var(--color-text-muted)' }}
                         onMouseEnter={e => e.currentTarget.style.background = 'var(--color-bg-secondary)'}
@@ -432,7 +435,7 @@ export default function EditCapstoneModal({ capstone, onClose, onSuccess, update
                                                             </div>
                                                         </td>
                                                         <td className="px-2 py-1.5 text-center">
-                                                            <button
+                                                            <button aria-label="Remove author"
                                                                 onClick={() => removeAuthorRow(idx)}
                                                                 className="p-1 rounded-md transition-colors"
                                                                 style={{ color: 'var(--color-text-muted)' }}
@@ -556,7 +559,7 @@ export default function EditCapstoneModal({ capstone, onClose, onSuccess, update
                                             </p>
                                             <p className="text-xs" style={{ color: '#0891b2' }}>Uploaded</p>
                                         </div>
-                                        <button onClick={() => { setImradInfo(null); if (imradRef.current) imradRef.current.value = ''; }}
+                                        <button aria-label="Close" onClick={() => { setImradInfo(null); if (imradRef.current) imradRef.current.value = ''; }}
                                             style={{ color: 'var(--color-text-muted)' }}
                                             onMouseEnter={e => e.currentTarget.style.color = '#ef4444'}
                                             onMouseLeave={e => e.currentTarget.style.color = 'var(--color-text-muted)'}>
@@ -592,7 +595,7 @@ export default function EditCapstoneModal({ capstone, onClose, onSuccess, update
                                             <HiOutlineUser className="w-4 h-4" style={{ color: '#d97706' }} />
                                         </div>
                                         <span className="text-sm font-medium flex-1" style={{ color: 'var(--color-text)' }}>{adviser.name}</span>
-                                        <button onClick={() => setAdviser(null)}
+                                        <button aria-label="Close" onClick={() => setAdviser(null)}
                                             style={{ color: 'var(--color-text-muted)' }}
                                             onMouseEnter={e => e.currentTarget.style.color = '#ef4444'}
                                             onMouseLeave={e => e.currentTarget.style.color = 'var(--color-text-muted)'}>
@@ -663,7 +666,7 @@ export default function EditCapstoneModal({ capstone, onClose, onSuccess, update
                                                     <p className="text-xs font-semibold truncate" style={{ color: 'var(--color-text)' }}>{r.name}</p>
                                                     <p className="text-xs truncate" style={{ color: 'var(--color-text-muted)' }}>{r.local_name || r.file_original_name}</p>
                                                 </div>
-                                                <button onClick={() => setResources(p => p.filter(x => x.id !== r.id))}
+                                                <button aria-label="Delete" onClick={() => setResources(p => p.filter(x => x.id !== r.id))}
                                                     style={{ color: 'var(--color-text-muted)' }}
                                                     onMouseEnter={e => e.currentTarget.style.color = '#ef4444'}
                                                     onMouseLeave={e => e.currentTarget.style.color = 'var(--color-text-muted)'}>
@@ -690,7 +693,7 @@ export default function EditCapstoneModal({ capstone, onClose, onSuccess, update
                                             {pendingResourceFile ? pendingResourceFile.name : 'Click to select file…'}
                                         </span>
                                         {pendingResourceFile && (
-                                            <button onClick={e => { e.stopPropagation(); setPendingResourceFile(null); if (resourceFileRef.current) resourceFileRef.current.value = ''; }}
+                                            <button aria-label="Close" onClick={e => { e.stopPropagation(); setPendingResourceFile(null); if (resourceFileRef.current) resourceFileRef.current.value = ''; }}
                                                 style={{ color: 'var(--color-text-muted)' }}
                                                 onMouseEnter={e => e.currentTarget.style.color = '#ef4444'}
                                                 onMouseLeave={e => e.currentTarget.style.color = 'var(--color-text-muted)'}>
@@ -726,7 +729,7 @@ export default function EditCapstoneModal({ capstone, onClose, onSuccess, update
                                                         {r.author}{r.year && <span className="mx-1">·</span>}{r.year}
                                                     </p>
                                                 </div>
-                                                <button onClick={() => setReferences(p => p.filter(x => x.id !== r.id))}
+                                                <button aria-label="Delete" onClick={() => setReferences(p => p.filter(x => x.id !== r.id))}
                                                     style={{ color: 'var(--color-text-muted)' }}
                                                     onMouseEnter={e => e.currentTarget.style.color = '#ef4444'}
                                                     onMouseLeave={e => e.currentTarget.style.color = 'var(--color-text-muted)'}>
@@ -806,6 +809,6 @@ export default function EditCapstoneModal({ capstone, onClose, onSuccess, update
                     </button>
                 </div>
             </div>
-        </div>
+        </div>, document.body)
     );
 }

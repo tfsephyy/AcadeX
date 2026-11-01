@@ -165,7 +165,7 @@ export default function FacultyCapstoneApproval() {
                             className="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none"
                         />
                     </div>
-                    <button
+                    <button aria-label="Filters" aria-expanded={showFilters}
                         onClick={() => setShowFilters(!showFilters)}
                         className={`inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg border transition-colors ${
                             showFilters || hasActiveFilters
@@ -183,8 +183,8 @@ export default function FacultyCapstoneApproval() {
                     <div className="pt-3 border-t border-gray-100">
                         <div className="flex flex-wrap items-end gap-3">
                             <div>
-                                <label className="block text-xs font-medium text-gray-500 mb-1">Year</label>
-                                <select
+                                <label htmlFor="field-facultycapstoneapproval-7673" className="block text-xs font-medium text-gray-500 mb-1">Year</label>
+                                <select id="field-facultycapstoneapproval-7673"
                                     value={filters.year}
                                     onChange={(e) => handleFilterChange('year', e.target.value)}
                                     className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500 outline-none min-w-[120px]"
@@ -196,8 +196,8 @@ export default function FacultyCapstoneApproval() {
                                 </select>
                             </div>
                             <div>
-                                <label className="block text-xs font-medium text-gray-500 mb-1">Program</label>
-                                <select
+                                <label htmlFor="field-facultycapstoneapproval-8545" className="block text-xs font-medium text-gray-500 mb-1">Program</label>
+                                <select id="field-facultycapstoneapproval-8545"
                                     value={filters.program}
                                     onChange={(e) => handleFilterChange('program', e.target.value)}
                                     className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500 outline-none min-w-[120px]"
@@ -271,7 +271,7 @@ export default function FacultyCapstoneApproval() {
                                 </div>
 
                                 <div className="flex items-center gap-2">
-                                    <button
+                                    <button aria-label="View"
                                         onClick={() => handleView(cap)}
                                         className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                                         title="View"

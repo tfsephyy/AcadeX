@@ -1,7 +1,10 @@
+import { createPortal } from 'react-dom';
+import { useDialogFocus } from './useDialogFocus';
 import { useState } from 'react'
 import { sendVerificationCode, verifyEmailCode } from '../api/admin'
 
 export default function VerifyAccountEmailModal({ email, password, onClose, onVerified }) {
+    const dialogRef = useDialogFocus(true, () => { if (!busy) onClose() });
   const [code, setCode] = useState('')
   const [sent, setSent] = useState(false)
   const [busy, setBusy] = useState(false)
@@ -23,9 +26,9 @@ export default function VerifyAccountEmailModal({ email, password, onClose, onVe
     } finally { setBusy(false) }
   }
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4">
-      <form onSubmit={submit} role="dialog" aria-modal="true" aria-labelledby="verify-account-heading"
-        className="w-full max-w-md rounded-xl p-6" style={{ background: 'var(--color-bg)', color: 'var(--color-text)' }}>
+    createPortal(<div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4">
+      <form ref={dialogRef} tabIndex={-1} onSubmit={submit} role="dialog" aria-modal="true" aria-labelledby="verify-account-heading"
+        className="ui-dialog w-full max-w-md rounded-xl p-6" style={{ background: 'var(--color-bg)', color: 'var(--color-text)' }}>
         <h2 id="verify-account-heading" className="text-xl font-semibold">Verify your email</h2>
         <p className="my-3">Confirm ownership of {email} before signing in. Administrator approval is still required.</p>
         {sent && <input className="input-field" aria-label="Verification code" value={code}
@@ -36,6 +39,6 @@ export default function VerifyAccountEmailModal({ email, password, onClose, onVe
           <button type="button" onClick={onClose} disabled={busy}>Cancel</button>
         </div>
       </form>
-    </div>
+    </div>, document.body)
   )
 }

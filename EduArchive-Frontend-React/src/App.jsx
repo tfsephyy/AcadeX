@@ -1,3 +1,5 @@
+import { lazy, Suspense } from 'react'
+import Loading from './components/Loading'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider } from './context/AuthContext'
 import { NotificationProvider } from './components/Notification'
@@ -6,50 +8,52 @@ import { ChatbotProvider } from './context/ChatbotContext'
 import ProtectedRoute from './components/ProtectedRoute'
 import GuestRoute from './components/GuestRoute'
 import Landing from './pages/Landing'
-import Login from './pages/Login'
-import Register from './pages/Register'
-import Dashboard from './pages/Dashboard'
+const Login = lazy(() => import('./pages/Login'))
+const Register = lazy(() => import('./pages/Register'))
+const Dashboard = lazy(() => import('./pages/Dashboard'))
+import RouteTitle from './components/RouteTitle'
+import NotFound from './pages/NotFound'
 
 // Admin pages
-import AdminLayout from './components/admin/AdminLayout'
-import AdminDashboard from './pages/admin/AdminDashboard'
-import CapstoneMainPage from './pages/admin/CapstoneMainPage'
-import CapstoneLibrary from './pages/admin/CapstoneLibrary'
-import UserManagement from './pages/admin/UserManagement'
-import PublishedCapstones from './pages/admin/PublishedCapstones'
-import AdminProfile from './pages/admin/AdminProfile'
-import ActivityLogs from './pages/admin/ActivityLogs'
-import CapstoneApproval from './pages/admin/CapstoneApproval'
+const AdminLayout = lazy(() => import('./components/admin/AdminLayout'))
+const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard'))
+const CapstoneMainPage = lazy(() => import('./pages/admin/CapstoneMainPage'))
+const CapstoneLibrary = lazy(() => import('./pages/admin/CapstoneLibrary'))
+const UserManagement = lazy(() => import('./pages/admin/UserManagement'))
+const PublishedCapstones = lazy(() => import('./pages/admin/PublishedCapstones'))
+const AdminProfile = lazy(() => import('./pages/admin/AdminProfile'))
+const ActivityLogs = lazy(() => import('./pages/admin/ActivityLogs'))
+const CapstoneApproval = lazy(() => import('./pages/admin/CapstoneApproval'))
 
 // Faculty pages
-import FacultyLayout from './components/faculty/FacultyLayout'
-import FacultyCapstoneLibrary from './pages/faculty/FacultyCapstoneLibrary'
-import FacultyUploadedCapstones from './pages/faculty/FacultyUploadedCapstones'
-import FacultyProfile from './pages/faculty/FacultyProfile'
-import FacultyCapstoneApproval from './pages/faculty/FacultyCapstoneApproval'
+const FacultyLayout = lazy(() => import('./components/faculty/FacultyLayout'))
+const FacultyCapstoneLibrary = lazy(() => import('./pages/faculty/FacultyCapstoneLibrary'))
+const FacultyUploadedCapstones = lazy(() => import('./pages/faculty/FacultyUploadedCapstones'))
+const FacultyProfile = lazy(() => import('./pages/faculty/FacultyProfile'))
+const FacultyCapstoneApproval = lazy(() => import('./pages/faculty/FacultyCapstoneApproval'))
 
 // Student pages
-import StudentLayout from './components/student/StudentLayout'
-import StudentUploadedCapstones from './pages/student/StudentUploadedCapstones'
-import StudentCapstoneMainPage from './pages/student/StudentCapstoneMainPage'
-import StudentCapstoneLibrary from './pages/student/StudentCapstoneLibrary'
-import StudentProfile from './pages/student/StudentProfile'
-import StudentCapstoneAdditionalInfoPage from './pages/student/StudentCapstoneAdditionalInfoPage'
+const StudentLayout = lazy(() => import('./components/student/StudentLayout'))
+const StudentUploadedCapstones = lazy(() => import('./pages/student/StudentUploadedCapstones'))
+const StudentCapstoneMainPage = lazy(() => import('./pages/student/StudentCapstoneMainPage'))
+const StudentCapstoneLibrary = lazy(() => import('./pages/student/StudentCapstoneLibrary'))
+const StudentProfile = lazy(() => import('./pages/student/StudentProfile'))
+const StudentCapstoneAdditionalInfoPage = lazy(() => import('./pages/student/StudentCapstoneAdditionalInfoPage'))
 
 // Faculty extra pages
-import CapstoneAdditionalInfoPage from './pages/faculty/CapstoneAdditionalInfoPage'
+const CapstoneAdditionalInfoPage = lazy(() => import('./pages/faculty/CapstoneAdditionalInfoPage'))
 
 // Admin extra pages
-import AdminCapstoneAdditionalInfoPage from './pages/admin/AdminCapstoneAdditionalInfoPage'
+const AdminCapstoneAdditionalInfoPage = lazy(() => import('./pages/admin/AdminCapstoneAdditionalInfoPage'))
 
 // Shared
-import ReviewExtractedDataPage from './components/ReviewExtractedDataPage'
+const ReviewExtractedDataPage = lazy(() => import('./components/ReviewExtractedDataPage'))
 
 // Visitor pages
-import VisitorLayout from './components/visitor/VisitorLayout'
-import VisitorCapstones from './pages/visitor/VisitorCapstones'
-import VisitorCapstoneMainPage from './pages/visitor/VisitorCapstoneMainPage'
-import VisitorProfile from './pages/visitor/VisitorProfile'
+const VisitorLayout = lazy(() => import('./components/visitor/VisitorLayout'))
+const VisitorCapstones = lazy(() => import('./pages/visitor/VisitorCapstones'))
+const VisitorCapstoneMainPage = lazy(() => import('./pages/visitor/VisitorCapstoneMainPage'))
+const VisitorProfile = lazy(() => import('./pages/visitor/VisitorProfile'))
 
 function AdminRoute({ children }) {
   return (
@@ -114,10 +118,11 @@ function App() {
   return (
     <ThemeProvider>
       <BrowserRouter>
+        <RouteTitle />
         <NotificationProvider>
           <AuthProvider>
             <ChatbotProvider>
-              <Routes>
+              <Suspense fallback={<Loading text="Loading page…" />}><Routes>
                 {/* Public landing page */}
                 <Route path="/" element={<Landing />} />
 
@@ -167,7 +172,8 @@ function App() {
                 <Route path="/visitor/saved" element={<VisitorRoute><VisitorCapstones /></VisitorRoute>} />
                 <Route path="/visitor/profile" element={<VisitorRoute><VisitorProfile /></VisitorRoute>} />
                 <Route path="/visitor" element={<Navigate to="/visitor/capstones" replace />} />
-              </Routes>
+                <Route path="*" element={<NotFound />} />
+              </Routes></Suspense>
             </ChatbotProvider>
           </AuthProvider>
         </NotificationProvider>

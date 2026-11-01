@@ -1,3 +1,5 @@
+import { createPortal } from 'react-dom';
+import { useDialogFocus } from './useDialogFocus';
 import { useEffect } from 'react';
 import { HiOutlineUserGroup, HiX, HiOutlineMail, HiOutlinePhone } from 'react-icons/hi';
 
@@ -17,6 +19,7 @@ import { HiOutlineUserGroup, HiX, HiOutlineMail, HiOutlinePhone } from 'react-ic
  *   capstone     – { title: string, author: string, author_details: array|null }
  */
 export default function AuthorDetailsModal({ open, onClose, capstone }) {
+    const dialogRef = useDialogFocus(open && Boolean(capstone), onClose);
     // Close on Escape key
     useEffect(() => {
         if (!open) return;
@@ -42,7 +45,7 @@ export default function AuthorDetailsModal({ open, onClose, capstone }) {
     const hasContact = rows.some(r => r.email || r.contact);
 
     return (
-        <>
+        createPortal(<>
             {/* Backdrop — solid dark overlay, no blur */}
             <div
                 className="fixed inset-0 z-50 bg-black/70"
@@ -51,8 +54,8 @@ export default function AuthorDetailsModal({ open, onClose, capstone }) {
 
             {/* Modal panel — centred over backdrop */}
             <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
-                <div
-                    className="pointer-events-auto w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden"
+                <div ref={dialogRef} tabIndex={-1} role="dialog" aria-modal="true" aria-label="Author details"
+                    className="ui-dialog pointer-events-auto w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden"
                     style={{
                         background: 'var(--color-bg-secondary)',
                         border: '1px solid var(--color-border-strong)',
@@ -83,7 +86,7 @@ export default function AuthorDetailsModal({ open, onClose, capstone }) {
                                 </p>
                             </div>
                         </div>
-                        <button
+                        <button aria-label="Close"
                             onClick={onClose}
                             className="p-1.5 rounded-lg transition-colors"
                             style={{ color: 'var(--color-text-muted)' }}
@@ -200,6 +203,6 @@ export default function AuthorDetailsModal({ open, onClose, capstone }) {
                     </div>
                 </div>
             </div>
-        </>
+        </>, document.body)
     );
 }

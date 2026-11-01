@@ -1,3 +1,5 @@
+import { createPortal } from 'react-dom';
+import { useDialogFocus } from './useDialogFocus';
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/useAuth';
 import { updateProfile } from '../api/admin';
@@ -11,6 +13,7 @@ import {
 } from 'react-icons/hi';
 
 export default function ProfileModal({ open, onClose }) {
+    const dialogRef = useDialogFocus(open, onClose);
     const { user, setUser } = useAuth();
     const notify = useNotification();
     const [changePwdOpen, setChangePwdOpen] = useState(false);
@@ -83,15 +86,15 @@ export default function ProfileModal({ open, onClose }) {
     ];
 
     return (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto custom-scrollbar flex flex-col">
+        createPortal(<div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+            <div ref={dialogRef} tabIndex={-1} role="dialog" aria-modal="true" aria-label="Your profile" className="ui-dialog bg-white rounded-xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto custom-scrollbar flex flex-col">
                 {/* Header */}
                 <div className="sticky top-0 bg-gradient-to-r from-[#1B5E20] to-[#2E7D32] px-6 py-6 flex items-center justify-between shrink-0">
                     <div>
                         <h2 className="text-2xl font-bold text-white">My Profile</h2>
                         <p className="text-green-200 text-sm mt-1">Manage your account settings</p>
                     </div>
-                    <button
+                    <button aria-label="Close"
                         onClick={onClose}
                         className="p-2 hover:bg-white/20 rounded-lg transition-colors"
                     >
@@ -146,10 +149,10 @@ export default function ProfileModal({ open, onClose }) {
 
                         {editing && (
                             <div className="mt-6 pt-4 border-t border-gray-100">
-                                <label className="block text-xs font-semibold text-gray-500 uppercase mb-2">
+                                <label htmlFor="field-profilemodal-7746" className="block text-xs font-semibold text-gray-500 uppercase mb-2">
                                     Current Password (required to save)
                                 </label>
-                                <input
+                                <input id="field-profilemodal-7746"
                                     type="password"
                                     value={currentPassword}
                                     onChange={(e) => setCurrentPassword(e.target.value)}
@@ -213,6 +216,6 @@ export default function ProfileModal({ open, onClose }) {
                 {/* Change Email Modal */}
                 <ChangeEmailModal open={changeEmailOpen} onClose={() => setChangeEmailOpen(false)} />
             </div>
-        </div>
+        </div>, document.body)
     );
 }

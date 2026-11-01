@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
     HiArrowLeft, HiArrowRight, HiOutlineDocumentText,
-    HiOutlinePlus, HiOutlineX, HiOutlineUserGroup,
+    HiOutlinePlus, HiOutlineX, HiOutlineUserGroup, HiOutlineInformationCircle, HiCheck,
 } from 'react-icons/hi';
 import CategoryCombobox from './CategoryCombobox';
 import { useNotification } from './useNotification';
@@ -77,7 +77,11 @@ export default function ReviewExtractedDataPage({ nextPath, backPath }) {
     const handleNext = () => {
         if (!form.title.trim()) { notify.error('Title is required.'); return; }
         if (!form.author.trim()) { notify.error('Author is required.'); return; }
-        navigate(nextPath, { state: { form: { ...form, author_details: authorDetails }, pdfInfo } });
+        const reviewed = { ...form, author_details: authorDetails };
+        // Keep this history entry's draft so Back from Additional Info restores
+        // the user's corrections instead of reinitializing from OCR suggestions.
+        navigate(location.pathname, { replace: true, state: { ...location.state, extracted: reviewed } });
+        navigate(nextPath, { state: { form: reviewed, pdfInfo } });
     };
 
     const inputCls = "w-full px-3.5 py-2.5 rounded-lg text-sm outline-none transition border"
@@ -86,7 +90,7 @@ export default function ReviewExtractedDataPage({ nextPath, backPath }) {
         + " focus:ring-2 focus:ring-[var(--color-primary)]/30";
 
     return (
-        <div className="min-h-screen flex flex-col" style={{ background: 'var(--color-bg)' }}>
+        <div className="upload-review min-h-screen flex flex-col" style={{ background: 'var(--color-bg)' }}>
 
             {/* ── Top Bar ─────────────────────────────────── */}
             <div className="sticky top-0 z-20 border-b" style={{ background: 'var(--color-surface-elevated)', borderColor: 'var(--color-border-strong)', backdropFilter: 'blur(16px)' }}>
@@ -98,7 +102,7 @@ export default function ReviewExtractedDataPage({ nextPath, backPath }) {
                     </button>
 
                     {/* Step pills */}
-                    <div className="flex items-center gap-2">
+                    <div className="flow-steps flex items-center gap-2" aria-label="Submission steps">
                         {[
                             { label: 'Upload PDF', done: true },
                             { label: 'Review Data', active: true },
@@ -106,11 +110,11 @@ export default function ReviewExtractedDataPage({ nextPath, backPath }) {
                         ].map((s, i) => (
                             <div key={i} className="flex items-center gap-2">
                                 <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold ${
-                                    s.active ? 'text-white' : s.done ? 'text-[#1B5E20]' : ''
-                                }`} style={s.active ? { background: '#1B5E20' } : s.done ? { background: 'rgba(27,94,32,0.15)' } : { background: 'var(--color-bg-tertiary)', color: 'var(--color-text-muted)' }}>
+                                    s.active ? 'text-white' : ''
+                                }`} aria-current={s.active ? 'step' : undefined} style={s.active ? { background: '#1B5E20' } : s.done ? { background: 'rgba(27,94,32,0.15)', color: 'var(--color-link)' } : { background: 'var(--color-bg-tertiary)', color: 'var(--color-text-muted)' }}>
                                     <span className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-bold ${s.active ? 'bg-white text-[#1B5E20]' : s.done ? 'bg-[#1B5E20] text-white' : ''}`}
                                         style={s.upcoming ? { background: 'var(--color-border-strong)', color: 'var(--color-text-muted)' } : {}}>
-                                        {s.done ? '✓' : i + 1}
+                                        {s.done ? <HiCheck aria-label="Completed" /> : i + 1}
                                     </span>
                                     {s.label}
                                 </div>
@@ -128,7 +132,7 @@ export default function ReviewExtractedDataPage({ nextPath, backPath }) {
                 <div className="max-w-6xl mx-auto px-4 lg:px-8 py-6 space-y-5">
 
                     {/* PDF file banner */}
-                    <div className="flex items-center gap-3 p-4 rounded-2xl text-white" style={{ background: 'linear-gradient(135deg, #1B5E20, #2E7D32)' }}>
+                    <div className="flex items-center gap-3 p-4 rounded-2xl text-white" style={{ background: 'var(--document-banner)' }}>
                         <HiOutlineDocumentText className="w-8 h-8 flex-shrink-0" style={{ color: 'rgba(255,255,255,0.6)' }} />
                         <div>
                             <p className="text-xs font-medium uppercase tracking-wider" style={{ color: 'rgba(255,255,255,0.6)' }}>Uploaded PDF</p>
@@ -138,7 +142,7 @@ export default function ReviewExtractedDataPage({ nextPath, backPath }) {
 
                     {/* Notice */}
                     <div className="p-3.5 rounded-xl border" style={{ background: 'rgba(245,158,11,0.1)', borderColor: 'rgba(245,158,11,0.3)' }}>
-                        <p className="text-sm font-medium" style={{ color: '#d97706' }}>
+                        <p className="extraction-notice" style={{ color: 'var(--color-text-secondary)' }}><HiOutlineInformationCircle aria-hidden="true" />
                             {getExtractionNotice(location.state)}
                         </p>
                     </div>
@@ -146,18 +150,18 @@ export default function ReviewExtractedDataPage({ nextPath, backPath }) {
                     {/* ── Row 1: Title + Author ─────────────── */}
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
                         <div className="rounded-2xl border p-5 space-y-1" style={{ background: 'var(--color-surface)', borderColor: 'var(--color-border)' }}>
-                            <label className="block text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--color-text-muted)' }}>
+                            <label htmlFor="metadata-title" className="block text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--color-text-muted)' }}>
                                 Title <span className="text-red-400">*</span>
                             </label>
-                            <input type="text" value={form.title}
+                            <input id="metadata-title" type="text" value={form.title}
                                 onChange={(e) => setForm(prev => ({ ...prev, title: e.target.value }))}
                                 className={inputCls} placeholder="Capstone title..." />
                         </div>
                         <div className="rounded-2xl border p-5 space-y-1" style={{ background: 'var(--color-surface)', borderColor: 'var(--color-border)' }}>
-                            <label className="block text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--color-text-muted)' }}>
+                            <label htmlFor="metadata-author" className="block text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--color-text-muted)' }}>
                                 Author <span className="text-red-400">*</span>
                             </label>
-                            <input type="text" value={form.author}
+                            <input id="metadata-author" type="text" value={form.author}
                                 onChange={(e) => handleAuthorFieldChange(e.target.value)}
                                 className={inputCls} placeholder="Author name(s) separated by commas..." />
                             <p className="text-xs mt-1" style={{ color: 'var(--color-text-muted)' }}>Separate multiple authors with commas</p>
@@ -167,14 +171,14 @@ export default function ReviewExtractedDataPage({ nextPath, backPath }) {
                     {/* ── Row 2: Year + Program + Category ─── */}
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
                         <div className="rounded-2xl border p-5" style={{ background: 'var(--color-surface)', borderColor: 'var(--color-border)' }}>
-                            <label className="block text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--color-text-muted)' }}>Year</label>
-                            <input type="number" value={form.year}
+                            <label htmlFor="metadata-year" className="block text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--color-text-muted)' }}>Year</label>
+                            <input id="metadata-year" type="number" value={form.year}
                                 onChange={(e) => setForm(prev => ({ ...prev, year: e.target.value }))}
                                 className={inputCls} min="2000" max="2099" placeholder="2024" />
                         </div>
                         <div className="rounded-2xl border p-5" style={{ background: 'var(--color-surface)', borderColor: 'var(--color-border)' }}>
-                            <label className="block text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--color-text-muted)' }}>Program</label>
-                            <select value={form.program}
+                            <label htmlFor="metadata-program" className="block text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--color-text-muted)' }}>Program</label>
+                            <select id="metadata-program" value={form.program}
                                 onChange={(e) => setForm(prev => ({ ...prev, program: e.target.value }))}
                                 className={inputCls} style={{ background: 'var(--input-bg)', color: 'var(--input-text)' }}>
                                 <option value="" style={{ background: 'var(--select-option-bg)' }}>Select program</option>
@@ -183,8 +187,8 @@ export default function ReviewExtractedDataPage({ nextPath, backPath }) {
                             </select>
                         </div>
                         <div className="rounded-2xl border p-5" style={{ background: 'var(--color-surface)', borderColor: 'var(--color-border)' }}>
-                            <label className="block text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--color-text-muted)' }}>Category</label>
-                            <CategoryCombobox value={form.category}
+                            <label htmlFor="metadata-category" className="block text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--color-text-muted)' }}>Category</label>
+                            <CategoryCombobox id="metadata-category" value={form.category}
                                 onChange={(v) => setForm(prev => ({ ...prev, category: v }))}
                                 className={inputCls} />
                         </div>
@@ -193,8 +197,8 @@ export default function ReviewExtractedDataPage({ nextPath, backPath }) {
                     {/* ── Row 3: Abstract + Keywords ───────── */}
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
                         <div className="rounded-2xl border p-5" style={{ background: 'var(--color-surface)', borderColor: 'var(--color-border)' }}>
-                            <label className="block text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--color-text-muted)' }}>Abstract</label>
-                            <textarea value={form.abstract}
+                            <label htmlFor="metadata-abstract" className="block text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--color-text-muted)' }}>Abstract</label>
+                            <textarea id="metadata-abstract" value={form.abstract}
                                 onChange={(e) => setForm(prev => ({ ...prev, abstract: e.target.value }))}
                                 rows={7}
                                 className={inputCls + ' resize-y'}
@@ -208,7 +212,7 @@ export default function ReviewExtractedDataPage({ nextPath, backPath }) {
                                     <span key={idx} className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-full border"
                                         style={{ background: 'rgba(91,190,99,0.12)', color: 'var(--color-primary)', borderColor: 'var(--color-border-strong)' }}>
                                         {kw}
-                                        <button onClick={() => removeKeyword(idx)} className="ml-0.5 hover:text-red-400 transition-colors">
+                                        <button aria-label={`Remove keyword ${kw}`} onClick={() => removeKeyword(idx)} className="ml-0.5 hover:text-red-400 transition-colors">
                                             <HiOutlineX className="w-3 h-3" />
                                         </button>
                                     </span>
@@ -218,11 +222,11 @@ export default function ReviewExtractedDataPage({ nextPath, backPath }) {
                                 )}
                             </div>
                             <div className="flex gap-2">
-                                <input type="text" value={newKeyword}
+                                <input aria-label="Add a keyword" type="text" value={newKeyword}
                                     onChange={(e) => setNewKeyword(e.target.value)}
                                     onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addKeyword())}
                                     placeholder="Add keyword & press Enter…"
-                                    className={inputCls + ' flex-1'} />
+                                    className={inputCls + ' flex-1 min-w-0'} />
                                 <button onClick={addKeyword}
                                     className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium rounded-lg border transition-colors"
                                     style={{ background: 'rgba(91,190,99,0.12)', color: 'var(--color-primary)', borderColor: 'var(--color-border-strong)' }}>
@@ -244,7 +248,7 @@ export default function ReviewExtractedDataPage({ nextPath, backPath }) {
                                     <p className="text-xs mt-0.5" style={{ color: 'var(--color-text-muted)' }}>Auto-extracted from PDF (Appendix N / Curriculum Vitae) — edit if needed</p>
                                 </div>
                             </div>
-                            <div className="p-5 overflow-x-auto">
+                            <div className="table-scroll p-5 overflow-x-auto" role="region" aria-label="Scrollable data table" tabIndex={0}>
                                 <table className="w-full text-sm border-collapse">
                                     <thead>
                                         <tr style={{ background: 'var(--color-bg-tertiary)' }}>
@@ -289,7 +293,7 @@ export default function ReviewExtractedDataPage({ nextPath, backPath }) {
             </div>
 
             {/* ── Fixed Bottom Bar ─────────────────────────── */}
-            <div className="fixed bottom-0 left-0 right-0 z-30 border-t"
+            <div className="flow-footer fixed bottom-0 left-0 right-0 z-30 border-t"
                 style={{ background: 'var(--color-surface-elevated)', borderColor: 'var(--color-border-strong)', backdropFilter: 'blur(16px)' }}>
                 <div className="max-w-6xl mx-auto px-4 lg:px-8 py-4 flex items-center justify-between gap-4">
                     <button onClick={() => navigate(backPath)}

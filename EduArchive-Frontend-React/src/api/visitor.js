@@ -25,4 +25,4 @@ export const loadVisitorImrad = async (id) => {
 
 // ── Bookmarks (shared route — available to all authenticated users) ──
 export const toggleVisitorBookmark  = (id)  => axios.post(`/capstones/${id}/bookmark`);
-export const getVisitorBookmarks    = ()     => axios.get('/capstones/bookmarked');
+export const getVisitorBookmarks    = (params = {}) => axios.get('/capstones/bookmarked', { params });

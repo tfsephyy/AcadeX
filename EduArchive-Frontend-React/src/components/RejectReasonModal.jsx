@@ -1,3 +1,5 @@
+import { createPortal } from 'react-dom';
+import { useDialogFocus } from './useDialogFocus';
 import { useState, useEffect, useRef } from 'react';
 import { HiOutlineX, HiOutlineExclamation } from 'react-icons/hi';
 
@@ -14,6 +16,7 @@ import { HiOutlineX, HiOutlineExclamation } from 'react-icons/hi';
  *   onCancel    – () => void
  */
 export default function RejectReasonModal({ open, title, onConfirm, onCancel }) {
+    const dialogRef = useDialogFocus(open, onCancel);
     const [reason, setReason] = useState('');
     const [submitting, setSubmitting] = useState(false);
     const textareaRef = useRef(null);
@@ -47,7 +50,7 @@ export default function RejectReasonModal({ open, title, onConfirm, onCancel }) 
     };
 
     return (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
+        createPortal(<div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
             {/* Backdrop */}
             <div
                 className="fixed inset-0 bg-black/60 backdrop-blur-sm animate-fade-in"
@@ -55,7 +58,7 @@ export default function RejectReasonModal({ open, title, onConfirm, onCancel }) 
             />
 
             {/* Panel */}
-            <div className="relative glass-strong rounded-2xl shadow-2xl w-full max-w-md animate-scale-in overflow-hidden"
+            <div ref={dialogRef} tabIndex={-1} role="dialog" aria-modal="true" aria-label="Review rejection reason" className="ui-dialog relative glass-strong rounded-2xl shadow-2xl w-full max-w-md animate-scale-in overflow-hidden"
                 style={{ boxShadow: 'var(--shadow-lg), var(--shadow-glow)' }}
             >
                 {/* Top accent stripe */}
@@ -170,6 +173,6 @@ export default function RejectReasonModal({ open, title, onConfirm, onCancel }) 
                     </button>
                 </div>
             </div>
-        </div>
+        </div>, document.body)
     );
 }

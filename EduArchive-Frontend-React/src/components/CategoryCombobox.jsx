@@ -1,11 +1,14 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useId } from 'react';
 import { getPublishedCategories } from '../api/admin';
 
 /**
  * Category Combobox — a dropdown that shows existing categories
  * but also allows typing a new custom category.
  */
-export default function CategoryCombobox({ value, onChange, className = '' }) {
+export default function CategoryCombobox({ value, onChange, className = '', id, 'aria-label': ariaLabel = 'Category' }) {
+    const generatedId = useId();
+    const inputId = id || generatedId;
+    const [activeIndex, setActiveIndex] = useState(-1);
     const [categories, setCategories] = useState([]);
     const [open, setOpen] = useState(false);
     const [filter, setFilter] = useState('');
@@ -40,6 +43,7 @@ export default function CategoryCombobox({ value, onChange, className = '' }) {
         const v = e.target.value;
         onChange(v);
         setFilter(v);
+        setActiveIndex(-1);
         if (!open) setOpen(true);
     };
 
@@ -47,6 +51,8 @@ export default function CategoryCombobox({ value, onChange, className = '' }) {
         onChange(cat);
         setFilter('');
         setOpen(false);
+        setActiveIndex(-1);
+        inputRef.current?.focus();
     };
 
     const handleFocus = () => {
@@ -57,7 +63,17 @@ export default function CategoryCombobox({ value, onChange, className = '' }) {
     const handleKeyDown = (e) => {
         if (e.key === 'Escape') {
             setOpen(false);
-            inputRef.current?.blur();
+            setActiveIndex(-1);
+        }
+        if (['ArrowDown', 'ArrowUp'].includes(e.key)) {
+            e.preventDefault(); setOpen(true);
+            if (filtered.length) setActiveIndex(i => e.key === 'ArrowDown' ? (i + 1) % filtered.length : (i <= 0 ? filtered.length - 1 : i - 1));
+        }
+        if (e.key === 'Enter' && open && activeIndex >= 0 && filtered[activeIndex]) {
+            e.preventDefault(); handleSelect(filtered[activeIndex]);
+        }
+        if (e.key === 'Tab') {
+            setOpen(false);
         }
     };
 
@@ -65,6 +81,9 @@ export default function CategoryCombobox({ value, onChange, className = '' }) {
         <div ref={wrapperRef} className="relative">
             <input
                 ref={inputRef}
+                id={inputId} role="combobox" aria-label={ariaLabel} aria-autocomplete="list"
+                aria-expanded={open} aria-controls={open ? `${inputId}-options` : undefined}
+                aria-activedescendant={open && activeIndex >= 0 ? `${inputId}-option-${activeIndex}` : undefined}
                 type="text"
                 value={value}
                 onChange={handleInputChange}
@@ -77,6 +96,7 @@ export default function CategoryCombobox({ value, onChange, className = '' }) {
             {/* Dropdown chevron */}
             <button
                 type="button"
+                aria-label="Show category suggestions" aria-expanded={open}
                 tabIndex={-1}
                 onClick={() => { setOpen(!open); inputRef.current?.focus(); }}
                 className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-0.5"
@@ -88,11 +108,14 @@ export default function CategoryCombobox({ value, onChange, className = '' }) {
 
             {/* Dropdown panel */}
             {open && (
-                <div className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-xl max-h-48 overflow-y-auto custom-scrollbar">
+                <div id={`${inputId}-options`} role="listbox" aria-label="Categories" className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-xl max-h-48 overflow-y-auto custom-scrollbar">
                     {filtered.length > 0 ? (
                         filtered.map((cat, i) => (
                             <button
                                 key={i}
+                                id={`${inputId}-option-${i}`} role="option" aria-selected={cat === value} tabIndex={-1}
+                                onMouseDown={e => e.preventDefault()}
+                                style={activeIndex === i ? { background: 'var(--color-bg-tertiary)' } : undefined}
                                 type="button"
                                 onClick={() => handleSelect(cat)}
                                 className={`w-full text-left px-3 py-2 text-sm hover:bg-green-50 hover:text-green-700 transition-colors ${

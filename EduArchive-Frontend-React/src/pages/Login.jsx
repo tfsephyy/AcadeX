@@ -1,3 +1,5 @@
+import AuthAside from '../components/AuthAside'
+import Brand from '../components/Brand'
 import { useState, useEffect } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/useAuth'
@@ -46,141 +48,6 @@ function MoonIcon() {
 }
 
 /* ── Left illustration panel ─────────────────────────────────── */
-function LoginIllustration() {
-  return (
-    <div
-      className="hidden lg:flex flex-col justify-between p-8 relative overflow-hidden"
-      style={{
-        background: 'linear-gradient(135deg, var(--color-bg) 0%, var(--color-bg-secondary) 50%, var(--color-bg-tertiary) 100%)',
-        borderRight: '1px solid var(--color-border)',
-        minHeight: '100vh',
-        flex: '0 0 40%',
-      }}
-    >
-      {/* Background orbs */}
-      <div aria-hidden="true" className="absolute top-[-10%] right-[-20%] w-[400px] h-[400px] rounded-full pointer-events-none animate-blob"
-        style={{ background: 'radial-gradient(circle, rgba(91,190,99,0.2) 0%, transparent 70%)', filter: 'blur(60px)' }} />
-      <div aria-hidden="true" className="absolute bottom-[-10%] left-[-15%] w-[350px] h-[350px] rounded-full pointer-events-none animate-float-slow"
-        style={{ background: 'radial-gradient(circle, rgba(27,127,91,0.25) 0%, transparent 70%)', filter: 'blur(70px)' }} />
-
-      {/* Grid overlay */}
-      <div className="absolute inset-0 bg-grid opacity-40 pointer-events-none" aria-hidden="true" />
-
-      {/* Logo */}
-      <div className="relative z-10">
-        <Link to="/" className="flex items-center gap-2.5 w-fit group">
-          <div style={{
-            width: 40, height: 40,
-            background: 'linear-gradient(135deg, var(--color-primary), var(--color-accent-bright))',
-            borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center',
-            boxShadow: '0 4px 16px rgba(91,190,99,0.3)',
-          }}>
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="white" aria-hidden="true">
-              <path d="M4 6H2v14a2 2 0 002 2h14v-2H4V6zm16-4H8a2 2 0 00-2 2v12a2 2 0 002 2h12a2 2 0 002-2V4a2 2 0 00-2-2zm-1 9H9V9h10v2zm-4 4H9v-2h6v2zm4-8H9V5h10v2z" />
-            </svg>
-          </div>
-          <span className="font-poppins font-bold text-2xl" style={{ color: 'var(--color-text)' }}>
-            Acade<span style={{ color: 'var(--color-primary)' }}>X</span>
-          </span>
-        </Link>
-      </div>
-
-      {/* Center content */}
-      <div className="relative z-10 flex-1 flex flex-col justify-center py-6">
-        {/* Central abstract visual */}
-        <div className="relative mx-auto" style={{ width: 240, height: 240 }}>
-          {/* Rotating outer ring */}
-          <div className="absolute inset-0 rounded-full border animate-spin-slow"
-            style={{ borderColor: 'rgba(91,190,99,0.15)', borderStyle: 'dashed' }} aria-hidden="true" />
-
-          {/* Inner pulsing circle */}
-          <div className="absolute inset-8 rounded-full animate-glow-pulse"
-            style={{ background: 'rgba(91,190,99,0.06)', border: '1px solid var(--color-border)' }} aria-hidden="true" />
-
-          {/* Center document icon */}
-          <div
-            className="absolute inset-0 flex items-center justify-center"
-          >
-            <div style={{
-              width: 72, height: 72,
-              background: 'linear-gradient(135deg, var(--color-primary), var(--color-accent-bright))',
-              borderRadius: 18,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              boxShadow: 'var(--shadow-glow-strong)',
-            }}>
-              <svg width="36" height="36" viewBox="0 0 24 24" fill="white" aria-hidden="true">
-                <path d="M4 6H2v14a2 2 0 002 2h14v-2H4V6zm16-4H8a2 2 0 00-2 2v12a2 2 0 002 2h12a2 2 0 002-2V4a2 2 0 00-2-2zm-1 9H9V9h10v2zm-4 4H9v-2h6v2zm4-8H9V5h10v2z" />
-              </svg>
-            </div>
-          </div>
-
-          {/* Orbiting badges */}
-          {[
-            { label: 'PDF Extract', icon: '📄', angle: 0, delay: '0s' },
-            { label: 'OCR', icon: '🔍', angle: 90, delay: '0.5s' },
-            { label: 'NLP', icon: '🧠', angle: 180, delay: '1s' },
-            { label: 'Secure', icon: '🔒', angle: 270, delay: '1.5s' },
-          ].map(({ label, icon, angle, delay }) => {
-            const rad = (angle * Math.PI) / 180
-            const r = 105
-            const x = Math.cos(rad) * r
-            const y = Math.sin(rad) * r
-            return (
-              <div
-                key={label}
-                className="absolute flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold animate-float"
-                style={{
-                  left: `calc(50% + ${x}px - 44px)`,
-                  top: `calc(50% + ${y}px - 16px)`,
-                  background: 'var(--color-surface)',
-                  backdropFilter: 'blur(12px)',
-                  border: '1px solid var(--color-border-strong)',
-                  color: 'var(--color-text)',
-                  boxShadow: 'var(--shadow-sm)',
-                  animationDelay: delay,
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                <span>{icon}</span>
-                <span>{label}</span>
-              </div>
-            )
-          })}
-        </div>
-
-        {/* Description */}
-        <div className="text-center mt-5">
-          <h2 className="font-poppins font-bold text-lg mb-2" style={{ color: 'var(--color-text)' }}>
-            Academic Research,{' '}
-            <span className="text-gradient">Reimagined</span>
-          </h2>
-          <p className="leading-relaxed max-w-xs mx-auto" style={{ color: 'var(--color-text-muted)', fontSize: '0.78rem' }}>
-            Access thousands of capstone projects from Mindoro State University in one centralized, intelligent repository.
-          </p>
-        </div>
-
-        {/* Stats strip */}
-        <div className="flex justify-center gap-6 mt-5">
-          {[['1,000+', 'Projects'], ['500+', 'Students'], ['50+', 'Faculty']].map(([val, label]) => (
-            <div key={label} className="text-center">
-              <div className="font-poppins font-bold text-base" style={{ color: 'var(--color-primary)' }}>{val}</div>
-              <div style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)' }}>{label}</div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Bottom MinSU branding */}
-      <div className="relative z-10">
-        <p className="text-xs" style={{ color: 'var(--color-text-faint)' }}>
-          © {new Date().getFullYear()} Mindoro State University
-        </p>
-      </div>
-    </div>
-  )
-}
-
-/* ── Main Login Page ─────────────────────────────────────────── */
 export default function Login() {
   const { login } = useAuth()
   const { theme, toggleTheme } = useTheme()
@@ -264,15 +131,15 @@ export default function Login() {
 
   return (
     <div
-      className="h-screen flex overflow-hidden"
+      className="auth-layout"
       style={{ background: 'var(--color-bg)' }}
     >
       {/* Left — illustration */}
-      <LoginIllustration />
+      <AuthAside />
 
       {/* Right — form */}
       <div
-        className="flex-1 flex flex-col items-center justify-center px-6 py-4 h-screen relative overflow-y-auto"
+        className="auth-form-panel"
         style={{ background: 'var(--color-bg)' }}
       >
         {/* Theme toggle — top right */}
@@ -292,21 +159,7 @@ export default function Login() {
           }}
         >
           {/* Mobile logo */}
-          <div className="flex lg:hidden items-center justify-center gap-2.5 mb-5">
-            <div style={{
-              width: 34, height: 34,
-              background: 'linear-gradient(135deg, var(--color-primary), var(--color-accent-bright))',
-              borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center',
-              boxShadow: '0 4px 16px rgba(91,190,99,0.3)',
-            }}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="white" aria-hidden="true">
-                <path d="M4 6H2v14a2 2 0 002 2h14v-2H4V6zm16-4H8a2 2 0 00-2 2v12a2 2 0 002 2h12a2 2 0 002-2V4a2 2 0 00-2-2zm-1 9H9V9h10v2zm-4 4H9v-2h6v2zm4-8H9V5h10v2z" />
-              </svg>
-            </div>
-            <span className="font-poppins font-bold text-xl" style={{ color: 'var(--color-text)' }}>
-              Acade<span style={{ color: 'var(--color-primary)' }}>X</span>
-            </span>
-          </div>
+          <div className="flex lg:hidden items-center justify-center mb-5"><Brand /></div>
 
           {/* Heading */}
           <div className="mb-5">

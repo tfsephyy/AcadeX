@@ -1,3 +1,4 @@
+import { HiOutlineBookOpen, HiOutlineSearch, HiOutlineAcademicCap, HiOutlineChartBar, HiOutlineShieldCheck, HiOutlineLink, HiOutlineUserGroup } from 'react-icons/hi';
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/useAuth';
@@ -109,86 +110,86 @@ function formatTime(date) {
 // ─── FAQ Data ─────────────────────────────────────────────────────────────────
 
 const FAQ_DEFINITIONS = [
-    { q: 'What is IMRAD?', icon: '📄' },
-    { q: 'What is an abstract in a research paper?', icon: '📝' },
-    { q: 'What is the difference between a capstone and a thesis?', icon: '🎓' },
-    { q: 'What does publication status mean?', icon: '📰' },
-    { q: 'What does copyright status mean for a capstone?', icon: '©️' },
-    { q: 'What is the difference between archived and published?', icon: '📦' },
-    { q: 'What does it mean when my capstone is pending?', icon: '⏳' },
-    { q: 'What is the role of an adviser in a capstone project?', icon: '👨‍🏫' },
-    { q: 'What are keywords and why do they matter in research?', icon: '🏷️' },
-    { q: 'What does approval status mean?', icon: '✅' },
-    { q: 'What formats are accepted for capstone uploads?', icon: '📁' },
+    { q: 'What is IMRAD?', icon: HiOutlineBookOpen },
+    { q: 'What is an abstract in a research paper?', icon: HiOutlineSearch },
+    { q: 'What is the difference between a capstone and a thesis?', icon: HiOutlineAcademicCap },
+    { q: 'What does publication status mean?', icon: HiOutlineBookOpen },
+    { q: 'What does copyright status mean for a capstone?', icon: HiOutlineSearch },
+    { q: 'What is the difference between archived and published?', icon: HiOutlineSearch },
+    { q: 'What does it mean when my capstone is pending?', icon: HiOutlineSearch },
+    { q: 'What is the role of an adviser in a capstone project?', icon: HiOutlineAcademicCap },
+    { q: 'What are keywords and why do they matter in research?', icon: HiOutlineSearch },
+    { q: 'What does approval status mean?', icon: HiOutlineShieldCheck },
+    { q: 'What formats are accepted for capstone uploads?', icon: HiOutlineSearch },
 ];
 
 const FAQ_DYNAMIC = [
-    { q: 'What are the top 3 most viewed capstones?', icon: '👁️' },
-    { q: 'What is the top most downloaded capstones?', icon: '⬇️' },
-    { q: 'What is the most bookmarked capstones this year?', icon: '🔖' },
-    { q: 'Which program has the most capstone submissions?', icon: '🏆' },
-    { q: 'Which year had the most capstone submissions?', icon: '📅' },
+    { q: 'What are the top 3 most viewed capstones?', icon: HiOutlineSearch },
+    { q: 'What is the top most downloaded capstones?', icon: HiOutlineSearch },
+    { q: 'What is the most bookmarked capstones this year?', icon: HiOutlineSearch },
+    { q: 'Which program has the most capstone submissions?', icon: HiOutlineSearch },
+    { q: 'Which year had the most capstone submissions?', icon: HiOutlineSearch },
 ];
 
 const FAQ_STUDENT = [
-    { q: 'What capstones has my adviser supervised before?', icon: '👨‍🏫' },
-    { q: 'What is the most popular research topic?', icon: '🔥' },
-    { q: 'How has the number of capstone submissions changed over the years?', icon: '📅' },
-    { q: 'Which advisers handle the most research projects?', icon: '🏆' },
-    { q: 'What is the most referenced capstone?', icon: '🔗' },
+    { q: 'What capstones has my adviser supervised before?', icon: HiOutlineAcademicCap },
+    { q: 'What is the most popular research topic?', icon: HiOutlineChartBar },
+    { q: 'How has the number of capstone submissions changed over the years?', icon: HiOutlineSearch },
+    { q: 'Which advisers handle the most research projects?', icon: HiOutlineSearch },
+    { q: 'What is the most referenced capstone?', icon: HiOutlineLink },
 ];
 
 const FAQ_FACULTY = [
-    { q: 'What is the most viewed title capstone among I advised?', icon: '👁️' },
-    { q: 'Are there capstone topics in my advisory that have been overdone?', icon: '⚠️' },
-    { q: 'How many capstone have I advised across all years?', icon: '📊' },
-    { q: 'Find capstones in my advisory that has been published.', icon: '📰' },
-    { q: 'Find capstones in my advisory that has been copyrighted', icon: '©️' },
-    { q: 'Show All the capstone I have advised for the past 3 years', icon: '📅' },
+    { q: 'What is the most viewed title capstone among I advised?', icon: HiOutlineSearch },
+    { q: 'Are there capstone topics in my advisory that have been overdone?', icon: HiOutlineSearch },
+    { q: 'How many capstone have I advised across all years?', icon: HiOutlineChartBar },
+    { q: 'Find capstones in my advisory that has been published.', icon: HiOutlineBookOpen },
+    { q: 'Find capstones in my advisory that has been copyrighted', icon: HiOutlineSearch },
+    { q: 'Show All the capstone I have advised for the past 3 years', icon: HiOutlineSearch },
 ];
 
 const FAQ_ADMIN = [
-    { q: 'How many capstones are in the archive in total?', icon: '📚' },
-    { q: 'How many users are registered by role?', icon: '👥' },
-    { q: 'Show recent login activity', icon: '🔒' },
-    { q: 'Which capstones have never been viewed since publishing?', icon: '👻' },
-    { q: 'How many capstone has no IMRAD attached?', icon: '📭' },
-    { q: 'Which users have never logged in since registering?', icon: '🔐' },
-    { q: 'Who are the most active users this month?', icon: '🔥' },
-    { q: 'How many capstones are published?', icon: '📰' },
-    { q: 'How many capstone are copyrighted?', icon: '©️' },
+    { q: 'How many capstones are in the archive in total?', icon: HiOutlineSearch },
+    { q: 'How many users are registered by role?', icon: HiOutlineSearch },
+    { q: 'Show recent login activity', icon: HiOutlineShieldCheck },
+    { q: 'Which capstones have never been viewed since publishing?', icon: HiOutlineSearch },
+    { q: 'How many capstone has no IMRAD attached?', icon: HiOutlineBookOpen },
+    { q: 'Which users have never logged in since registering?', icon: HiOutlineShieldCheck },
+    { q: 'Who are the most active users this month?', icon: HiOutlineChartBar },
+    { q: 'How many capstones are published?', icon: HiOutlineBookOpen },
+    { q: 'How many capstone are copyrighted?', icon: HiOutlineSearch },
 ];
 
 const FAQ_CONTEXT = [
-    { q: 'What is this capstone about?', icon: '📋' },
-    { q: 'Who advised this capstone?', icon: '👨‍🏫' },
-    { q: 'What keywords describe this capstone?', icon: '🏷️' },
-    { q: 'Find capstones related to this one', icon: '🔗' },
-    { q: 'What is the publication and copyright status of this?', icon: '©️' },
-    { q: 'When was this capstone approved?', icon: '✅' },
-    { q: 'How does this capstone compare in views to others in its program?', icon: '📊' },
+    { q: 'What is this capstone about?', icon: HiOutlineBookOpen },
+    { q: 'Who advised this capstone?', icon: HiOutlineAcademicCap },
+    { q: 'What keywords describe this capstone?', icon: HiOutlineSearch },
+    { q: 'Find capstones related to this one', icon: HiOutlineLink },
+    { q: 'What is the publication and copyright status of this?', icon: HiOutlineSearch },
+    { q: 'When was this capstone approved?', icon: HiOutlineShieldCheck },
+    { q: 'How does this capstone compare in views to others in its program?', icon: HiOutlineChartBar },
 ];
 
 // Build tab structure per role
 const TABS_BY_ROLE = {
     student: [
-        { id: 'definitions', label: 'Definitions', icon: '📖', questions: FAQ_DEFINITIONS },
-        { id: 'discover',    label: 'Discover',    icon: '📊', questions: FAQ_DYNAMIC },
-        { id: 'student',     label: 'My Research', icon: '🎓', questions: FAQ_STUDENT },
+        { id: 'definitions', label: 'Definitions', icon: HiOutlineBookOpen, questions: FAQ_DEFINITIONS },
+        { id: 'discover',    label: 'Discover',    icon: HiOutlineChartBar, questions: FAQ_DYNAMIC },
+        { id: 'student',     label: 'My Research', icon: HiOutlineAcademicCap, questions: FAQ_STUDENT },
     ],
     faculty: [
-        { id: 'definitions', label: 'Definitions', icon: '📖', questions: FAQ_DEFINITIONS },
-        { id: 'discover',    label: 'Discover',    icon: '📊', questions: FAQ_DYNAMIC },
-        { id: 'faculty',     label: 'My Program',  icon: '🏫', questions: FAQ_FACULTY },
+        { id: 'definitions', label: 'Definitions', icon: HiOutlineBookOpen, questions: FAQ_DEFINITIONS },
+        { id: 'discover',    label: 'Discover',    icon: HiOutlineChartBar, questions: FAQ_DYNAMIC },
+        { id: 'faculty',     label: 'My Program',  icon: HiOutlineAcademicCap, questions: FAQ_FACULTY },
     ],
     admin: [
-        { id: 'definitions', label: 'Definitions', icon: '📖', questions: FAQ_DEFINITIONS },
-        { id: 'discover',    label: 'Discover',    icon: '📊', questions: FAQ_DYNAMIC },
-        { id: 'admin',       label: 'System',      icon: '🔐', questions: FAQ_ADMIN },
+        { id: 'definitions', label: 'Definitions', icon: HiOutlineBookOpen, questions: FAQ_DEFINITIONS },
+        { id: 'discover',    label: 'Discover',    icon: HiOutlineChartBar, questions: FAQ_DYNAMIC },
+        { id: 'admin',       label: 'System',      icon: HiOutlineShieldCheck, questions: FAQ_ADMIN },
     ],
     visitor: [
-        { id: 'definitions', label: 'Definitions', icon: '📖', questions: FAQ_DEFINITIONS },
-        { id: 'discover',    label: 'Discover',    icon: '📊', questions: FAQ_DYNAMIC },
+        { id: 'definitions', label: 'Definitions', icon: HiOutlineBookOpen, questions: FAQ_DEFINITIONS },
+        { id: 'discover',    label: 'Discover',    icon: HiOutlineChartBar, questions: FAQ_DYNAMIC },
     ],
 };
 
@@ -225,7 +226,7 @@ function FaqPanel({ role, onAsk, filter }) {
                         className={`faq-tab${activeTab === tab.id ? ' active' : ''}`}
                         onClick={() => setActiveTab(tab.id)}
                     >
-                        <span>{tab.icon}</span>
+                        <tab.icon aria-hidden="true" />
                         <span>{tab.label}</span>
                     </button>
                 ))}
@@ -246,7 +247,7 @@ function FaqPanel({ role, onAsk, filter }) {
                             className="faq-item"
                             onClick={() => onAsk(item.q)}
                         >
-                            <span className="faq-item-icon">{item.icon}</span>
+                            <span className="faq-item-icon"><item.icon aria-hidden="true" /></span>
                             <span className="faq-item-text">{item.q}</span>
                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
                                  stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
@@ -505,7 +506,7 @@ export default function Chatbot() {
         <>
             {/* ── Floating Action Button (Draggable) ──────────────────── */}
             <button
-                ref={fabRef}
+                aria-label="AcaBot — AI Capstone Assistant (Drag to move)" ref={fabRef}
                 id="chatbot-fab"
                 className="chatbot-fab"
                 style={fabStyle}
@@ -556,7 +557,7 @@ export default function Chatbot() {
                         {/* Clear button */}
                         {messages.length > 0 && (
                             <button
-                                onClick={handleClear}
+                                aria-label="Clear conversation" onClick={handleClear}
                                 className="chatbot-header-close"
                                 title="Clear conversation"
                                 style={{ marginRight: '0.2rem' }}
@@ -571,7 +572,7 @@ export default function Chatbot() {
                                 </svg>
                             </button>
                         )}
-                        <button
+                        <button aria-label="Close"
                             id="chatbot-close-btn"
                             className="chatbot-header-close"
                             onClick={() => setOpen(false)}
@@ -623,7 +624,7 @@ export default function Chatbot() {
                                                         }}
                                                         title="View capstone"
                                                     >
-                                                        🔗 View
+                                                        <HiOutlineLink aria-hidden="true" /> View
                                                     </button>
                                                 ))
                                                 : msg.text
@@ -642,7 +643,7 @@ export default function Chatbot() {
                                                             { selected_adviser_id: faculty.id }
                                                         )}
                                                     >
-                                                        👨‍🏫 {faculty.name}
+                                                        <HiOutlineUserGroup aria-hidden="true" /> {faculty.name}
                                                     </button>
                                                 ))}
                                             </div>
@@ -738,7 +739,7 @@ export default function Chatbot() {
                         <textarea
                             ref={textareaRef}
                             id="chatbot-input"
-                            className="chatbot-textarea"
+                            className="chatbot-textarea resize-none"
                             rows={1}
                             placeholder={messages.length === 0 ? 'Search questions or ask anything…' : 'Ask about capstone projects…'}
                             value={input}
@@ -746,7 +747,7 @@ export default function Chatbot() {
                             onKeyDown={handleKeyDown}
                             disabled={loading}
                         />
-                        <button
+                        <button aria-label="Send message"
                             id="chatbot-send-btn"
                             className="chatbot-send-btn"
                             onClick={() => sendMessage()}

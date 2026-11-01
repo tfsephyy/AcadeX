@@ -89,8 +89,8 @@ export default function VisitorProfile() {
                     {editing && (
                         <>
                             <div>
-                                <label className="text-[11px] font-semibold text-gray-400 uppercase block mb-1">Current Password (required to save)</label>
-                                <input type="password" value={currentPassword} onChange={e => setCurrentPassword(e.target.value)}
+                                <label htmlFor="field-visitorprofile-5603" className="text-[11px] font-semibold text-gray-400 uppercase block mb-1">Current Password (required to save)</label>
+                                <input id="field-visitorprofile-5603" type="password" value={currentPassword} onChange={e => setCurrentPassword(e.target.value)}
                                     className="w-full px-3 py-2 text-sm border rounded-lg outline-none focus:ring-2 focus:ring-green-500"
                                     style={{ background: 'var(--color-bg-tertiary)', borderColor: 'var(--color-border)', color: 'var(--color-text)' }}
                                     placeholder="Enter current password" />

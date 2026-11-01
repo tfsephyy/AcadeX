@@ -1,7 +1,10 @@
+import { createPortal } from 'react-dom';
+import { useDialogFocus } from '../useDialogFocus';
 import { useNavigate } from 'react-router-dom';
 import { HiX, HiArrowRight } from 'react-icons/hi';
 
 export default function CapstoneModal({ capstone, open, onClose, onViewFull }) {
+    const dialogRef = useDialogFocus(open && Boolean(capstone), onClose);
     const navigate = useNavigate();
 
     if (!open || !capstone) return null;
@@ -16,13 +19,13 @@ export default function CapstoneModal({ capstone, open, onClose, onViewFull }) {
     };
 
     return (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
-            <div className="fixed inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
-            <div className="relative bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[85vh] flex flex-col animate-scale-in">
+        createPortal(<div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
+            <div className="fixed inset-0 ui-dialog-backdrop" onClick={onClose} />
+            <div ref={dialogRef} tabIndex={-1} role="dialog" aria-modal="true" aria-label="Capstone summary" className="ui-dialog relative bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[85vh] flex flex-col animate-scale-in">
                 {/* Header */}
                 <div className="flex items-start justify-between px-6 py-4 border-b border-gray-200">
                     <h2 className="text-lg font-semibold text-gray-900 pr-8 leading-tight">{capstone.title}</h2>
-                    <button
+                    <button aria-label="Close"
                         onClick={onClose}
                         className="p-1 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-colors shrink-0"
                     >
@@ -75,7 +78,7 @@ export default function CapstoneModal({ capstone, open, onClose, onViewFull }) {
                     </button>
                 </div>
             </div>
-        </div>
+        </div>, document.body)
     );
 }
 

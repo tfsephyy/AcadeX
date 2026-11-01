@@ -1,5 +1,19 @@
 # AcadeX local setup
 
+## Current November 1 follow-up
+
+The deployed interface and upload feedback are documented in [the current release report](docs/handoff/UI_RELEASE_2026-11-01.md). The four user-selected local role accounts were subsequently aligned with their deployed sign-in records after a private local backup; [the account comparison](docs/ui/2026-11-01-local-account-comparison.md) explains that local-only setup. No account password belongs in this file.
+
+The normal local frontend/API remain available, but Windows Application Control currently blocks the existing OCR virtual-environment interpreter from starting. Do not disable or bypass that security control. Embedded-text PDFs can still use the local extraction path; scanned extraction requires a working trusted OCR runtime. The deployed OCR service passed a controlled scanned-PDF recognition check. Local and production data remain separate.
+
+## November 1, 2026 local repair and UI continuation
+
+The current local preview is `http://localhost:5173/`, using the Laravel API at `http://localhost:8000/api/v1`. The database is the original `acadex_local`, not `EduArchiveDB`. The latter name in the ignored backend `.env` caused the session query's MySQL 1049 error; correcting that local value restored a successful CSRF/session response.
+
+Before the correction, the original local environment and all 24 existing database tables/rows were backed up privately under `.local/ui-local-backup-20261101-094847/`. The four pending migrations already present in this repository were then applied: secure authentication state, document uploads, capstone approval backfill, and publication default. All 31 migrations are now recorded locally. The application key and original user's stored values/password were preserved. No reset, fresh migration, replacement database, production action or administrator password change was performed.
+
+The role/mobile browser review used a separate loopback API and the existing approved, schema-restricted disposable database, with private test storage and array mail. Those synthetic users/documents are separate from the regular preview. See [the current verification report](docs/ui/2026-11-01-role-mobile-verification.md). The October 13 setup and test results below are historical.
+
 Repository: https://github.com/tfsephyy/AcadeX.git
 
 Cloned directly into `C:\Users\ASUS\Desktop\EduArchive` on branch `main`, starting at commit `4560e3f`.
@@ -43,7 +57,7 @@ The stop script checks recorded process identities and stops their child process
 - PHP 8.3.16 and Composer 2.8.11, using the existing installation.
 - MySQL 8.4.3 at `127.0.0.1:3306`.
 - New database `acadex_local` and a scoped `acadex_local` database user. A generated password is stored only in the ignored backend `.env`.
-- Laravel application key generated; all 27 migrations and the repository seeder applied; public storage link created.
+- At initial setup: Laravel application key generated; 27 migrations and the repository seeder applied; public storage link created. The November 1 repair retained that key and brought the existing local schema to 31 migrations without reseeding.
 - Frontend dependencies installed with `npm.cmd ci`; backend Composer dependencies installed from its lockfile.
 - Backend Vite dependencies installed, with a new `EduArchive-Backend-Laravel/package-lock.json`.
 - OCR uses a separate Python 3.11.17 environment at `EduArchive-Backend-Laravel/ocr-service/.venv`. The managed interpreter is in the user's uv Python directory; the system's default Python 3.13 is unchanged.
@@ -79,7 +93,13 @@ Frontend:
 ```powershell
 Set-Location .\EduArchive-Frontend-React
 npm.cmd ci
-npm.cmd run build
+$acadexBuildApi = $env:VITE_API_BASE_URL
+try {
+    $env:VITE_API_BASE_URL = '/api/v1'
+    npm.cmd run build
+} finally {
+    $env:VITE_API_BASE_URL = $acadexBuildApi
+}
 npm.cmd run lint
 ```
 
@@ -91,8 +111,10 @@ composer.bat install --no-interaction --prefer-dist
 npm.cmd ci
 npm.cmd run build
 php artisan migrate --no-interaction
-php artisan test
+php scripts/run-security-tests.php
 ```
+
+Run that backend test command only after configuring the approved schema-restricted disposable database through `.env.testing`; see the client handoff's testing section. Never use the ordinary local database or production as the regression-test target.
 
 OCR dependencies (from the repository root):
 

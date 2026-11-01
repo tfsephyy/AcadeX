@@ -1,3 +1,5 @@
+import { createPortal } from 'react-dom';
+import { useDialogFocus } from './useDialogFocus';
 import { useState, useEffect, useRef } from 'react';
 import { HiOutlineX, HiOutlineMail, HiOutlineCheckCircle } from 'react-icons/hi';
 import { useAuth } from '../context/useAuth';
@@ -5,6 +7,7 @@ import { updateProfile, sendVerificationCode, verifyEmailCode } from '../api/adm
 import { useNotification } from './useNotification';
 
 export default function ChangeEmailModal({ open, onClose }) {
+    const dialogRef = useDialogFocus(open, () => handleClose());
     const { user, setUser } = useAuth();
     const notify = useNotification();
     const [currentPassword, setCurrentPassword] = useState('');
@@ -138,14 +141,14 @@ export default function ChangeEmailModal({ open, onClose }) {
     );
 
     return (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+        createPortal(<div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
             <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={handleClose} />
-            <div className="relative w-full max-w-sm bg-white rounded-2xl shadow-2xl overflow-hidden animate-scale-in flex flex-col max-h-[90vh]">
+            <div ref={dialogRef} tabIndex={-1} role="dialog" aria-modal="true" aria-label="Change email" className="ui-dialog relative w-full max-w-sm bg-white rounded-2xl shadow-2xl overflow-hidden animate-scale-in flex flex-col max-h-[90vh]">
                 <div className="bg-[#1B5E20] px-6 py-4 flex items-center justify-between">
                     <h2 className="text-white font-semibold text-lg flex items-center gap-2">
                         <HiOutlineMail className="w-5 h-5" /> Change Email
                     </h2>
-                    <button onClick={handleClose} className="text-white/70 hover:text-white transition-colors">
+                    <button aria-label="Close" onClick={handleClose} className="text-white/70 hover:text-white transition-colors">
                         <HiOutlineX className="w-5 h-5" />
                     </button>
                 </div>
@@ -169,8 +172,8 @@ export default function ChangeEmailModal({ open, onClose }) {
                     ) : (
                         <>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Current Email</label>
-                                <input
+                                <label htmlFor="field-changeemailmodal-7638" className="block text-sm font-medium text-gray-700 mb-1">Current Email</label>
+                                <input id="field-changeemailmodal-7638"
                                     type="email"
                                     value={user?.email || ''}
                                     disabled
@@ -179,8 +182,8 @@ export default function ChangeEmailModal({ open, onClose }) {
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">New Email</label>
-                                <input
+                                <label htmlFor="field-changeemailmodal-8194" className="block text-sm font-medium text-gray-700 mb-1">New Email</label>
+                                <input id="field-changeemailmodal-8194"
                                     type="email"
                                     value={newEmail}
                                     onChange={(e) => setNewEmail(e.target.value)}
@@ -215,8 +218,8 @@ export default function ChangeEmailModal({ open, onClose }) {
                             ) : (
                                 <>
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Verification Code</label>
-                                        <input
+                                        <label htmlFor="field-changeemailmodal-10652" className="block text-sm font-medium text-gray-700 mb-1">Verification Code</label>
+                                        <input id="field-changeemailmodal-10652"
                                             type="text"
                                             value={emailCode}
                                             onChange={(e) => setEmailCode(e.target.value)}
@@ -260,6 +263,6 @@ export default function ChangeEmailModal({ open, onClose }) {
                     )}
                 </div>
             </div>
-        </div>
+        </div>, document.body)
     );
 }

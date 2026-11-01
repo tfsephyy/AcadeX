@@ -119,12 +119,12 @@ export default function AdminDashboard() {
             </div>
 
             {/* ── Stat Cards — full width single row ─────────────── */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 2xl:grid-cols-6 gap-3">
                 {statCards.map((card) => (
                     <div key={card.label} className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 hover:shadow-md transition-shadow">
                         <div className="flex items-center justify-between">
                             <div className="min-w-0">
-                                <p className="text-xs font-medium text-gray-500 truncate">{card.label}</p>
+                                <p className="text-xs font-medium text-gray-500 leading-relaxed">{card.label}</p>
                                 <p className="text-2xl font-bold text-gray-900 mt-1">{card.value}</p>
                             </div>
                             <div className={`p-2 rounded-lg flex-shrink-0 ml-2 ${card.bg}`}>
@@ -296,7 +296,7 @@ export default function AdminDashboard() {
                 {recentApproved.length === 0 ? (
                     <p className="text-sm text-gray-400 text-center py-8">No capstones uploaded yet.</p>
                 ) : (
-                    <div className="overflow-x-auto">
+                    <div className="table-scroll overflow-x-auto" role="region" aria-label="Scrollable data table" tabIndex={0}>
                         <table className="w-full text-sm">
                             <thead>
                                 <tr className="border-b border-gray-100">

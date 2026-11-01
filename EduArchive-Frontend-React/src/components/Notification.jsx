@@ -31,10 +31,11 @@ export function NotificationProvider({ children }) {
     return (
         <NotificationContext.Provider value={notify}>
             {children}
-            <div className="fixed top-4 right-4 z-[100] flex flex-col gap-2 max-w-sm w-full">
+            <div className="notification-stack fixed z-[120] flex flex-col gap-2" aria-live="polite" aria-relevant="additions">
                 {notifications.map((n) => (
                     <div
                         key={n.id}
+                        role={n.type === 'error' ? 'alert' : 'status'}
                         className={`flex items-start gap-3 p-4 rounded-lg shadow-lg border text-sm animate-slide-in
                             ${n.type === 'success' ? 'bg-green-50 border-green-200 text-green-800' : ''}
                             ${n.type === 'error' ? 'bg-red-50 border-red-200 text-red-800' : ''}
@@ -45,7 +46,7 @@ export function NotificationProvider({ children }) {
                         {n.type === 'error' && <HiXCircle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />}
                         {n.type === 'info' && <HiInformationCircle className="w-5 h-5 text-blue-500 shrink-0 mt-0.5" />}
                         <span className="flex-1">{n.message}</span>
-                        <button onClick={() => removeNotification(n.id)} className="shrink-0">
+                        <button type="button" aria-label="Dismiss notification" onClick={() => removeNotification(n.id)} className="shrink-0 rounded-md">
                             <HiX className="w-4 h-4 opacity-50 hover:opacity-100" />
                         </button>
                     </div>

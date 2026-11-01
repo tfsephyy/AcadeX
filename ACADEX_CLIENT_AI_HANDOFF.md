@@ -2,6 +2,8 @@
 
 Prepared: **October 19, 2026, Asia/Manila**.
 
+**November 1, 2026 interface release:** [Current interface/upload-feedback release and preservation checks](docs/handoff/UI_RELEASE_2026-11-01.md) records the serving release `/srv/acadex-staging/releases/acadex-ui-20261101T115952Z`, the official landing/sidebar SVG identity, honest transfer/processing feedback, verified backup and preservation of all six production accounts and 27 existing private files. Backend behavior/key/storage remain unchanged. OCR intentionally continues to run from the metadata release directory documented below; do not restart or relocate that worker for this frontend update. This dated release supersedes the local-only UI checkpoint statuses.
+
 Audience: the client, the client's incoming developer, and the client's coding AI.
 
 Purpose: transfer the project knowledge needed to maintain, troubleshoot, update, and deploy AcadeX without depending on the previous developer's laptop or having that developer perform each future release.

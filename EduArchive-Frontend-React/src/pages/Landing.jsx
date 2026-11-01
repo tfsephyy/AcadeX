@@ -7,9 +7,9 @@ import Footer from '../components/Footer'
 
 export default function Landing() {
   return (
-    <div style={{ background: 'var(--color-bg)', color: 'var(--color-text)' }}>
+    <div className="landing-page" style={{ background: 'var(--color-bg)', color: 'var(--color-text)' }}>
       <Navbar />
-      <main>
+      <main id="main-content" tabIndex={-1}>
         <Hero />
         <Features />
         <About />

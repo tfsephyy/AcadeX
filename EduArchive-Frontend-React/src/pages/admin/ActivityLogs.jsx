@@ -369,7 +369,7 @@ export default function ActivityLogs() {
                     <span className="font-medium text-gray-900">{paginationData.total}</span> entries
                 </p>
                 <div className="flex items-center gap-1">
-                    <button
+                    <button aria-label="Previous page"
                         onClick={() => onPageChange(Math.max(1, page - 1))}
                         disabled={page <= 1}
                         className="p-2 text-gray-700 hover:bg-gray-200 rounded-lg disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
@@ -396,7 +396,7 @@ export default function ActivityLogs() {
                             </button>
                         );
                     })}
-                    <button
+                    <button aria-label="Next page"
                         onClick={() => onPageChange(Math.min(paginationData.last_page, page + 1))}
                         disabled={page >= paginationData.last_page}
                         className="p-2 text-gray-700 hover:bg-gray-200 rounded-lg disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
@@ -414,7 +414,7 @@ export default function ActivityLogs() {
         return (
             <div className="bg-white rounded-xl border border-gray-200 shadow-sm mb-4">
                 <div className="p-4 flex items-center gap-3">
-                    <form onSubmit={(e) => { e.preventDefault(); updateTab(tab, { page: 1 }); }} className="flex-1">
+                    <form noValidate onSubmit={(e) => { e.preventDefault(); updateTab(tab, { page: 1 }); }} className="flex-1">
                         <div className="relative">
                             <HiOutlineSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                             <input
@@ -444,8 +444,8 @@ export default function ActivityLogs() {
                     <div className="px-4 pb-4 border-t border-gray-100 pt-3">
                         <div className="flex flex-wrap items-end gap-3">
                             <div>
-                                <label className="block text-xs font-medium text-gray-500 mb-1">Role</label>
-                                <select
+                                <label htmlFor="field-activitylogs-20528" className="block text-xs font-medium text-gray-500 mb-1">Role</label>
+                                <select id="field-activitylogs-20528"
                                     value={s.role}
                                     onChange={(e) => updateTab(tab, { role: e.target.value, page: 1 })}
                                     className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500 outline-none min-w-[120px]"
@@ -456,8 +456,8 @@ export default function ActivityLogs() {
                             </div>
                             {showCategory && (
                                 <div>
-                                    <label className="block text-xs font-medium text-gray-500 mb-1">Category</label>
-                                    <select
+                                    <label htmlFor="field-activitylogs-21410" className="block text-xs font-medium text-gray-500 mb-1">Category</label>
+                                    <select id="field-activitylogs-21410"
                                         value={s.category}
                                         onChange={(e) => updateTab(tab, { category: e.target.value, page: 1 })}
                                         className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500 outline-none min-w-[140px]"
@@ -504,7 +504,7 @@ export default function ActivityLogs() {
         return (
             <div className="bg-white rounded-xl border border-gray-200 shadow-sm mb-4">
                 <div className="p-4 flex items-center gap-3">
-                    <form onSubmit={(e) => { e.preventDefault(); updateDrill({ page: 1 }); }} className="flex-1">
+                    <form noValidate onSubmit={(e) => { e.preventDefault(); updateDrill({ page: 1 }); }} className="flex-1">
                         <div className="relative">
                             <HiOutlineSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                             <input
@@ -533,8 +533,8 @@ export default function ActivityLogs() {
                     <div className="px-4 pb-4 border-t border-gray-100 pt-3">
                         <div className="flex flex-wrap items-end gap-3">
                             <div>
-                                <label className="block text-xs font-medium text-gray-500 mb-1">Category</label>
-                                <select
+                                <label htmlFor="field-activitylogs-26619" className="block text-xs font-medium text-gray-500 mb-1">Category</label>
+                                <select id="field-activitylogs-26619"
                                     value={drillState.category}
                                     onChange={(e) => updateDrill({ category: e.target.value, page: 1 })}
                                     className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500 outline-none min-w-[140px]"
@@ -580,7 +580,7 @@ export default function ActivityLogs() {
         if (!logs.length) return <EmptyState icon={HiOutlineClipboardList} text={emptyText} sub="Try adjusting your filters or search terms" />;
         return (
             <>
-                <div className="overflow-x-auto">
+                <div className="table-scroll overflow-x-auto" role="region" aria-label="Scrollable data table" tabIndex={0}>
                     <table className="w-full text-sm text-left">
                         <thead>
                             <tr className="bg-gray-50 border-b border-gray-200">
@@ -667,7 +667,7 @@ export default function ActivityLogs() {
                 <div className="flex items-center justify-between gap-3 mt-0.5">
                     <p className="text-sm text-gray-500">Monitor system activity, sessions, and login attempts</p>
                     {/* Refresh button - visible on mobile, hidden on desktop (desktop has its own) */}
-                    <button
+                    <button aria-label="Refresh"
                         onClick={() => {
                             if (activeTab !== 'activity' || activitySection === 'all') {
                                 fetchTabLogs(activeTab);
@@ -1205,7 +1205,7 @@ export default function ActivityLogs() {
                             <EmptyState icon={HiOutlineLogin} text="No session logs found" sub="Successful logins will appear here" />
                         ) : (
                             <>
-                                <div className="overflow-x-auto">
+                                <div className="table-scroll overflow-x-auto" role="region" aria-label="Scrollable data table" tabIndex={0}>
                                     <table className="w-full text-sm text-left">
                                         <thead>
                                             <tr className="bg-gray-50 border-b border-gray-200">
@@ -1254,7 +1254,7 @@ export default function ActivityLogs() {
                             <EmptyState icon={HiOutlineLockClosed} text="No login attempt logs found" sub="Failed and locked login attempts will appear here" />
                         ) : (
                             <>
-                                <div className="overflow-x-auto">
+                                <div className="table-scroll overflow-x-auto" role="region" aria-label="Scrollable data table" tabIndex={0}>
                                     <table className="w-full text-sm text-left">
                                         <thead>
                                             <tr className="bg-gray-50 border-b border-gray-200">

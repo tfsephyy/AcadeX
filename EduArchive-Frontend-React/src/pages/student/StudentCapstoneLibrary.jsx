@@ -158,18 +158,18 @@ export default function StudentCapstoneLibrary() {
         const p = size === 'sm' ? 'p-1.5' : 'p-2';
         return (
             <>
-                <button onClick={(e) => { e?.stopPropagation(); navigate(`/student/capstones/${cap.id}`); }} title="View" className={`${p} text-blue-600 hover:bg-blue-50 rounded-lg transition-colors`}><HiOutlineEye className="w-4 h-4" /></button>
+                <button aria-label="View" onClick={(e) => { e?.stopPropagation(); navigate(`/student/capstones/${cap.id}`); }} title="View" className={`${p} text-blue-600 hover:bg-blue-50 rounded-lg transition-colors`}><HiOutlineEye className="w-4 h-4" /></button>
                 {viewing === 'active' ? (
                     <>
                         {cap.approval_status !== 'pending' && (
-                            <button onClick={(e) => { e?.stopPropagation(); handleEdit(cap); }} title="Edit" className={`${p} text-amber-600 hover:bg-amber-50 rounded-lg transition-colors`}><HiOutlinePencil className="w-4 h-4" /></button>
+                            <button aria-label="Edit" onClick={(e) => { e?.stopPropagation(); handleEdit(cap); }} title="Edit" className={`${p} text-amber-600 hover:bg-amber-50 rounded-lg transition-colors`}><HiOutlinePencil className="w-4 h-4" /></button>
                         )}
-                        <button onClick={(e) => { e?.stopPropagation(); handleArchive(cap); }} title="Archive" className={`${p} text-orange-600 hover:bg-orange-50 rounded-lg transition-colors`}><HiOutlineArchiveBoxArrowDown className="w-4 h-4" /></button>
+                        <button aria-label="Archive" onClick={(e) => { e?.stopPropagation(); handleArchive(cap); }} title="Archive" className={`${p} text-orange-600 hover:bg-orange-50 rounded-lg transition-colors`}><HiOutlineArchiveBoxArrowDown className="w-4 h-4" /></button>
                     </>
                 ) : (
                     <>
-                        <button onClick={(e) => { e?.stopPropagation(); handleUnarchive(cap); }} title="Restore" className={`${p} text-green-600 hover:bg-green-50 rounded-lg transition-colors`}><HiOutlineArchiveBoxXMark className="w-4 h-4" /></button>
-                        <button onClick={(e) => { e?.stopPropagation(); handleDelete(cap); }} title="Delete permanently" className={`${p} text-red-600 hover:bg-red-50 rounded-lg transition-colors`}><HiOutlineTrash className="w-4 h-4" /></button>
+                        <button aria-label="Restore" onClick={(e) => { e?.stopPropagation(); handleUnarchive(cap); }} title="Restore" className={`${p} text-green-600 hover:bg-green-50 rounded-lg transition-colors`}><HiOutlineArchiveBoxXMark className="w-4 h-4" /></button>
+                        <button aria-label="Delete permanently" onClick={(e) => { e?.stopPropagation(); handleDelete(cap); }} title="Delete permanently" className={`${p} text-red-600 hover:bg-red-50 rounded-lg transition-colors`}><HiOutlineTrash className="w-4 h-4" /></button>
                     </>
                 )}
             </>
@@ -179,12 +179,12 @@ export default function StudentCapstoneLibrary() {
     // ── Card View ─────────────────────────────────────────────────────────────────
     const CardView = () => (
         <div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 p-4 lg:p-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4 p-4 lg:p-6">
                 {capstones.map((cap) => (
                     <div key={cap.id}
                         onClick={() => navigate(`/student/capstones/${cap.id}`)}
                         className="group bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 flex flex-col overflow-hidden cursor-pointer">
-                        <div className="h-1.5 bg-gradient-to-r from-[#1B5E20] to-green-400 w-full" />
+                        <div className="record-accent" aria-hidden="true" />
                         <div className="p-4 flex flex-col flex-1 gap-3">
                             <h3 className="text-sm font-semibold text-gray-900 leading-snug line-clamp-2 group-hover:text-[#1B5E20] transition-colors">{cap.title}</h3>
                             <div className="flex flex-wrap gap-1.5">
@@ -220,7 +220,7 @@ export default function StudentCapstoneLibrary() {
     // ── Table View ────────────────────────────────────────────────────────────────
     const TableView = () => (
         <div>
-            <div className="overflow-x-auto">
+            <div className="table-scroll overflow-x-auto" role="region" aria-label="Scrollable data table" tabIndex={0}>
                 <table className="w-full">
                     <thead>
                         <tr className="border-b border-gray-200 bg-gray-50">
@@ -269,7 +269,7 @@ export default function StudentCapstoneLibrary() {
     );
 
     return (
-        <div className="flex flex-col h-screen bg-gray-50">
+        <div className="repository-page flex flex-col bg-gray-50">
             {/* ── Header ── */}
             <div className="bg-white border-b border-gray-200 shadow-sm">
                 <div className="px-4 lg:px-8 py-6 lg:py-8 space-y-4">
@@ -278,7 +278,7 @@ export default function StudentCapstoneLibrary() {
                     <div className="hidden sm:flex sm:items-center sm:justify-between gap-3">
                         <div className="flex items-center gap-3">
                             {viewing === 'archived' && (
-                                <button onClick={() => { setViewing('active'); setPage(1); }} className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors" title="Back">
+                                <button aria-label="Back" onClick={() => { setViewing('active'); setPage(1); }} className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors" title="Back">
                                     <HiArrowLeft className="w-5 h-5" />
                                 </button>
                             )}
@@ -317,7 +317,7 @@ export default function StudentCapstoneLibrary() {
                         {/* Title - Mobile */}
                         <div className="flex items-center gap-3">
                             {viewing === 'archived' && (
-                                <button onClick={() => { setViewing('active'); setPage(1); }} className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors" title="Back">
+                                <button aria-label="Back" onClick={() => { setViewing('active'); setPage(1); }} className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors" title="Back">
                                     <HiArrowLeft className="w-5 h-5" />
                                 </button>
                             )}
@@ -331,21 +331,21 @@ export default function StudentCapstoneLibrary() {
                         <div className="flex items-center justify-end gap-2">
                             {/* Card / Table toggle */}
                             <div className="flex items-center bg-gray-100 rounded-lg p-1 border border-gray-200">
-                                <button onClick={() => setDisplayMode('card')} title="Card View"
+                                <button aria-label="Card View" onClick={() => setDisplayMode('card')} title="Card View"
                                     className={`flex items-center gap-1 px-2 py-1.5 rounded-md text-sm font-medium transition-all duration-200 ${displayMode === 'card' ? 'bg-white text-[#1B5E20] shadow-sm border border-gray-200' : 'text-gray-500 hover:text-gray-700'}`}>
                                     <HiOutlineViewGrid className="w-4 h-4" />
                                 </button>
-                                <button onClick={() => setDisplayMode('table')} title="Table View"
+                                <button aria-label="Table View" onClick={() => setDisplayMode('table')} title="Table View"
                                     className={`flex items-center gap-1 px-2 py-1.5 rounded-md text-sm font-medium transition-all duration-200 ${displayMode === 'table' ? 'bg-white text-[#1B5E20] shadow-sm border border-gray-200' : 'text-gray-500 hover:text-gray-700'}`}>
                                     <HiOutlineViewList className="w-4 h-4" />
                                 </button>
                             </div>
                             {viewing === 'active' && (
                                 <>
-                                    <button onClick={() => { setViewing('archived'); setPage(1); }} className="inline-flex items-center justify-center p-2.5 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-lg hover:bg-gray-200 transition-colors" title="Archive">
+                                    <button aria-label="Archive" onClick={() => { setViewing('archived'); setPage(1); }} className="inline-flex items-center justify-center p-2.5 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-lg hover:bg-gray-200 transition-colors" title="Archive">
                                         <HiOutlineArchiveBoxArrowDown className="w-4 h-4" />
                                     </button>
-                                    <button onClick={() => setUploadOpen(true)} className="inline-flex items-center justify-center p-2.5 text-sm font-medium text-white bg-green-600 border border-green-600 rounded-lg hover:bg-green-700 transition-colors shadow-sm" title="Upload Capstone">
+                                    <button aria-label="Upload Capstone" onClick={() => setUploadOpen(true)} className="inline-flex items-center justify-center p-2.5 text-sm font-medium text-white bg-green-600 border border-green-600 rounded-lg hover:bg-green-700 transition-colors shadow-sm" title="Upload Capstone">
                                         <HiOutlineUpload className="w-4 h-4" />
                                     </button>
                                 </>
@@ -359,7 +359,7 @@ export default function StudentCapstoneLibrary() {
                                 <input type="text" value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} placeholder="Search..."
                                     className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg text-sm text-gray-900 placeholder-gray-400 bg-white focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none" />
                             </div>
-                            <button onClick={() => setShowFilters(!showFilters)}
+                            <button aria-label="Filters" onClick={() => setShowFilters(!showFilters)}
                                 className={`relative inline-flex items-center justify-center p-2.5 text-sm font-medium rounded-lg border transition-colors flex-shrink-0 ${showFilters ? 'bg-green-50 text-green-700 border-green-200' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}`}
                                 title="Filters">
                                 <HiOutlineFilter className="w-4 h-4" />
@@ -374,7 +374,7 @@ export default function StudentCapstoneLibrary() {
                             <input type="text" value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} placeholder="Search by title or author..."
                                 className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg text-sm text-gray-900 placeholder-gray-400 bg-white focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none" />
                         </div>
-                        <button onClick={() => setShowFilters(!showFilters)}
+                        <button aria-label="Filters" aria-expanded={showFilters} onClick={() => setShowFilters(!showFilters)}
                             className={`relative inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg border transition-colors ${showFilters ? 'bg-green-50 text-green-700 border-green-200' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}`}>
                             <HiOutlineFilter className="w-4 h-4" />
                             Filters
@@ -385,22 +385,22 @@ export default function StudentCapstoneLibrary() {
                     {showFilters && (
                         <div className="flex flex-wrap gap-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
                             <div>
-                                <label className="text-xs text-gray-600 font-semibold uppercase block mb-1">Year</label>
-                                <select value={filters.year} onChange={e => setFilter('year', e.target.value)} className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 bg-white focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none">
+                                <label htmlFor="field-studentcapstonelibrary-26658" className="text-xs text-gray-600 font-semibold uppercase block mb-1">Year</label>
+                                <select id="field-studentcapstonelibrary-26658" value={filters.year} onChange={e => setFilter('year', e.target.value)} className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 bg-white focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none">
                                     <option value="">All Years</option>
                                     {years.map(y => <option key={y} value={y}>{y}</option>)}
                                 </select>
                             </div>
                             <div>
-                                <label className="text-xs text-gray-600 font-semibold uppercase block mb-1">Program</label>
-                                <select value={filters.program} onChange={e => setFilter('program', e.target.value)} className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 bg-white focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none">
+                                <label htmlFor="field-studentcapstonelibrary-27327" className="text-xs text-gray-600 font-semibold uppercase block mb-1">Program</label>
+                                <select id="field-studentcapstonelibrary-27327" value={filters.program} onChange={e => setFilter('program', e.target.value)} className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 bg-white focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none">
                                     <option value="">All Programs</option>
                                     {programs.map(p => <option key={p} value={p}>{p}</option>)}
                                 </select>
                             </div>
                             <div>
-                                <label className="text-xs text-gray-600 font-semibold uppercase block mb-1">Category</label>
-                                <select value={filters.category} onChange={e => setFilter('category', e.target.value)} className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 bg-white focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none">
+                                <label htmlFor="field-studentcapstonelibrary-28009" className="text-xs text-gray-600 font-semibold uppercase block mb-1">Category</label>
+                                <select id="field-studentcapstonelibrary-28009" value={filters.category} onChange={e => setFilter('category', e.target.value)} className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 bg-white focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none">
                                     <option value="">All Categories</option>
                                     {categories.map(c => {
                                         const val = typeof c === 'string' ? c : c.name;

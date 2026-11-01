@@ -25,6 +25,14 @@ export default function SearchWithSuggestions({
     const expandRef    = useRef(null);
     const wrapperRef   = useRef(null);
     const abortRef     = useRef(null);
+    const inputRef = useRef(null);
+    const composingRef = useRef(false);
+    const [activeSuggestion, setActiveSuggestion] = useState(-1);
+    useEffect(() => () => {
+        clearTimeout(debounceRef.current);
+        clearTimeout(expandRef.current);
+        abortRef.current?.abort();
+    }, []);
 
     // Sync controlled value from parent
     useEffect(() => {
@@ -91,23 +99,29 @@ export default function SearchWithSuggestions({
         }
         setSuggLoading(true);
         if (abortRef.current) abortRef.current.abort();
-        abortRef.current = new AbortController();
+        const controller = new AbortController();
+        abortRef.current = controller;
         try {
             const res = await api.get('/published/suggest', {
                 params: { q, limit: 6 },
-                signal: abortRef.current.signal,
+                signal: controller.signal,
             });
-            setSuggestions(res.data?.data || []);
+            if (!controller.signal.aborted) setSuggestions(res.data?.data || []);
         } catch {
-            setSuggestions([]);
+            if (!controller.signal.aborted) setSuggestions([]);
         } finally {
-            setSuggLoading(false);
+            if (!controller.signal.aborted) setSuggLoading(false);
         }
     }, []);
 
     const handleInput = (e) => {
         const q = e.target.value;
         setInputVal(q);
+        setActiveSuggestion(-1);
+        clearTimeout(debounceRef.current);
+        clearTimeout(expandRef.current);
+        abortRef.current?.abort();
+        if (composingRef.current) return;
         setShowDropdown(true);
 
         // Client-side expansion preview (instant)
@@ -127,20 +141,28 @@ export default function SearchWithSuggestions({
     };
 
     const handleSuggestionClick = (suggestion) => {
+        clearTimeout(debounceRef.current);
+        clearTimeout(expandRef.current);
+        abortRef.current?.abort();
         const val = typeof suggestion === 'string' ? suggestion : suggestion.name;
         setInputVal(val);
         onChange(val);
         setSuggestions([]);
         setExpansions(getClientExpansions(val));
         setShowDropdown(false);
+        inputRef.current?.focus();
     };
 
     const handleClear = () => {
+        clearTimeout(debounceRef.current);
+        clearTimeout(expandRef.current);
+        abortRef.current?.abort();
         setInputVal('');
         onChange('');
         setSuggestions([]);
         setExpansions([]);
         setShowDropdown(false);
+        inputRef.current?.focus();
     };
 
     const showSuggList  = showDropdown && suggestions.length > 0;
@@ -152,10 +174,29 @@ export default function SearchWithSuggestions({
             <div className="relative flex items-center">
                 <HiOutlineSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
                 <input
+                    ref={inputRef}
                     id={id}
+                    role="combobox" aria-label="Search capstone research" aria-autocomplete="list"
+                    aria-expanded={showSuggList} aria-controls={showSuggList ? `${id}-suggestions` : undefined}
+                    aria-activedescendant={showSuggList && activeSuggestion >= 0 ? `${id}-suggestion-${activeSuggestion}` : undefined}
                     type="text"
                     value={inputVal}
                     onChange={handleInput}
+                    onCompositionStart={() => { composingRef.current = true; clearTimeout(debounceRef.current); clearTimeout(expandRef.current); }}
+                    onCompositionEnd={e => { composingRef.current = false; handleInput(e); }}
+                    onKeyDown={e => {
+                        if (e.nativeEvent.isComposing) return;
+                        if (e.key === 'Escape') { setShowDropdown(false); setActiveSuggestion(-1); }
+                        if (['ArrowDown', 'ArrowUp'].includes(e.key) && suggestions.length) {
+                            e.preventDefault(); setShowDropdown(true);
+                            setActiveSuggestion(i => e.key === 'ArrowDown' ? (i + 1) % suggestions.length : (i <= 0 ? suggestions.length - 1 : i - 1));
+                        }
+                        if (e.key === 'Enter') {
+                            e.preventDefault();
+                            if (showSuggList && activeSuggestion >= 0) handleSuggestionClick(suggestions[activeSuggestion]);
+                            else { clearTimeout(debounceRef.current); onChange(inputVal); setShowDropdown(false); }
+                        }
+                    }}
                     onFocus={() => setShowDropdown(true)}
                     placeholder={placeholder}
                     autoComplete="off"
@@ -166,7 +207,6 @@ export default function SearchWithSuggestions({
                         type="button"
                         onClick={handleClear}
                         className="absolute right-3 top-1/2 -translate-y-1/2 p-0.5 text-gray-400 hover:text-gray-600 rounded transition-colors"
-                        tabIndex={-1}
                         aria-label="Clear search"
                     >
                         <HiOutlineX className="w-3.5 h-3.5" />
@@ -194,7 +234,7 @@ export default function SearchWithSuggestions({
 
             {/* Autocomplete dropdown */}
             {showSuggList && (
-                <div className="absolute z-50 top-full mt-1 left-0 right-0 bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden">
+                <div id={`${id}-suggestions`} role="listbox" aria-label="Search suggestions" className="absolute z-50 top-full mt-1 left-0 right-0 bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden">
                     {suggLoading && (
                         <div className="px-4 py-2 text-xs text-gray-400">Loading suggestions…</div>
                     )}
@@ -203,9 +243,11 @@ export default function SearchWithSuggestions({
                         return (
                             <button
                                 key={i}
+                                id={`${id}-suggestion-${i}`} role="option" aria-selected={activeSuggestion === i} tabIndex={-1}
                                 type="button"
                                 onMouseDown={(e) => e.preventDefault()}
                                 onClick={() => handleSuggestionClick(s)}
+                                style={activeSuggestion === i ? { background: 'var(--color-bg-tertiary)' } : undefined}
                                 className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-green-50 hover:text-green-800 transition-colors flex items-center gap-2"
                             >
                                 <HiOutlineSearch className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />

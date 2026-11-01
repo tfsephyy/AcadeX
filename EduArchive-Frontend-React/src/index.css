@@ -14,34 +14,41 @@
   --color-primary-dark: #3d9e45;
   --color-accent: #1B7F5B;
   --color-accent-bright: #24a876;
+  --color-action: #5BBE63;
+  --color-action-hover: #73cd7b;
+  --color-on-action: #07170F;
+  --document-banner: #202722;
+  --color-link: #9bc5a0;
+  --color-focus: #9bc5a0;
+  --scrollbar-thumb: #66746a;
 
   /* Backgrounds */
-  --color-bg: #07170F;
-  --color-bg-secondary: #0d2218;
-  --color-bg-tertiary: #112b1c;
+  --color-bg: #121614;
+  --color-bg-secondary: #191e1b;
+  --color-bg-tertiary: #232a25;
 
   /* Surfaces (glass cards) */
-  --color-surface: rgba(13, 34, 24, 0.75);
-  --color-surface-hover: rgba(20, 50, 35, 0.85);
-  --color-surface-elevated: rgba(15, 40, 27, 0.9);
+  --color-surface: #1c221e;
+  --color-surface-hover: #252d28;
+  --color-surface-elevated: #202722;
 
   /* Text */
-  --color-text: #F3F8F3;
-  --color-text-secondary: #c8e0c8;
-  --color-text-muted: #7aaa85;
-  --color-text-faint: #4d7a58;
+  --color-text: #f0f2f0;
+  --color-text-secondary: #c0c7c2;
+  --color-text-muted: #9ca69f;
+  --color-text-faint: #929d95;
 
   /* Borders */
-  --color-border: rgba(91, 190, 99, 0.18);
-  --color-border-strong: rgba(91, 190, 99, 0.35);
-  --color-border-focus: rgba(91, 190, 99, 0.7);
+  --color-border: rgba(195, 208, 199, .12);
+  --color-border-strong: rgba(195, 208, 199, .23);
+  --color-border-focus: #9bc5a0;
 
   /* Shadows */
-  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.4);
-  --shadow-md: 0 4px 20px rgba(0, 0, 0, 0.5);
-  --shadow-lg: 0 8px 40px rgba(0, 0, 0, 0.6);
-  --shadow-glow: 0 0 30px rgba(91, 190, 99, 0.15);
-  --shadow-glow-strong: 0 0 50px rgba(91, 190, 99, 0.25);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.18);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.22);
+  --shadow-lg: 0 12px 36px rgba(0, 0, 0, 0.28);
+  --shadow-glow: none;
+  --shadow-glow-strong: none;
 
   /* Backdrop Blur */
   --blur-sm: blur(8px);
@@ -54,11 +61,11 @@
                    linear-gradient(180deg, #07170F 0%, #0d2218 100%);
 
   /* Form inputs */
-  --input-bg: rgba(10, 28, 18, 0.8);
-  --input-border: rgba(91, 190, 99, 0.25);
-  --input-text: #F3F8F3;
-  --input-placeholder: #4d7a58;
-  --select-option-bg: #0d2218;
+  --input-bg: #151a17;
+  --input-border: rgba(195, 208, 199, .23);
+  --input-text: #f0f2f0;
+  --input-placeholder: #929d95;
+  --select-option-bg: #191e1b;
 }
 
 /* ── Light Mode ──────────────────────────────────────────────── */
@@ -68,6 +75,13 @@
   --color-primary-dark: #3d9e45;
   --color-accent: #4CAF50;
   --color-accent-bright: #43A047;
+  --color-action: #1B5E20;
+  --color-action-hover: #154a19;
+  --color-on-action: #ffffff;
+  --document-banner: #1B5E20;
+  --color-link: #256a30;
+  --color-focus: #256a30;
+  --scrollbar-thumb: #7e9b83;
 
   /* Backgrounds */
   --color-bg: #F6FFF7;
@@ -75,15 +89,15 @@
   --color-bg-tertiary: #E4F4E6;
 
   /* Surfaces (glass cards) */
-  --color-surface: rgba(255, 255, 255, 0.82);
+  --color-surface: #ffffff;
   --color-surface-hover: rgba(255, 255, 255, 0.95);
-  --color-surface-elevated: rgba(255, 255, 255, 0.98);
+  --color-surface-elevated: #ffffff;
 
   /* Text */
   --color-text: #0f2e15;
   --color-text-secondary: #2d5a35;
   --color-text-muted: #4a7a4a;
-  --color-text-faint: #7aaa7a;
+  --color-text-faint: #5c785f;
 
   /* Borders */
   --color-border: rgba(91, 190, 99, 0.22);
@@ -91,9 +105,9 @@
   --color-border-focus: rgba(76, 175, 80, 0.7);
 
   /* Shadows */
-  --shadow-sm: 0 2px 8px rgba(15, 81, 50, 0.08);
-  --shadow-md: 0 4px 20px rgba(15, 81, 50, 0.12);
-  --shadow-lg: 0 8px 40px rgba(15, 81, 50, 0.18);
+  --shadow-sm: 0 1px 3px rgba(15, 81, 50, 0.04);
+  --shadow-md: 0 4px 16px rgba(15, 81, 50, 0.08);
+  --shadow-lg: 0 12px 36px rgba(15, 81, 50, 0.12);
   --shadow-glow: 0 0 30px rgba(91, 190, 99, 0.2);
   --shadow-glow-strong: 0 0 50px rgba(91, 190, 99, 0.3);
 
@@ -106,26 +120,16 @@
   --input-bg: rgba(255, 255, 255, 0.9);
   --input-border: rgba(76, 175, 80, 0.3);
   --input-text: #0f2e15;
-  --input-placeholder: #7aaa7a;
+  --input-placeholder: #5c785f;
   --select-option-bg: #ffffff;
 }
 
 /* ═══════════════════════════════════════════════════════════════
    GLOBAL TRANSITIONS — Smooth theme switching
    ═══════════════════════════════════════════════════════════════ */
-*, *::before, *::after {
-  box-sizing: border-box;
-  transition:
-    background-color 0.35s ease,
-    border-color 0.35s ease,
-    color 0.35s ease,
-    box-shadow 0.35s ease;
-}
-
-/* Exclude transforms/opacity from blanket transition to avoid jank */
-*:not([class*="animate"]):not([class*="transition"]):not([class*="motion"]) {
-  transition-property: background-color, border-color, color, box-shadow;
-}
+*, *::before, *::after { box-sizing: border-box; }
+/* Transitions belong to interactive controls, not every node in the document. */
+button, a, input, select, textarea { transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease; }
 
 /* ═══════════════════════════════════════════════════════════════
    BASE RESET & TYPOGRAPHY
@@ -138,7 +142,6 @@ body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
-  overflow-x: hidden;
   background-color: var(--color-bg);
   color: var(--color-text);
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
@@ -463,40 +466,7 @@ input[type="password"]::-ms-clear {
 /* ═══════════════════════════════════════════════════════════════
    SCROLLBAR
    ═══════════════════════════════════════════════════════════════ */
-/* Hide scrollbar but keep functionality */
-.scrollbar-hide {
-  -ms-overflow-style: none;  /* IE and Edge */
-  scrollbar-width: none;  /* Firefox */
-}
-.scrollbar-hide::-webkit-scrollbar {
-  display: none;  /* Chrome, Safari and Opera */
-}
-
-.custom-scrollbar::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-.custom-scrollbar::-webkit-scrollbar-track {
-  background: transparent;
-}
-.custom-scrollbar::-webkit-scrollbar-thumb {
-  background: var(--color-text-muted);
-  border-radius: 9999px;
-}
-.custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: var(--color-primary);
-}
-.custom-scrollbar {
-  scrollbar-width: thin;
-  scrollbar-color: var(--color-text-muted) transparent;
-}
-
-/* Admin scroll — fully theme-compatible (transparent track works in light + dark) */
-.admin-scroll::-webkit-scrollbar { width: 5px; height: 5px; }
-.admin-scroll::-webkit-scrollbar-track { background: transparent; }
-.admin-scroll::-webkit-scrollbar-thumb { background: var(--color-border-strong); border-radius: 9999px; }
-.admin-scroll::-webkit-scrollbar-thumb:hover { background: var(--color-primary); }
-.admin-scroll { scrollbar-width: thin; scrollbar-color: var(--color-border-strong) transparent; }
+/* All scrollable regions inherit the global baseline in refinements.css. */
 
 /* ═══════════════════════════════════════════════════════════════
    SECTION BACKGROUNDS
@@ -733,38 +703,38 @@ input[type="password"]::-ms-clear {
 /* ── Dark Mode Panel Tokens ────────────────────────────────────── */
 :root,
 [data-theme="dark"] {
-  --panel-sidebar-start:       #05120d;
-  --panel-sidebar-end:         #091a0f;
-  --panel-logo-border:         rgba(91, 190, 99, 0.14);
+  --panel-sidebar-start: #101411;
+  --panel-sidebar-end: #101411;
+  --panel-logo-border: var(--color-border);
   --panel-logo-icon-bg:        rgba(91, 190, 99, 0.16);
-  --panel-nav-text:            #7aaa80;
+  --panel-nav-text: var(--color-text-muted);
   --panel-nav-hover-bg:        rgba(91, 190, 99, 0.08);
-  --panel-nav-hover-text:      #c8e0c8;
+  --panel-nav-hover-text: var(--color-text);
   --panel-nav-active-bg:       rgba(91, 190, 99, 0.15);
-  --panel-nav-active-text:     #5BBE63;
+  --panel-nav-active-text: var(--color-link);
   --panel-nav-active-glow:     #5BBE63;
   --panel-profile-hover:       rgba(91, 190, 99, 0.07);
-  --panel-profile-text:        #c8e0c8;
-  --panel-profile-muted:       #7aaa80;
-  --panel-header-bg:           rgba(5, 18, 13, 0.97);
-  --panel-header-border:       rgba(91, 190, 99, 0.10);
-  --panel-content-bg:          #07170F;
-  --panel-dropdown-bg:         #0d2218;
-  --panel-dropdown-border:     rgba(91, 190, 99, 0.18);
-  --panel-dropdown-text:       #a8cca8;
+  --panel-profile-text: var(--color-text-secondary);
+  --panel-profile-muted: var(--color-text-muted);
+  --panel-header-bg: #161b18;
+  --panel-header-border: var(--color-border);
+  --panel-content-bg: var(--color-bg);
+  --panel-dropdown-bg: var(--color-surface-elevated);
+  --panel-dropdown-border: var(--color-border-strong);
+  --panel-dropdown-text: var(--color-text-secondary);
   --panel-dropdown-hover:      rgba(91, 190, 99, 0.07);
   --panel-dropdown-danger:     #f87171;
   --panel-dropdown-danger-hover: rgba(248, 113, 113, 0.08);
   --panel-dropdown-divider:    rgba(91, 190, 99, 0.12);
-  --panel-arrow-bg:            #0d2218;
-  --panel-arrow-hover:         #112b1c;
-  --panel-sidebar-border-r:    rgba(91, 190, 99, 0.09);
-  --panel-topbar-text:         #7aaa80;
+  --panel-arrow-bg: var(--color-bg-secondary);
+  --panel-arrow-hover: var(--color-bg-tertiary);
+  --panel-sidebar-border-r: var(--color-border);
+  --panel-topbar-text: var(--color-text-secondary);
   --panel-topbar-btn-hover:    rgba(91, 190, 99, 0.08);
-  --panel-welcome-accent:      #5BBE63;
+  --panel-welcome-accent: var(--color-text);
   --panel-notif-unread-bg:     rgba(91, 190, 99, 0.06);
   --panel-notif-unread-hover:  rgba(91, 190, 99, 0.11);
-  --panel-notif-divider:       rgba(91, 190, 99, 0.09);
+  --panel-notif-divider: var(--color-border);
 }
 
 /* ── Light Mode Panel Tokens ───────────────────────────────────── */
@@ -773,7 +743,7 @@ input[type="password"]::-ms-clear {
   --panel-sidebar-end:         #2E7D32;
   --panel-logo-border:         rgba(0, 0, 0, 0.13);
   --panel-logo-icon-bg:        rgba(139, 195, 74, 0.22);
-  --panel-nav-text:            rgba(255, 255, 255, 0.60);
+  --panel-nav-text:            rgba(255, 255, 255, 0.86);
   --panel-nav-hover-bg:        rgba(255, 255, 255, 0.12);
   --panel-nav-hover-text:      #ffffff;
   --panel-nav-active-bg:       rgba(255, 255, 255, 0.22);
@@ -781,7 +751,7 @@ input[type="password"]::-ms-clear {
   --panel-nav-active-glow:     #8BC34A;
   --panel-profile-hover:       rgba(255, 255, 255, 0.10);
   --panel-profile-text:        rgba(255, 255, 255, 0.90);
-  --panel-profile-muted:       rgba(255, 255, 255, 0.55);
+  --panel-profile-muted:       rgba(255, 255, 255, 0.80);
   --panel-header-bg:           rgba(255, 255, 255, 0.97);
   --panel-header-border:       rgba(0, 0, 0, 0.07);
   --panel-content-bg:          #F0FBF0;
@@ -861,13 +831,6 @@ input[type="password"]::-ms-clear {
 .panel-notif-unread:hover { background: var(--panel-notif-unread-hover); }
 .panel-notif-divide > * + * { border-top: 1px solid var(--panel-notif-divider); }
 
-/* Panel scrollbar */
-.panel-scroll::-webkit-scrollbar { width: 4px; }
-.panel-scroll::-webkit-scrollbar-track { background: transparent; }
-.panel-scroll::-webkit-scrollbar-thumb { background: var(--panel-logo-border); border-radius: 9999px; }
-.panel-scroll::-webkit-scrollbar-thumb:hover { background: var(--color-primary); }
-.panel-scroll { scrollbar-width: thin; scrollbar-color: var(--panel-logo-border) transparent; }
-
 /* ═══════════════════════════════════════════════════════════════
    DARK MODE — GLOBAL TAILWIND OVERRIDES
    Auto-remaps hardcoded Tailwind color utilities so inner page
@@ -879,7 +842,7 @@ input[type="password"]::-ms-clear {
   .bg-white   { background-color: var(--color-surface-elevated) !important; }
   .bg-gray-50 { background-color: var(--color-bg-secondary)     !important; }
   .bg-gray-100{ background-color: var(--color-bg-tertiary)      !important; }
-  .bg-gray-200{ background-color: rgba(17, 43, 28, 0.95)        !important; }
+  .bg-gray-200{ background-color: var(--color-bg-tertiary)        !important; }
 
   /* ─ Text ───────────────────────────────────────────────────────── */
   .text-gray-900 { color: var(--color-text)           !important; }
@@ -970,7 +933,7 @@ input[type="password"]::-ms-clear {
 
   /* ─ Capstone info card (CapstoneMainPage / StudentCapstoneMainPage) ── */
   /* Card wrapper — green-50/60 opacity variant isn't caught by .bg-green-50 */
-  .bg-green-50\/60 { background-color: rgba(13, 34, 24, 0.75) !important; }
+  .bg-green-50\/60 { background-color: var(--color-surface) !important; }
   /* Card border */
   .border-green-200 { border-color: rgba(91, 190, 99, 0.22) !important; }
   /* Keyword / tag pills */
@@ -1019,30 +982,30 @@ input[type="password"]::-ms-clear {
 /* ── Chatbot CSS variables (dark mode) ───────────────────────── */
 :root,
 [data-theme="dark"] {
-  --chat-bg: rgba(7, 18, 12, 0.97);
-  --chat-header-bg: linear-gradient(135deg, #0d2218 0%, #112b1c 100%);
-  --chat-border: rgba(91, 190, 99, 0.22);
-  --chat-border-strong: rgba(91, 190, 99, 0.45);
-  --chat-user-bubble: linear-gradient(135deg, #3d9e45, #5BBE63);
-  --chat-user-text: #ffffff;
-  --chat-bot-bubble: rgba(13, 34, 24, 0.9);
-  --chat-bot-text: #F3F8F3;
-  --chat-bot-border: rgba(91, 190, 99, 0.2);
-  --chat-input-bg: rgba(10, 28, 18, 0.85);
-  --chat-input-border: rgba(91, 190, 99, 0.25);
+  --chat-bg: var(--color-surface);
+  --chat-header-bg: var(--color-bg-secondary);
+  --chat-border: var(--color-border);
+  --chat-border-strong: var(--color-border-strong);
+  --chat-user-bubble: #324b36;
+  --chat-user-text: #f0f2f0;
+  --chat-bot-bubble: var(--color-bg-tertiary);
+  --chat-bot-text: var(--color-text);
+  --chat-bot-border: var(--color-border);
+  --chat-input-bg: var(--input-bg);
+  --chat-input-border: var(--input-border);
   --chat-input-focus: rgba(91, 190, 99, 0.55);
-  --chat-input-text: #F3F8F3;
-  --chat-placeholder: #4d7a58;
-  --chat-shadow: 0 20px 60px rgba(0,0,0,0.6), 0 0 0 1px rgba(91,190,99,0.15);
-  --chat-fab-shadow: 0 8px 32px rgba(91, 190, 99, 0.35), 0 4px 12px rgba(0,0,0,0.4);
-  --chat-fab-hover-shadow: 0 12px 40px rgba(91, 190, 99, 0.5), 0 6px 16px rgba(0,0,0,0.5);
+  --chat-input-text: var(--input-text);
+  --chat-placeholder: var(--input-placeholder);
+  --chat-shadow: var(--shadow-lg);
+  --chat-fab-shadow: var(--shadow-md);
+  --chat-fab-hover-shadow: var(--shadow-md);
   --chat-tag-bg: rgba(91, 190, 99, 0.12);
   --chat-tag-border: rgba(91, 190, 99, 0.3);
   --chat-tag-text: #5BBE63;
   --chat-scroll-track: rgba(0,0,0,0.2);
   --chat-scroll-thumb: rgba(91, 190, 99, 0.25);
-  --chat-time-text: #4d7a58;
-  --chat-empty-text: #4d7a58;
+  --chat-time-text: var(--color-text-muted);
+  --chat-empty-text: var(--color-text-muted);
 }
 
 /* ── Chatbot CSS variables (light mode) ──────────────────────── */
@@ -1279,13 +1242,6 @@ input[type="password"]::-ms-clear {
   flex-direction: column;
   gap: 0.875rem;
   scroll-behavior: smooth;
-}
-
-.chatbot-messages::-webkit-scrollbar { width: 4px; }
-.chatbot-messages::-webkit-scrollbar-track { background: var(--chat-scroll-track); }
-.chatbot-messages::-webkit-scrollbar-thumb {
-  background: var(--chat-scroll-thumb);
-  border-radius: 2px;
 }
 
 /* ── Empty state ─────────────────────────────────────────────── */
@@ -1604,9 +1560,6 @@ input[type="password"]::-ms-clear {
 }
 .chatbot-textarea::placeholder { color: var(--chat-placeholder); }
 .chatbot-textarea:focus { border-color: var(--chat-input-focus); }
-.chatbot-textarea::-webkit-scrollbar { width: 3px; }
-.chatbot-textarea::-webkit-scrollbar-thumb { background: var(--chat-scroll-thumb); border-radius: 2px; }
-
 .chatbot-send-btn {
   width: 2.25rem;
   height: 2.25rem;
@@ -1759,9 +1712,7 @@ input[type="password"]::-ms-clear {
   padding: 0.6rem 0.9rem 0.5rem;
   overflow-x: auto;
   flex-shrink: 0;
-  scrollbar-width: none;
 }
-.faq-tabs::-webkit-scrollbar { display: none; }
 .faq-tab {
   display: flex;
   align-items: center;
@@ -1800,12 +1751,6 @@ input[type="password"]::-ms-clear {
   scrollbar-width: thin;
   scrollbar-color: var(--chat-scroll-thumb) transparent;
 }
-.faq-list::-webkit-scrollbar { width: 3px; }
-.faq-list::-webkit-scrollbar-thumb {
-  background: var(--chat-scroll-thumb);
-  border-radius: 2px;
-}
-
 /* ── Individual question item ───────────────────────────────── */
 .faq-item {
   display: flex;

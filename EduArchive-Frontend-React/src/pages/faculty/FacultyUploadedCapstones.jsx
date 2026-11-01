@@ -1,3 +1,4 @@
+import { cardInteraction } from '../../components/cardInteraction';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -193,16 +194,16 @@ export default function FacultyUploadedCapstones() {
     // ── Card View ─────────────────────────────────────────────────────────────────
     const CardView = () => (
         <>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4">
                 {capstones.map((cap) => (
-                    <div key={cap.id} onClick={() => openCapstoneModal(cap)}
+                    <div key={cap.id} {...cardInteraction(() => openCapstoneModal(cap))}
                         className="group bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 flex flex-col overflow-hidden cursor-pointer">
-                        <div className="h-1.5 bg-gradient-to-r from-[#1B5E20] to-green-400 w-full" />
-                        <div className="h-36 bg-gradient-to-br from-green-50 to-gray-50 flex items-center justify-center">
-                            <HiOutlineDocumentText className="w-14 h-14 text-gray-300 group-hover:text-green-400 transition-colors" />
+                        <div className="record-accent" aria-hidden="true" />
+                        <div className="record-cover flex items-center justify-center">
+                            <HiOutlineDocumentText className="w-8 h-8 text-gray-400 group-hover:text-green-400 transition-colors" />
                         </div>
                         <div className="p-4 flex flex-col flex-1 gap-2">
-                            <h3 className="text-sm font-semibold text-gray-800 line-clamp-2 leading-tight group-hover:text-[#1B5E20] transition-colors">{cap.title}</h3>
+                            <h3 className="text-sm font-semibold text-gray-800 line-clamp-3 leading-relaxed group-hover:text-[#1B5E20] transition-colors">{cap.title}</h3>
                             <p className="text-xs text-gray-500">{cap.author}</p>
                             <div className="flex flex-wrap gap-1.5 mt-auto">
                                 {cap.program && (<span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium bg-green-50 text-green-700 rounded-full border border-green-100"><HiOutlineAcademicCap className="w-3 h-3" />{cap.program}</span>)}
@@ -233,7 +234,7 @@ export default function FacultyUploadedCapstones() {
     const TableView = () => (
         <>
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-                <div className="overflow-x-auto">
+                <div className="table-scroll overflow-x-auto" role="region" aria-label="Scrollable data table" tabIndex={0}>
                     <table className="w-full">
                         <thead>
                             <tr className="border-b border-gray-200 bg-gray-50">
@@ -257,7 +258,7 @@ export default function FacultyUploadedCapstones() {
                                     </td>
                                     <td className="py-3 px-4 text-sm text-gray-600">{cap.year || '—'}</td>
                                     <td className="py-3 px-4 text-center">
-                                        <button onClick={(e) => { e.stopPropagation(); openCapstoneModal(cap); }}
+                                        <button aria-label="View" onClick={(e) => { e.stopPropagation(); openCapstoneModal(cap); }}
                                             className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="View">
                                             <HiOutlineEye className="w-4 h-4" />
                                         </button>
@@ -315,7 +316,7 @@ export default function FacultyUploadedCapstones() {
                         placeholder="Search by title, author, keyword…"
                         className="flex-1 min-w-0"
                     />
-                    <button onClick={() => setShowFilters(!showFilters)}
+                    <button aria-label="Filters" aria-expanded={showFilters} onClick={() => setShowFilters(!showFilters)}
                         className={`relative flex-shrink-0 inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg border transition-colors ${showFilters ? 'bg-green-50 text-green-700 border-green-200' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}`}>
                         <HiOutlineFilter className="w-4 h-4" />
                         <span className="hidden xs:inline">Filters</span>
@@ -330,8 +331,8 @@ export default function FacultyUploadedCapstones() {
                     <div className="flex flex-wrap gap-4 p-4 mt-3 bg-gray-50 rounded-lg border border-gray-200">
                         {/* Year */}
                         <div>
-                            <label className="text-xs text-gray-600 font-semibold uppercase block mb-1">Year</label>
-                            <select value={filters.year} onChange={(e) => handleFilterChange('year', e.target.value)}
+                            <label htmlFor="field-facultyuploadedcapstones-19162" className="text-xs text-gray-600 font-semibold uppercase block mb-1">Year</label>
+                            <select id="field-facultyuploadedcapstones-19162" value={filters.year} onChange={(e) => handleFilterChange('year', e.target.value)}
                                 className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 bg-white focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none">
                                 <option value="">All Years</option>
                                 {years.map((y) => <option key={y} value={y}>{y}</option>)}
@@ -339,8 +340,8 @@ export default function FacultyUploadedCapstones() {
                         </div>
                         {/* Program */}
                         <div>
-                            <label className="text-xs text-gray-600 font-semibold uppercase block mb-1">Program</label>
-                            <select value={filters.program} onChange={(e) => handleFilterChange('program', e.target.value)}
+                            <label htmlFor="field-facultyuploadedcapstones-19888" className="text-xs text-gray-600 font-semibold uppercase block mb-1">Program</label>
+                            <select id="field-facultyuploadedcapstones-19888" value={filters.program} onChange={(e) => handleFilterChange('program', e.target.value)}
                                 className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 bg-white focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none">
                                 <option value="">All Programs</option>
                                 {programs.map((p) => <option key={p} value={p}>{p}</option>)}
@@ -383,8 +384,8 @@ export default function FacultyUploadedCapstones() {
                         </div>
                         {/* Category — mobile dropdown (desktop uses sidebar) */}
                         <div className="lg:hidden">
-                            <label className="text-xs text-gray-600 font-semibold uppercase block mb-1">Category</label>
-                            <select value={filters.category} onChange={(e) => { handleFilterChange('category', e.target.value); setSelectedCategory(e.target.value); }}
+                            <label htmlFor="field-facultyuploadedcapstones-24120" className="text-xs text-gray-600 font-semibold uppercase block mb-1">Category</label>
+                            <select id="field-facultyuploadedcapstones-24120" value={filters.category} onChange={(e) => { handleFilterChange('category', e.target.value); setSelectedCategory(e.target.value); }}
                                 className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 bg-white focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none">
                                 <option value="">All Categories</option>
                                 {categories.map((cat) => <option key={cat.name} value={cat.name}>{cat.name}{cat.count ? ` (${cat.count})` : ''}</option>)}
@@ -465,7 +466,7 @@ export default function FacultyUploadedCapstones() {
                             <h2 className="text-base font-semibold text-gray-900 flex items-center gap-2">
                                 <HiOutlineBookmark className="w-4 h-4 text-amber-500" />Saved Capstones
                             </h2>
-                            <button onClick={() => setSavedOpen(false)}
+                            <button aria-label="Close" onClick={() => setSavedOpen(false)}
                                 className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
                                 <HiOutlineX className="w-5 h-5" />
                             </button>
@@ -481,7 +482,7 @@ export default function FacultyUploadedCapstones() {
                             ) : (
                                 savedCapstones.map((cap) => (
                                     <div key={cap.id} className="bg-white rounded-lg border border-gray-100 p-3 hover:border-amber-200 hover:shadow-sm transition-all">
-                                        <h4 className="text-sm font-semibold text-gray-800 line-clamp-2 leading-tight">{cap.title}</h4>
+                                        <h4 className="text-sm font-semibold text-gray-800 line-clamp-3 leading-relaxed">{cap.title}</h4>
                                         <p className="text-xs text-gray-500 mt-1">{cap.author}</p>
                                         <div className="flex items-center gap-2 mt-1.5">
                                             <span className="text-xs text-gray-400">{cap.year || '—'}</span>

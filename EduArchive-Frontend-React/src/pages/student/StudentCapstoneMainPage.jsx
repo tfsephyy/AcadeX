@@ -11,7 +11,8 @@ import CitationGenerator from '../../components/CitationGenerator';
 import CapstoneAnalyticsPanel from '../../components/CapstoneAnalyticsPanel';
 import AuthorDetailsModal from '../../components/AuthorDetailsModal';
 import Loading from '../../components/Loading';
-import { Document, Page, pdfjs } from 'react-pdf';
+import { Document, pdfjs } from 'react-pdf';
+import ViewportPdfPage from '../../components/ViewportPdfPage';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
 import api from '../../api/axios';
@@ -63,8 +64,9 @@ export default function StudentCapstoneMainPage() {
             }
         };
         updateWidth();
-        window.addEventListener('resize', updateWidth);
-        return () => window.removeEventListener('resize', updateWidth);
+        const observer = new ResizeObserver(updateWidth);
+        if (pdfContainerRef.current) observer.observe(pdfContainerRef.current);
+        return () => observer.disconnect();
     }, [loading]);
 
     // Fullscreen PDF width
@@ -76,8 +78,9 @@ export default function StudentCapstoneMainPage() {
             }
         };
         updateFsWidth();
-        window.addEventListener('resize', updateFsWidth);
-        return () => window.removeEventListener('resize', updateFsWidth);
+        const observer = new ResizeObserver(updateFsWidth);
+        if (fsContainerRef.current) observer.observe(fsContainerRef.current);
+        return () => observer.disconnect();
     }, [fullscreen]);
 
     // Lock body scroll when fullscreen open
@@ -235,7 +238,7 @@ export default function StudentCapstoneMainPage() {
                     <div className="p-5 flex flex-col gap-4">
 
                         {/* Title — clickable to restore capstone PDF when IMRAD is active */}
-                        <div className="flex items-start gap-2 flex-wrap">
+                        <div className="record-title-row flex items-start gap-2 flex-wrap">
                             <h1
                                 className={`text-xl font-bold leading-snug flex-1 transition-colors ${activePdf === 'imrad' ? 'cursor-pointer text-[#1B5E20] underline decoration-dotted underline-offset-2 hover:text-green-800' : 'text-gray-900'}`}
                                 onClick={activePdf === 'imrad' ? switchToCapstone : undefined}
@@ -419,7 +422,7 @@ export default function StudentCapstoneMainPage() {
                                 error={<div className="text-center py-20 text-gray-500">Failed to load PDF.</div>}
                             >
                                 {Array.from(new Array(numPages), (_, i) => (
-                                    <Page
+                                    <ViewportPdfPage
                                         key={`page_${i + 1}`}
                                         pageNumber={i + 1}
                                         width={pdfWidth}
@@ -475,7 +478,7 @@ export default function StudentCapstoneMainPage() {
                                 error={<div className="text-center py-20 text-gray-400">Failed to load PDF.</div>}
                             >
                                 {Array.from(new Array(fsNumPages), (_, i) => (
-                                    <Page
+                                    <ViewportPdfPage
                                         key={`fs_page_${i + 1}`}
                                         pageNumber={i + 1}
                                         width={fsWidth}
@@ -517,7 +520,7 @@ function ReferencedCard({ item, onOpen }) {
                 </p>
             </div>
             <button
-                onClick={onOpen}
+                aria-label="Open capstone" onClick={onOpen}
                 className="shrink-0 text-gray-400 group-hover:text-green-600 transition-colors"
                 title="Open capstone"
             >

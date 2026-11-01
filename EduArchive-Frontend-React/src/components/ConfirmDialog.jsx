@@ -1,6 +1,12 @@
 import { HiExclamation } from 'react-icons/hi';
+import { useId } from 'react';
+import { createPortal } from 'react-dom';
+import { useDialogFocus } from './useDialogFocus';
 
 export default function ConfirmDialog({ open, title, message, confirmText = 'Confirm', cancelText = 'Cancel', onConfirm, onCancel, variant = 'danger' }) {
+    const titleId = useId();
+    const messageId = useId();
+    const dialogRef = useDialogFocus(open, onCancel);
     if (!open) return null;
 
     const variantStyles = {
@@ -17,34 +23,36 @@ export default function ConfirmDialog({ open, title, message, confirmText = 'Con
         info: 'bg-blue-100 text-blue-600',
     };
 
-    return (
+    return createPortal(
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-            <div className="fixed inset-0 bg-black/50 backdrop-blur-sm" onClick={onCancel} />
-            <div className="relative bg-white rounded-xl shadow-2xl max-w-md w-full p-6 animate-scale-in max-h-[calc(100vh-40px)] flex flex-col">
+            <div className="fixed inset-0 ui-dialog-backdrop" onClick={onCancel} />
+            <div ref={dialogRef} role="alertdialog" aria-modal="true" aria-labelledby={titleId} aria-describedby={messageId} tabIndex={-1} className="ui-dialog relative max-w-md w-full p-6 overflow-y-auto flex flex-col">
                 <div className="flex items-start gap-4">
                     <div className={`p-2 rounded-full flex-shrink-0 ${iconColorMap[variant]}`}>
                         <HiExclamation className="w-6 h-6" />
                     </div>
                     <div className="flex-1">
-                        <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
-                        <p className="mt-1 text-sm text-gray-500">{message}</p>
+                        <h3 id={titleId} className="text-lg font-semibold text-gray-900">{title}</h3>
+                        <p id={messageId} className="mt-2 text-sm text-gray-500 leading-relaxed">{message}</p>
                     </div>
                 </div>
                 <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-gray-100">
                     <button
                         onClick={onCancel}
+                        data-dialog-autofocus type="button"
                         className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-300 transition-colors"
                     >
                         {cancelText}
                     </button>
                     <button
                         onClick={onConfirm}
+                        type="button"
                         className={`px-4 py-2 text-sm font-medium text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors ${variantStyles[variant]}`}
                     >
                         {confirmText}
                     </button>
                 </div>
             </div>
-        </div>
+        </div>, document.body
     );
 }

@@ -10,7 +10,8 @@ import { useNotification } from '../../components/useNotification';
 import AuthorDetailsModal from '../../components/AuthorDetailsModal';
 import CitationGenerator from '../../components/CitationGenerator';
 import Loading from '../../components/Loading';
-import { Document, Page, pdfjs } from 'react-pdf';
+import { Document, pdfjs } from 'react-pdf';
+import ViewportPdfPage from '../../components/ViewportPdfPage';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
 import api from '../../api/axios';
@@ -48,16 +49,18 @@ export default function VisitorCapstoneMainPage() {
     useEffect(() => {
         const update = () => { if (pdfContainerRef.current) setPdfWidth(pdfContainerRef.current.clientWidth - 2); };
         update();
-        window.addEventListener('resize', update);
-        return () => window.removeEventListener('resize', update);
+        const observer = new ResizeObserver(update);
+        if (pdfContainerRef.current) observer.observe(pdfContainerRef.current);
+        return () => observer.disconnect();
     }, [loading]);
 
     useEffect(() => {
         if (!fullscreen) return;
         const update = () => { if (fsContainerRef.current) setFsWidth(Math.min(fsContainerRef.current.clientWidth - 48, 1100)); };
         update();
-        window.addEventListener('resize', update);
-        return () => window.removeEventListener('resize', update);
+        const observer = new ResizeObserver(update);
+        if (fsContainerRef.current) observer.observe(fsContainerRef.current);
+        return () => observer.disconnect();
     }, [fullscreen]);
 
     useEffect(() => {
@@ -240,7 +243,7 @@ export default function VisitorCapstoneMainPage() {
                     <div className="p-5 flex flex-col gap-4">
 
                         {/* Title */}
-                        <div className="flex items-start gap-2 flex-wrap">
+                        <div className="record-title-row flex items-start gap-2 flex-wrap">
                             <h1
                                 className={`text-xl font-bold leading-snug flex-1 transition-colors ${canSeePdf && activePdf === 'imrad' ? 'cursor-pointer text-[#1B5E20] underline decoration-dotted underline-offset-2 hover:text-green-800' : ''}`}
                                 style={!(canSeePdf && activePdf === 'imrad') ? { color: 'var(--color-text)' } : {}}
@@ -414,7 +417,7 @@ export default function VisitorCapstoneMainPage() {
                                 error={<div className="text-center py-20 text-gray-500">Failed to load PDF.</div>}
                             >
                                 {Array.from(new Array(numPages), (_, i) => (
-                                    <Page key={`page_${i + 1}`} pageNumber={i + 1} width={pdfWidth} className="mb-1"
+                                    <ViewportPdfPage key={`page_${i + 1}`} pageNumber={i + 1} width={pdfWidth} className="mb-1"
                                         renderTextLayer={true} renderAnnotationLayer={true} />
                                 ))}
                             </Document>
@@ -459,7 +462,7 @@ export default function VisitorCapstoneMainPage() {
                                 error={<div className="text-center py-20 text-gray-400">Failed to load PDF.</div>}
                             >
                                 {Array.from(new Array(fsNumPages), (_, i) => (
-                                    <Page key={`fs_page_${i + 1}`} pageNumber={i + 1} width={fsWidth} className="mb-3 shadow-2xl"
+                                    <ViewportPdfPage key={`fs_page_${i + 1}`} pageNumber={i + 1} width={fsWidth} className="mb-3 shadow-2xl"
                                         renderTextLayer={true} renderAnnotationLayer={true} />
                                 ))}
                             </Document>

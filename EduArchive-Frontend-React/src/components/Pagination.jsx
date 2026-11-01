@@ -51,7 +51,7 @@ export default function Pagination({ paginationData, page, onPageChange, perPage
     const pageNumbers = getPageNumbers();
     
     return (
-        <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 border-t border-gray-200 bg-gray-50">
+        <nav aria-label="Pagination" className="pagination-controls flex flex-wrap items-center justify-between gap-3 px-4 py-3 border-t border-gray-200 bg-gray-50">
             {/* Items info */}
             <p className="text-xs text-gray-700">
                 Showing <span className="font-medium text-gray-900">{from || 1}</span> to{' '}
@@ -100,6 +100,6 @@ export default function Pagination({ paginationData, page, onPageChange, perPage
                     <HiOutlineChevronRight className="w-4 h-4" />
                 </button>
             </div>
-        </div>
+        </nav>
     );
 }

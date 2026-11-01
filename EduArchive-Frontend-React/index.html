@@ -2,8 +2,12 @@
 <html lang="en" data-theme="dark">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <link id="app-icon" rel="icon" type="image/svg+xml" href="/src/assets/brand/acadex-app-icon-dark.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#121614" />
+    <script>
+      try { document.documentElement.dataset.theme = localStorage.getItem('acadex_theme') === 'light' ? 'light' : 'dark' } catch { /* Use the default theme when storage is unavailable. */ }
+    </script>
     <meta name="description" content="AcadeX is Mindoro State University's centralized digital repository for securely storing, managing, and discovering approved capstone projects with automated PDF metadata extraction." />
     <meta name="keywords" content="capstone projects, academic repository, Mindoro State University, MinSU, PDF extraction, research repository, AcadeX" />
     <meta name="author" content="Mindoro State University" />

@@ -1,0 +1,18 @@
+{
+  "profile": "product-admin",
+  "sourceRoots": ["EduArchive-Frontend-React/src"],
+  "locale": "en-PH",
+  "canonicalMap": "UX-CONTRACT.md",
+  "requiredCapabilities": ["Select/Listbox", "Date", "Form", "Scrollbar", "Toast", "CRUD"],
+  "ownership": { "Select/Listbox": "native", "Date": "native" },
+  "requiredCommands": ["unit", "lint", "build"],
+  "commands": {
+    "unit": "npm --prefix EduArchive-Frontend-React test",
+    "lint": "npm --prefix EduArchive-Frontend-React run lint",
+    "build": "npm --prefix EduArchive-Frontend-React run build"
+  },
+  "evidence": {
+    "crudFullFlow": "docs/ui/2026-11-01-role-mobile-verification.md",
+    "failurePaths": "EduArchive-Frontend-React/tests/pdfUploadValidation.test.js"
+  }
+}

@@ -1,5 +1,6 @@
+import { useDialogFocus } from '../useDialogFocus';
 import { useState, useEffect, useRef } from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/useAuth';
 import { useTheme } from '../../context/useTheme';
 import {
@@ -8,7 +9,6 @@ import {
     HiOutlineBookOpen,
     HiOutlineLibrary,
     HiOutlineMenu,
-    HiOutlineX,
     HiOutlineLogout,
     HiOutlineUser,
     HiChevronDown,
@@ -19,6 +19,7 @@ import {
 import ConfirmDialog from '../ConfirmDialog';
 import { getAdminNotifications, getUnreadNotificationCount, markNotificationRead, markAllNotificationsRead } from '../../api/admin';
 import Chatbot from '../Chatbot';
+import WorkspaceSidebar from '../WorkspaceSidebar';
 
 const navItems = [
     { to: '/admin/dashboard',      label: 'Dashboard',          icon: HiOutlineViewGrid },
@@ -44,7 +45,7 @@ export default function AdminLayout({ children }) {
     const navigate = useNavigate();
 
     const profileAreaRef  = useRef(null);
-    const notifDropdownRef = useRef(null);
+    const notifDropdownRef = useDialogFocus(notificationOpen, () => setNotificationOpen(false));
     const bellRef          = useRef(null);
 
     useEffect(() => { fetchNotifications(); }, []);
@@ -104,77 +105,18 @@ export default function AdminLayout({ children }) {
     };
 
     return (
-        <div className="flex h-screen overflow-hidden panel-content-bg">
-            {/* Mobile overlay */}
-            {sidebarOpen && (
-                <div
-                    className="fixed inset-0 z-40 lg:hidden"
-                    style={{ background: 'var(--panel-mobile-overlay, rgba(0,0,0,0.6))' }}
-                    onClick={() => setSidebarOpen(false)}
-                />
-            )}
-
-            {/* ── Sidebar ──────────────────────────────────────────── */}
-            <aside className={`
-                fixed lg:static inset-y-0 left-0 z-50
-                flex flex-col flex-shrink-0
-                panel-sidebar overflow-hidden
-                transition-all duration-300 ease-in-out
-                ${sidebarCollapsed ? 'lg:w-0' : 'lg:w-64'}
-                ${sidebarOpen ? 'w-64 translate-x-0' : 'w-64 -translate-x-full lg:translate-x-0'}
-            `}>
-                {/* Logo */}
-                <div className="flex items-center gap-3 px-6 py-5 panel-logo-border flex-shrink-0">
-                    <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
-                         style={{ background: 'var(--panel-logo-icon-bg)' }}>
-                        <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" viewBox="0 0 24 24"
-                             fill="var(--color-primary)">
-                            <path d="M4 6H2v14a2 2 0 002 2h14v-2H4V6zm16-4H8a2 2 0 00-2 2v12a2 2 0 002 2h12a2 2 0 002-2V4a2 2 0 00-2-2zm-1 9H9V9h10v2zm-4 4H9v-2h6v2zm4-8H9V5h10v2z" />
-                        </svg>
-                    </div>
-                    <div>
-                        <h1 className="font-bold text-lg leading-tight"
-                            style={{ color: 'var(--panel-profile-text)' }}>
-                            Aca<span style={{ color: 'var(--color-primary)' }}>dex</span>
-                        </h1>
-                        <span className="text-[10px] uppercase tracking-widest"
-                              style={{ color: 'var(--panel-profile-muted)' }}>Admin</span>
-                    </div>
-                    <button
-                        className="lg:hidden ml-auto p-1 rounded-lg panel-profile-btn transition-colors"
-                        onClick={() => setSidebarOpen(false)}
-                    >
-                        <HiOutlineX className="w-5 h-5" />
-                    </button>
-                </div>
-
-                {/* Navigation */}
-                <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto panel-scroll">
-                    {navItems.map((item) => (
-                        <NavLink
-                            key={item.to}
-                            to={item.to}
-                            onClick={() => setSidebarOpen(false)}
-                            className={({ isActive }) =>
-                                `flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${
-                                    isActive ? 'panel-nav-active' : 'panel-nav-item'
-                                }`
-                            }
-                        >
-                            <item.icon className="w-5 h-5 shrink-0" />
-                            {item.label}
-                        </NavLink>
-                    ))}
-                </nav>
-
+        <div className="app-shell flex overflow-hidden panel-content-bg">
+            <a className="skip-link" href="#workspace-content">Skip to content</a>
+            <WorkspaceSidebar role="Admin" items={navItems} open={sidebarOpen} collapsed={sidebarCollapsed}
+                onOpenChange={setSidebarOpen} onCollapsedChange={setSidebarCollapsed}>
                 {/* Profile + Bell row */}
-                <div ref={profileAreaRef} className="relative px-3 py-3 panel-profile-border">
+                <div ref={profileAreaRef} onKeyDown={e => { if (e.key === 'Escape') setProfileOpen(false); }} className="sidebar-account relative px-3 py-3 panel-profile-border">
                     {/* Row */}
-                    <div className="flex items-center gap-1 px-2 py-2 rounded-xl transition-colors panel-profile-btn">
+                    <div className="sidebar-account-row flex items-center gap-1 px-2 py-2 rounded-xl transition-colors panel-profile-btn">
                         {/* Avatar */}
                         <button
-                            onClick={() => { setProfileOpen(!profileOpen); setNotificationOpen(false); }}
-                            className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold shrink-0 text-white"
+                            aria-label="Account menu" aria-expanded={profileOpen} onClick={() => { setProfileOpen(!profileOpen); setNotificationOpen(false); }}
+                            title="Account menu" className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold shrink-0 text-white"
                             style={{ background: 'var(--color-primary)' }}
                         >
                             {user?.name?.charAt(0)?.toUpperCase() || 'A'}
@@ -182,8 +124,8 @@ export default function AdminLayout({ children }) {
 
                         {/* Name & email */}
                         <button
-                            onClick={() => { setProfileOpen(!profileOpen); setNotificationOpen(false); }}
-                            className="flex-1 text-left px-2 min-w-0"
+                            aria-label="Account menu" aria-expanded={profileOpen} onClick={() => { setProfileOpen(!profileOpen); setNotificationOpen(false); }}
+                            className="sidebar-account-copy flex-1 text-left px-2 min-w-0"
                         >
                             <p className="text-sm font-semibold truncate"
                                style={{ color: 'var(--panel-profile-text)' }}>
@@ -197,7 +139,7 @@ export default function AdminLayout({ children }) {
 
                         {/* Bell */}
                         <button
-                            ref={bellRef}
+                            title="Notifications" aria-label="Notifications" aria-expanded={notificationOpen} ref={bellRef}
                             onClick={() => { setNotificationOpen(!notificationOpen); setProfileOpen(false); }}
                             className="relative p-1.5 rounded-md transition-colors panel-nav-item"
                         >
@@ -211,8 +153,8 @@ export default function AdminLayout({ children }) {
 
                         {/* Chevron */}
                         <button
-                            onClick={() => { setProfileOpen(!profileOpen); setNotificationOpen(false); }}
-                            className="shrink-0 transition-colors"
+                            aria-label="Account menu" aria-expanded={profileOpen} onClick={() => { setProfileOpen(!profileOpen); setNotificationOpen(false); }}
+                            className="sidebar-account-chevron shrink-0 transition-colors"
                             style={{ color: 'var(--panel-profile-muted)' }}
                         >
                             <HiChevronDown className={`w-4 h-4 transition-transform ${profileOpen ? 'rotate-180' : ''}`} />
@@ -239,23 +181,7 @@ export default function AdminLayout({ children }) {
                         </div>
                     )}
                 </div>
-            </aside>
-
-            {/* ── Desktop sidebar toggle tab ───────────────────────── */}
-            <button
-                className="hidden lg:flex fixed top-4 z-[60] items-center justify-center w-5 h-10 rounded-r-lg shadow-lg transition-all duration-300 panel-arrow-tab"
-                style={{ left: sidebarCollapsed ? 0 : '16rem' }}
-                onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-                title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-            >
-                <svg xmlns="http://www.w3.org/2000/svg" className="w-3.5 h-3.5" fill="none"
-                     viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                    {sidebarCollapsed
-                        ? <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                        : <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-                    }
-                </svg>
-            </button>
+            </WorkspaceSidebar>
 
             {/* ── Main content ─────────────────────────────────────── */}
             <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
@@ -263,7 +189,7 @@ export default function AdminLayout({ children }) {
                 <header className="flex items-center gap-3 px-4 py-2.5 shrink-0 panel-header">
                     {/* Mobile hamburger */}
                     <button
-                        className="lg:hidden p-2 rounded-lg transition-colors panel-topbar-btn"
+                        aria-label="Open navigation" aria-controls="workspace-navigation" aria-expanded={sidebarOpen} className="lg:hidden p-2 rounded-lg transition-colors panel-topbar-btn"
                         onClick={() => setSidebarOpen(true)}
                     >
                         <HiOutlineMenu className="w-5 h-5" />
@@ -273,7 +199,7 @@ export default function AdminLayout({ children }) {
 
                     {/* Theme toggle */}
                     <button
-                        onClick={toggleTheme}
+                        aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'} onClick={toggleTheme}
                         className="p-2 rounded-lg transition-colors panel-topbar-btn"
                         title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
                     >
@@ -302,7 +228,7 @@ export default function AdminLayout({ children }) {
                 </header>
 
                 {/* Page content */}
-                <main className="flex-1 overflow-y-auto p-4 lg:p-8 admin-scroll panel-content-bg">
+                <main id="workspace-content" tabIndex={-1} className="app-main flex-1 overflow-y-auto p-4 lg:p-8 admin-scroll panel-content-bg">
                     {children}
                 </main>
             </div>
@@ -310,8 +236,8 @@ export default function AdminLayout({ children }) {
             {/* ── Notification dropdown (outside sidebar to avoid clip) */}
             {notificationOpen && (
                 <div
-                    ref={notifDropdownRef}
-                    className={`fixed bottom-16 w-80 rounded-xl max-h-96 overflow-y-auto z-[9999] transition-all duration-300 panel-scroll panel-dropdown ${
+                    ref={notifDropdownRef} role="dialog" aria-modal="true" aria-label="Notifications" tabIndex={-1}
+                    className={`admin-notifications fixed bottom-16 w-80 rounded-xl max-h-96 overflow-y-auto z-[9999] transition-all duration-300 panel-scroll panel-dropdown ${
                         sidebarCollapsed ? 'left-4' : 'left-[17rem]'
                     }`}
                     style={{ maxWidth: 'calc(100vw - 2rem)' }}

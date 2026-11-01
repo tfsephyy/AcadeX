@@ -104,8 +104,8 @@ export default function StudentBrowseCapstones() {
                     className="flex-1 min-w-[250px]"
                 />
                 <div>
-                    <label className="text-xs text-gray-600 font-semibold uppercase block mb-1">Category</label>
-                    <select
+                    <label htmlFor="field-studentbrowsecapstones-4495" className="text-xs text-gray-600 font-semibold uppercase block mb-1">Category</label>
+                    <select id="field-studentbrowsecapstones-4495"
                         value={filters.category}
                         onChange={(e) => handleFilterChange('category', e.target.value)}
                         className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 bg-white focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none"
@@ -114,7 +114,7 @@ export default function StudentBrowseCapstones() {
                         {categories.map(c => { const val = typeof c === 'string' ? c : c.name; return <option key={val} value={val}>{val}</option>; })}
                     </select>
                 </div>
-                <button
+                <button aria-label="Filters" aria-expanded={showFilters}
                     onClick={() => setShowFilters(!showFilters)}
                     className={`inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg border transition-colors
                         ${showFilters ? 'bg-green-50 text-green-700 border-green-200' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}`}

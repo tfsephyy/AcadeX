@@ -220,7 +220,7 @@ export default function CapstoneAdditionalInfoPage() {
     const currentCopyright = COPYRIGHT_OPTIONS.find(o => o.value === copyrightStatus);
 
     return (
-        <div className="min-h-screen flex flex-col" style={{ background: 'var(--color-bg)' }}>
+        <div className="submission-flow min-h-screen flex flex-col" style={{ background: 'var(--color-bg)' }}>
             {saving && <LoadingOverlay text="Saving capstone..." />}
 
             {/* ── Top Bar ─────────────────────────────────── */}
@@ -230,7 +230,7 @@ export default function CapstoneAdditionalInfoPage() {
                         style={{ color: 'var(--color-text-secondary)' }}>
                         <HiArrowLeft className="w-4 h-4" /> Back
                     </button>
-                    <div className="flex items-center gap-2">
+                    <div className="flow-steps flex items-center gap-2" aria-label="Submission steps">
                         {[
                             { label: 'Upload PDF', done: true },
                             { label: 'Review Data', done: true },
@@ -238,7 +238,7 @@ export default function CapstoneAdditionalInfoPage() {
                         ].map((s, i) => (
                             <div key={i} className="flex items-center gap-2">
                                 <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold`}
-                                    style={s.active ? { background: '#1B5E20', color: '#fff' } : { background: 'rgba(27,94,32,0.15)', color: '#1B5E20' }}>
+                                    style={s.active ? { background: '#1B5E20', color: '#fff' } : { background: 'rgba(27,94,32,0.15)', color: 'var(--color-link)' }}>
                                     <span className="w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-bold"
                                         style={s.active ? { background: '#fff', color: '#1B5E20' } : { background: '#1B5E20', color: '#fff' }}>
                                         {s.done ? '✓' : i + 1}
@@ -258,7 +258,7 @@ export default function CapstoneAdditionalInfoPage() {
                 <div className="max-w-6xl mx-auto px-4 lg:px-8 py-6 space-y-5">
 
                     {/* Capstone summary banner */}
-                    <div className="flex items-start gap-3 p-5 rounded-2xl text-white" style={{ background: 'linear-gradient(135deg, #1B5E20, #2E7D32)' }}>
+                    <div className="flex items-start gap-3 p-5 rounded-2xl text-white" style={{ background: 'var(--document-banner)' }}>
                         <HiOutlineDocumentText className="w-8 h-8 flex-shrink-0 mt-0.5" style={{ color: 'rgba(255,255,255,0.6)' }} />
                         <div>
                             <p className="text-xs font-medium uppercase tracking-wider mb-0.5" style={{ color: 'rgba(255,255,255,0.6)' }}>Capstone being submitted</p>
@@ -325,7 +325,7 @@ export default function CapstoneAdditionalInfoPage() {
                                     <p className="text-sm font-semibold truncate" style={{ color: 'var(--color-text)' }}>{imradFile?.name || imradInfo.file_original_name}</p>
                                     <p className="text-xs mt-0.5" style={{ color: 'var(--color-text-muted)' }}>IMRAD file uploaded successfully</p>
                                 </div>
-                                <button onClick={() => { setImradFile(null); setImradInfo(null); if (imradFileRef.current) imradFileRef.current.value = ''; }}
+                                <button aria-label="Close" onClick={() => { setImradFile(null); setImradInfo(null); if (imradFileRef.current) imradFileRef.current.value = ''; }}
                                     style={{ color: 'var(--color-text-muted)' }}
                                     onMouseEnter={e => e.currentTarget.style.color = '#ef4444'}
                                     onMouseLeave={e => e.currentTarget.style.color = 'var(--color-text-muted)'}>
@@ -370,7 +370,7 @@ export default function CapstoneAdditionalInfoPage() {
                                                 <p className="text-xs font-semibold truncate" style={{ color: 'var(--color-text)' }}>{r.name}</p>
                                                 <p className="text-xs truncate" style={{ color: 'var(--color-text-muted)' }}>{r.local_name || r.file_original_name}</p>
                                             </div>
-                                            <button onClick={() => setResources(prev => prev.filter(x => x.id !== r.id))}
+                                            <button aria-label="Delete" onClick={() => setResources(prev => prev.filter(x => x.id !== r.id))}
                                                 className="p-1 rounded transition-colors flex-shrink-0" style={{ color: 'var(--color-text-muted)' }}
                                                 onMouseEnter={e => e.currentTarget.style.color = '#ef4444'}
                                                 onMouseLeave={e => e.currentTarget.style.color = 'var(--color-text-muted)'}>
@@ -392,7 +392,7 @@ export default function CapstoneAdditionalInfoPage() {
                                         {pendingResourceFile ? pendingResourceFile.name : 'Click to select file…'}
                                     </span>
                                     {pendingResourceFile && (
-                                        <button onClick={(e) => { e.stopPropagation(); setPendingResourceFile(null); if (resourceFileRef.current) resourceFileRef.current.value = ''; }}
+                                        <button aria-label="Close" onClick={(e) => { e.stopPropagation(); setPendingResourceFile(null); if (resourceFileRef.current) resourceFileRef.current.value = ''; }}
                                             style={{ color: 'var(--color-text-muted)' }}>
                                             <HiOutlineX className="w-3.5 h-3.5" />
                                         </button>
@@ -420,7 +420,7 @@ export default function CapstoneAdditionalInfoPage() {
                                                 <p className="text-xs font-semibold truncate" style={{ color: 'var(--color-text)' }}>{r.title}</p>
                                                 <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>{r.author}{r.year && <span className="mx-1">·</span>}{r.year}</p>
                                             </div>
-                                            <button onClick={() => setReferences(prev => prev.filter(x => x.id !== r.id))}
+                                            <button aria-label="Delete" onClick={() => setReferences(prev => prev.filter(x => x.id !== r.id))}
                                                 className="p-1 rounded flex-shrink-0" style={{ color: 'var(--color-text-muted)' }}
                                                 onMouseEnter={e => e.currentTarget.style.color = '#ef4444'}
                                                 onMouseLeave={e => e.currentTarget.style.color = 'var(--color-text-muted)'}>
@@ -479,7 +479,7 @@ export default function CapstoneAdditionalInfoPage() {
                                         <p className="text-sm font-semibold" style={{ color: 'var(--color-text)' }}>{adviser.name}</p>
                                         <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>Faculty Adviser</p>
                                     </div>
-                                    <button onClick={() => setAdviser(null)} style={{ color: 'var(--color-text-muted)' }}
+                                    <button aria-label="Close" onClick={() => setAdviser(null)} style={{ color: 'var(--color-text-muted)' }}
                                         onMouseEnter={e => e.currentTarget.style.color = '#ef4444'}
                                         onMouseLeave={e => e.currentTarget.style.color = 'var(--color-text-muted)'}>
                                         <HiOutlineX className="w-4 h-4" />
@@ -569,7 +569,7 @@ export default function CapstoneAdditionalInfoPage() {
             </div>
 
             {/* ── Fixed Bottom Bar ─────────────────────────── */}
-            <div className="fixed bottom-0 left-0 right-0 z-30 border-t"
+            <div className="flow-footer fixed bottom-0 left-0 right-0 z-30 border-t"
                 style={{ background: 'var(--color-surface-elevated)', borderColor: 'var(--color-border-strong)', backdropFilter: 'blur(16px)' }}>
                 <div className="max-w-6xl mx-auto px-4 lg:px-8 py-4 flex items-center justify-between gap-4">
                     <button onClick={() => navigate(-1)}
