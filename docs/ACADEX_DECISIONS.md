@@ -138,3 +138,14 @@ in with Google immediately; their first successful Google login binds that
 Google identity. Explicit profile linking remains available as a password
 confirmed option. Focused security tests pass locally; production must be
 deployed separately.
+
+## D-010 — Derived encrypted viewing previews (2026-11-05)
+
+Prepare an optional qpdf-linearized copy during background upload processing and
+with `acadex:prepare-pdf-previews` for existing capstones. Store it encrypted under
+a source-path/size/modification-time cache key, use it only for authorized viewing,
+and retain the uploaded original for download. Missing qpdf, insufficient disk,
+or preparation errors fall back to the original. Private plaintext temporaries
+are removed after processing. Deployment must install qpdf separately; this is
+not a Composer dependency. Preview validity and page counts were checked on the
+live document, but PDF.js first-page latency remains unresolved at publication.

@@ -1,6 +1,6 @@
 # AcadeX implementation progress
 
-Last updated: 2026-11-05. First feature release deployed; viewer and registration follow-up tested and being released. See the latest dated entries for current evidence.
+Last updated: 2026-11-05. Feature and registration follow-ups are deployed. Large-document first-page latency remains under investigation; do not treat the performance acceptance criterion as complete. See the latest dated entries for current evidence.
 Read first: [ACADEX_REQUIREMENTS.md](ACADEX_REQUIREMENTS.md) and
 [ACADEX_DECISIONS.md](ACADEX_DECISIONS.md).
 
@@ -296,3 +296,13 @@ The referenced 97 MB PDF was converted with a byte-identical encrypted backup. S
 Live browser inspection found two remaining viewer costs: Apache stripped the initial Content-Length, and all 176 page text/annotation components mounted at once. The trusted Laravel front controller now retains its calculated length through Apache; a portable vhost example is included. The follow-up mounts pages near the viewport, retains visited text/links and provides an explicit all-page text option for browser Find. Registration Step 2 verifies the Google token before displaying its email, hides manual verification for that choice, skips the password page, and uses the main action to submit after profile completion. Final registration verifies the token again; existing accounts are rejected without linking during signup.
 
 Follow-up local checks: 17 authentication tests / 93 assertions on the guarded disposable schema, 15 frontend tests, quiet lint and production build passed. Preparing a second immutable release; follow-up browser changes are not yet deployed at this checkpoint.
+
+## 2026-11-05 — Published source checkpoint
+
+The serving application is now `/srv/acadex-staging/releases/acadex-20261105-final`, source `ed4bb6d`. The queue unit points to that backend and uses the database driver. The Google Step 2 follow-up is deployed; Google Console was observed as External / In production. Actual new-account Google signup, notification email delivery, and every role/mobile acceptance flow are not certified by that setting alone.
+
+The viewer now starts with explicit authenticated 1 MiB requests and mounts nearby pages. Optional qpdf linearization creates a separate encrypted viewing preview; it retains the original for downloads. The deployed preview was checked for valid linearization and equal page count. Full plaintext hashes of the backed-up original and its V2 storage conversion matched; original account/capstone counts and APP_KEY were preserved. The preview adds a derived private file, rather than overwriting the source.
+
+**Remaining critical issue:** on the existing large scanned PDF, PDF.js still requests many trailing ranges before exposing the first page. Individual range responses and valid preview bytes do not establish acceptable end-to-end opening time. Do not mark R1 complete or promise that a Git pull resolves the reported delay. This source checkpoint is published so the client's maintainer has the latest implementation and its limitations.
+
+Fresh local checks before publication: 15 frontend tests passed; quiet lint and production build passed (829 modules). Guarded disposable-MySQL checks passed: `AuthenticationSecurityTest` 17 tests / 93 assertions; `DocumentAuthorizationTest` plus `PdfPreviewFallbackTest` 5 tests / 287 assertions. No test suite ran against production.

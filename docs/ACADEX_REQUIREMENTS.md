@@ -11,7 +11,7 @@ The client-facing deployment history remains in [../ACADEX_CLIENT_AI_HANDOFF.md]
 - Preserve existing roles, approvals, authorization boundaries, encrypted documents, and production data.
 - No destructive schema operations. Every schema change is a forward migration with a rollback that does not destroy records.
 - Existing numeric capstone URLs must keep working when slugs are introduced.
-- Production writes require an approved backup. This workstation has no verified production access.
+- Production writes require an approved backup. Authorized access and backup verification were established on November 5; read the latest progress entry for the actual deployed state.
 - Local verification and deployed verification are recorded separately and are never conflated.
 - Background processing must degrade safely when Redis/Ollama are unavailable.
 
@@ -54,10 +54,10 @@ large synthetic encrypted PDF.
 - Selected role/program/year/section and approval rules match manual registration
   (student/faculty accounts still require administrator approval; visitors follow the
   existing visitor rules).
-- Existing account with the same email is **not** silently linked or taken over.
-  Google sign-in is allowed only when the stored `google_id` matches; otherwise the
-  response instructs the user to sign in with their existing credentials or reset
-  the password.
+- Registration rejects an existing email or Google identity without creating or
+  linking an account. Sign-in follows D-009: a previously verified Acadex email
+  may link only to the same server-verified Google email; unverified local emails,
+  conflicting Google subjects, and account restrictions remain protected.
 - The signed Google ID token, audience, issuer, expiry, and verified email are
   validated server-side; no client-supplied email is trusted. The registration
   POST also uses the application's session-bound CSRF protection.

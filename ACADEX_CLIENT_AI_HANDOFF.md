@@ -2,6 +2,8 @@
 
 Prepared: **October 19, 2026, Asia/Manila**.
 
+**November 5, 2026 current source checkpoint:** the live application serves source `ed4bb6d` from `/srv/acadex-staging/releases/acadex-20261105-final`. Read the latest entry in [implementation progress](docs/ACADEX_PROGRESS.md) before operating it. Forward migrations, Google registration changes, a persistent database-queue worker, authenticated document ranges, and optional encrypted qpdf viewing previews are deployed. Google Console was observed as External / In production. Original records, document content and APP_KEY were preserved with private backups. **The large scanned PDF still requests excessive ranges before its first page opens; performance acceptance remains incomplete.** A Git pull contains the latest source, not the production environment, private storage, credentials, database, installed qpdf package, or a complete end-to-end acceptance certificate.
+
 **November 1, 2026 interface release:** [Current interface/upload-feedback release and preservation checks](docs/handoff/UI_RELEASE_2026-11-01.md) records the serving release `/srv/acadex-staging/releases/acadex-ui-20261101T115952Z`, the official landing/sidebar SVG identity, honest transfer/processing feedback, verified backup and preservation of all six production accounts and 27 existing private files. Backend behavior/key/storage remain unchanged. OCR intentionally continues to run from the metadata release directory documented below; do not restart or relocate that worker for this frontend update. This dated release supersedes the local-only UI checkpoint statuses.
 
 Audience: the client, the client's incoming developer, and the client's coding AI.
