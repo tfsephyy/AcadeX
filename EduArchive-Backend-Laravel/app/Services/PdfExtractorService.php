@@ -67,18 +67,64 @@ class PdfExtractorService
      */
     public function extract(UploadedFile $file): array
     {
+        return $this->extractWithSource($file)['metadata'];
+    }
+
+    /**
+     * Extract metadata from an already-decrypted plain PDF path.
+     * Used by the queued upload job.
+     */
+    public function extractFromPath(string $filePath): array
+    {
+        return $this->extractPathWithSource($filePath)['metadata'];
+    }
+
+    /**
+     * Extract metadata plus the cleaned source text used for grounding.
+     *
+     * @return array{metadata: array, source: string, scope: string}
+     */
+    public function extractWithSource(UploadedFile $file): array
+    {
         // Never hand a large original to PHP's whole-document parser. Extract
         // from a bounded front-matter copy using the existing metadata pipeline.
         if ($file->getSize() > self::maxAutomaticBytes()) {
-            if (self::maxAutomaticBytes() < 1) return self::emptyMetadata();
+            if (self::maxAutomaticBytes() < 1) {
+                return ['metadata' => self::emptyMetadata(), 'source' => '', 'scope' => 'unavailable'];
+            }
             $sample = app(PdfMetadataSampler::class)->create($file);
             try {
-                return $this->extract(new UploadedFile($sample, 'metadata-sample.pdf', 'application/pdf', null, true));
+                $result = $this->extractWithSource(new UploadedFile($sample, 'metadata-sample.pdf', 'application/pdf', null, true));
+                $result['scope'] = 'first_12_pages';
+                return $result;
             } finally {
                 @unlink($sample);
             }
         }
-        $filePath = $file->getRealPath();
+        return $this->extractPathWithSource($file->getRealPath());
+    }
+
+    /**
+     * @return array{metadata: array, source: string, scope: string}
+     */
+    public function extractPathWithSource(string $filePath): array
+    {
+        clearstatcache(true, $filePath);
+        $size = @filesize($filePath);
+        if ($size !== false && $size > self::maxAutomaticBytes()) {
+            if (self::maxAutomaticBytes() < 1) {
+                return ['metadata' => self::emptyMetadata(), 'source' => '', 'scope' => 'unavailable'];
+            }
+            $source = new UploadedFile($filePath, 'metadata-source.pdf', 'application/pdf', null, true);
+            $sample = app(PdfMetadataSampler::class)->create($source);
+            try {
+                $result = $this->extractPathWithSource($sample);
+                $result['scope'] = 'first_12_pages';
+                return $result;
+            } finally {
+                @unlink($sample);
+            }
+        }
 
         // Parse PDF — get raw pages (no trimming)
         $rawPages = $this->extractRawPages($filePath);
@@ -114,8 +160,10 @@ class PdfExtractorService
         // Clean pages (header/footer trimmed) for title, author, abstract, etc.
         $pages = array_map(function ($rawText) use ($isOcr) {
             $cleaned = $this->trimHeaderFooterLines($rawText, $isOcr);
-            return $this->stripPatternNoise($cleaned);
+            $cleaned = $this->stripPatternNoise($cleaned);
+            return $this->normalizeWhitespace($cleaned);
         }, $rawPages);
+        $pages = $this->removeRepeatedPageMargins($pages);
 
         $firstPageText = $pages[0] ?? '';
         $fullText      = implode("\n", $pages);
@@ -131,14 +179,63 @@ class PdfExtractorService
         $title = $this->extractTitle($firstPageText, $fullText);
 
         return [
-            'title'          => $title === 'Untitled' ? null : $title,
-            'year'           => $this->extractYear($rawFirstPage),
-            'author'         => $authorField !== '' ? $authorField : null,
-            'author_details' => $authorDetails,
-            'program'        => $this->extractProgram($fullText),
-            'abstract'       => $abstract,
-            'keywords'       => $this->extractKeywords($fullText),
+            'metadata' => [
+                'title'          => $title === 'Untitled' ? null : $title,
+                'year'           => $this->extractYear($rawFirstPage),
+                'author'         => $authorField !== '' ? $authorField : null,
+                'author_details' => $authorDetails,
+                'program'        => $this->extractProgram($fullText),
+                'abstract'       => $abstract,
+                'keywords'       => $this->extractKeywords($fullText),
+            ],
+            'source' => $fullText,
+            'scope' => 'full_document',
         ];
+    }
+
+    /**
+     * Collapse whitespace and rejoin words split by a hyphenated line break.
+     * Applied to text-layer and OCR output alike.
+     */
+    protected function normalizeWhitespace(string $text): string
+    {
+        $text = str_replace(["\r\n", "\r"], "\n", $text);
+        $text = preg_replace('/([a-zA-Z])-\n([a-z])/', '$1$2', $text);
+        $text = preg_replace('/[ \t]{2,}/', ' ', $text);
+        return preg_replace('/\n{4,}/', "\n\n\n", $text);
+    }
+
+    /**
+     * Remove a first/last line that repeats on three or more pages. This is a
+     * conservative cross-page header/footer cleanup that leaves body text alone.
+     *
+     * @param string[] $pages
+     * @return string[]
+     */
+    protected function removeRepeatedPageMargins(array $pages): array
+    {
+        if (count($pages) < 3) return $pages;
+
+        $counts = ['first' => [], 'last' => []];
+        foreach ($pages as $page) {
+            $lines = array_values(array_filter(array_map('trim', explode("\n", $page)), fn ($l) => $l !== ''));
+            if (empty($lines)) continue;
+            $counts['first'][$lines[0]] = ($counts['first'][$lines[0]] ?? 0) + 1;
+            $last = end($lines);
+            $counts['last'][$last] = ($counts['last'][$last] ?? 0) + 1;
+        }
+
+        $stripFirst = array_key_first(array_filter($counts['first'], fn ($n) => $n >= 3));
+        $stripLast  = array_key_first(array_filter($counts['last'], fn ($n) => $n >= 3));
+        $stripFirst = $stripFirst === null ? null : (string) $stripFirst;
+        $stripLast  = $stripLast === null ? null : (string) $stripLast;
+
+        return array_map(function (string $page) use ($stripFirst, $stripLast) {
+            $lines = explode("\n", $page);
+            if ($stripFirst !== null && trim($lines[0] ?? '') === $stripFirst) array_shift($lines);
+            if ($stripLast !== null && trim(end($lines) ?: '') === $stripLast) array_pop($lines);
+            return implode("\n", $lines);
+        }, $pages);
     }
 
 

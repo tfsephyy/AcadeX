@@ -3,6 +3,7 @@ import { useAuth } from '../../context/useAuth';
 import { updateProfile } from '../../api/admin';
 import { useNotification } from '../../components/useNotification';
 import ChangePasswordModal from '../../components/ChangePasswordModal';
+import GoogleAccountLink from '../../components/GoogleAccountLink';
 import { HiOutlineUser, HiOutlineMail, HiOutlineIdentification, HiOutlineAcademicCap, HiOutlinePencil, HiOutlineKey } from 'react-icons/hi';
 
 export default function StudentProfile() {
@@ -58,6 +59,7 @@ export default function StudentProfile() {
 
     return (
         <div className="max-w-2xl mx-auto space-y-6">
+            <GoogleAccountLink />
             <div className="flex flex-wrap items-center justify-between gap-4">
                 <div>
                     <h1 className="text-2xl font-bold text-gray-900">Profile</h1>

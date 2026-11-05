@@ -12,11 +12,11 @@ use Illuminate\Validation\ValidationException;
 
 class DocumentUploads
 {
-    public function stage(User $user, string $purpose, string $path): string
+    public function stage(User $user, string $purpose, string $path, string $processingStatus = DocumentUpload::STATUS_COMPLETED, ?string $originalName = null): string
     {
         $id = (string) Str::uuid();
         try {
-            DB::transaction(function () use ($id, $user, $purpose, $path) {
+            DB::transaction(function () use ($id, $user, $purpose, $path, $processingStatus, $originalName) {
                 // Serialize this owner's allocations, including concurrent uploads.
                 User::whereKey($user->id)->lockForUpdate()->firstOrFail();
                 $pending = DocumentUpload::where('user_id', $user->id)->whereNull('capstone_id')->get(['path']);
@@ -31,13 +31,23 @@ class DocumentUploads
                         'Your pending uploads have reached the storage limit. Submit an existing upload or contact the administrator.']);
                 }
                 DocumentUpload::create(['id' => $id, 'user_id' => $user->id, 'purpose' => $purpose,
-                    'path' => $path, 'expires_at' => now()->addHours(24)]);
+                    'path' => $path, 'expires_at' => now()->addHours(24),
+                    'processing_status' => $processingStatus, 'original_name' => $originalName]);
             }, 3);
         } catch (\Throwable $e) {
             Storage::disk('local')->delete($path);
             throw $e;
         }
         return 'upload:'.$id;
+    }
+
+    /** Resolve an upload reference owned by this user for a status/retry request. */
+    public function findOwned(User $user, string $reference): ?DocumentUpload
+    {
+        if (!str_starts_with($reference, 'upload:')) return null;
+        return DocumentUpload::whereKey(substr($reference, 7))
+            ->where('user_id', $user->id)
+            ->first();
     }
 
     // Must run inside the controller's DB transaction, before record mutation.

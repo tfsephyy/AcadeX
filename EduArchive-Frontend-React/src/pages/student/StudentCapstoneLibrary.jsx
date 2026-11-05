@@ -158,7 +158,7 @@ export default function StudentCapstoneLibrary() {
         const p = size === 'sm' ? 'p-1.5' : 'p-2';
         return (
             <>
-                <button aria-label="View" onClick={(e) => { e?.stopPropagation(); navigate(`/student/capstones/${cap.id}`); }} title="View" className={`${p} text-blue-600 hover:bg-blue-50 rounded-lg transition-colors`}><HiOutlineEye className="w-4 h-4" /></button>
+                <button aria-label="View" onClick={(e) => { e?.stopPropagation(); navigate(`/student/capstones/${cap.slug || cap.id}`); }} title="View" className={`${p} text-blue-600 hover:bg-blue-50 rounded-lg transition-colors`}><HiOutlineEye className="w-4 h-4" /></button>
                 {viewing === 'active' ? (
                     <>
                         {cap.approval_status !== 'pending' && (
@@ -182,7 +182,7 @@ export default function StudentCapstoneLibrary() {
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4 p-4 lg:p-6">
                 {capstones.map((cap) => (
                     <div key={cap.id}
-                        onClick={() => navigate(`/student/capstones/${cap.id}`)}
+                        onClick={() => navigate(`/student/capstones/${cap.slug || cap.id}`)}
                         className="group bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 flex flex-col overflow-hidden cursor-pointer">
                         <div className="record-accent" aria-hidden="true" />
                         <div className="p-4 flex flex-col flex-1 gap-3">
@@ -194,7 +194,7 @@ export default function StudentCapstoneLibrary() {
                             </div>
                             <div className="flex items-center gap-1.5 text-xs text-gray-500 mt-auto">
                                 <HiOutlineUser className="w-3.5 h-3.5 flex-shrink-0" />
-                                <span className="truncate">{cap.author || '—'}</span>
+                                <span className="truncate">Uploaded by {cap.uploader?.name || '—'}</span>
                             </div>
                             <div className="text-xs text-gray-400">{new Date(cap.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</div>
                         </div>
@@ -234,7 +234,7 @@ export default function StudentCapstoneLibrary() {
                     <tbody>
                         {capstones.map((cap, idx) => (
                             <tr key={cap.id}
-                                onClick={() => navigate(`/student/capstones/${cap.id}`)}
+                                onClick={() => navigate(`/student/capstones/${cap.slug || cap.id}`)}
                                 className={`border-b border-gray-100 hover:bg-green-50 transition-colors cursor-pointer ${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
                                 <td className="py-3 px-4 text-sm">
                                     <div className="font-semibold text-gray-900 line-clamp-2 max-w-xs hover:text-[#1B5E20]">{cap.title}</div>

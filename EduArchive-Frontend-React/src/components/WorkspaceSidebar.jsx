@@ -11,7 +11,7 @@ export default function WorkspaceSidebar({ role, items, open, collapsed, onOpenC
     <aside id="workspace-navigation" ref={drawerRef} aria-label={`${role} navigation`} tabIndex={-1}
       className={`panel-sidebar workspace-sidebar${open ? ' is-open' : ''}${collapsed ? ' is-collapsed' : ''}`}>
       <div className="sidebar-brand-row panel-logo-border">
-        <div className="sidebar-brand-stack"><Brand className="sidebar-brand-logo" /><span className="sidebar-role">{role}</span></div>
+        <div className="sidebar-brand-stack"><Brand variant="sidebar" className="sidebar-brand-logo" /><span className="sidebar-role">{role}</span></div>
         <button type="button" aria-label="Close navigation" className="sidebar-close panel-profile-btn" onClick={() => onOpenChange(false)}><HiOutlineX aria-hidden="true" /></button>
       </div>
       <nav aria-label={`${role} pages`} className="sidebar-links panel-scroll">

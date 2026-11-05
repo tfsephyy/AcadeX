@@ -6,6 +6,7 @@ import { useAuth } from '../context/useAuth'
 import { useTheme } from '../context/useTheme'
 import ForgotPasswordModal from '../components/ForgotPasswordModal'
 import VerifyAccountEmailModal from '../components/VerifyAccountEmailModal'
+import GoogleButton from '../components/GoogleButton'
 
 /* ── Eye icons ─────────────────────────────────────────────── */
 function EyeIcon() {
@@ -49,7 +50,7 @@ function MoonIcon() {
 
 /* ── Left illustration panel ─────────────────────────────────── */
 export default function Login() {
-  const { login } = useAuth()
+  const { login, setUser } = useAuth()
   const { theme, toggleTheme } = useTheme()
   const navigate = useNavigate()
   const location = useLocation()
@@ -126,6 +127,25 @@ export default function Login() {
       }
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleGoogleSuccess = (result) => {
+    const user = result?.user
+    if (!user) {
+      setGlobalError('Google sign-in completed without an account response. Try again.')
+      return
+    }
+
+    setUser(user)
+    if (user.role === 'admin') {
+      navigate('/admin/dashboard', { replace: true })
+    } else if (user.role === 'faculty') {
+      navigate('/faculty/dashboard', { replace: true })
+    } else if (user.role === 'student') {
+      navigate('/student/uploads', { replace: true })
+    } else {
+      navigate('/dashboard', { replace: true })
     }
   }
 
@@ -350,6 +370,18 @@ export default function Login() {
                 )}
               </button>
             </form>
+
+            <div className="flex items-center gap-3 my-4">
+              <span className="h-px flex-1" style={{ background: 'var(--input-border)' }} />
+              <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>or</span>
+              <span className="h-px flex-1" style={{ background: 'var(--input-border)' }} />
+            </div>
+            <GoogleButton
+              mode="signin"
+              onSuccess={handleGoogleSuccess}
+              onError={setGlobalError}
+              className="w-full"
+            />
 
             <p className="mt-4 text-center" style={{ color: 'var(--color-text-muted)', fontSize: '0.8rem' }}>
               Don't have an account?{' '}

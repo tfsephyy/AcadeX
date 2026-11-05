@@ -41,7 +41,9 @@ class PdfEncryptorService
             $created = is_resource($target);
             if ($source === false || $target === false) throw new \RuntimeException('Cannot open document streams.');
             if (!chmod($destination, 0600)) throw new \RuntimeException('Cannot restrict encrypted document permissions.');
-            EncryptedFileStream::encrypt($source, $target, EncryptedFileStream::key(Crypt::getKey()));
+            // Independent authenticated blocks allow PDF.js to request only
+            // the byte ranges needed for its first page and later navigation.
+            ChunkedEncryptedFile::encrypt($source, $target, Crypt::getKey());
             if (!fflush($target)) throw new \RuntimeException('Encrypted file could not be flushed.');
             $stored = true;
             return $filename;
@@ -78,15 +80,52 @@ class PdfEncryptorService
         }
     }
 
-    /** Authenticate the complete document before exposing a response or plaintext. */
-    public function openVerifiedDocument(string $path, string $disk = 'local'): ?VerifiedDocument
+    /**
+     * Decrypt an encrypted document into a private temp file for background
+     * extraction. The caller owns the returned path and must unlink it.
+     */
+    public function decryptToTemp(string $path, string $extension = '.pdf', string $disk = 'local'): ?string
     {
+        $document = $this->openVerifiedDocument($path, $disk);
+        if (!$document) return null;
+
+        $temp = PrivateTemp::file($extension);
+        $output = null;
+        $complete = false;
+        try {
+            $output = fopen($temp, 'wb');
+            if ($output === false) throw new \RuntimeException('Cannot open extraction temp file.');
+            $document->copyTo($output);
+            $complete = true;
+            return $temp;
+        } finally {
+            if (is_resource($output)) fclose($output);
+            $document->close();
+            if (!$complete && is_file($temp)) @unlink($temp);
+        }
+    }
+
+    /** Authenticate the complete document before exposing a response or plaintext. */
+    public function openVerifiedDocument(string $path, string $disk = 'local'): ?VerifiedDocument    {
         $source = null;
         try {
             $filesystem = Storage::disk($disk);
             if (!$filesystem->exists($path)) return null;
             $source = $filesystem->readStream($path);
             if (!is_resource($source) || !flock($source, LOCK_SH)) throw new \RuntimeException('Cannot lock encrypted document.');
+
+            $prefix = fread($source, strlen(ChunkedEncryptedFile::MAGIC));
+            if ($prefix === ChunkedEncryptedFile::MAGIC) {
+                $document = ChunkedEncryptedFile::open($source, Crypt::getAllKeys());
+                foreach ($document->chunks() as $_chunk) {
+                    // Verify each independently authenticated block before a
+                    // full-download/extraction caller receives the document.
+                }
+                $size = $document->size();
+                return new VerifiedDocument($source, static fn () => $document->chunks(), $size);
+            }
+
+            rewind($source);
             $magic = fread($source, strlen(EncryptedFileStream::MAGIC));
             if ($magic === EncryptedFileStream::MAGIC) {
                 foreach (Crypt::getAllKeys() as $applicationKey) {
@@ -122,6 +161,33 @@ class PdfEncryptorService
     }
 
     /**
+     * Open a document for inline viewing. New V2 files support authenticated
+     * HTTP ranges; existing V1/legacy files retain their verified full-stream
+     * response until explicitly converted.
+     */
+    public function openForViewing(string $path, string $disk = 'local'): VerifiedDocument|ChunkedEncryptedFile|null
+    {
+        $source = null;
+        try {
+            $filesystem = Storage::disk($disk);
+            if (!$filesystem->exists($path)) return null;
+            $source = $filesystem->readStream($path);
+            if (!is_resource($source) || !flock($source, LOCK_SH)) throw new \RuntimeException('Cannot lock encrypted document.');
+            $prefix = fread($source, strlen(ChunkedEncryptedFile::MAGIC));
+            if ($prefix === ChunkedEncryptedFile::MAGIC) {
+                return ChunkedEncryptedFile::open($source, Crypt::getAllKeys());
+            }
+            flock($source, LOCK_UN);
+            fclose($source);
+            $source = null;
+            return $this->openVerifiedDocument($path, $disk);
+        } catch (\Throwable) {
+            if (is_resource($source)) { flock($source, LOCK_UN); fclose($source); }
+            return null;
+        }
+    }
+
+    /**
      * Re-encrypt a file that is currently stored as plain bytes.
      * Used by the EncryptExistingPdfs artisan command.
      */
@@ -133,9 +199,9 @@ class PdfEncryptorService
 
         $prefix = Storage::disk($disk)->readStream($path);
         if (!is_resource($prefix)) return false;
-        try { $magic = fread($prefix, strlen(EncryptedFileStream::MAGIC)); }
+        try { $magic = fread($prefix, max(strlen(EncryptedFileStream::MAGIC), strlen(ChunkedEncryptedFile::MAGIC))); }
         finally { fclose($prefix); }
-        if ($magic === EncryptedFileStream::MAGIC) return false;
+        if (str_starts_with($magic, EncryptedFileStream::MAGIC) || str_starts_with($magic, ChunkedEncryptedFile::MAGIC)) return false;
         // This explicit legacy conversion command must never allocate a new large file.
         if (Storage::disk($disk)->size($path) > 64 * 1024 * 1024) return false;
         $raw = Storage::disk($disk)->get($path);

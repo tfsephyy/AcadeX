@@ -8,9 +8,11 @@
     "require": {
         "php": "^8.2",
         "ext-sodium": "*",
+        "google/apiclient": "2.*",
         "laravel/framework": "^12.0",
         "laravel/sanctum": "^4.0",
         "laravel/tinker": "^2.10.1",
+        "predis/predis": "^2.3",
         "smalot/pdfparser": "^2.12",
         "thiagoalessio/tesseract_ocr": "^2.13"
     },

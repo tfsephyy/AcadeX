@@ -4,7 +4,7 @@ import { useCapstoneUpload } from '../useCapstoneUpload';
 import { useDialogFocus } from '../useDialogFocus';
 import { validateCapstonePdf } from '../pdfUploadValidation';
 import { useState, useRef } from 'react';
-import { HiOutlineUpload, HiOutlineX, HiOutlineDocumentText, HiOutlineArrowRight } from 'react-icons/hi';
+import { HiOutlineUpload, HiOutlineX, HiOutlineDocumentText } from 'react-icons/hi';
 import { useNotification } from '../useNotification';
 
 export default function StudentUploadCapstoneModal({ open, onClose }) {
@@ -13,10 +13,9 @@ export default function StudentUploadCapstoneModal({ open, onClose }) {
 
     const [file, setFile]           = useState(null);
 
-    const { uploading, manual, extractionRequested, transfer, chooseManual, startUpload } = useCapstoneUpload('student', () => { setFile(null); onClose(); });
+    const { uploading, transfer, startUpload } = useCapstoneUpload('student', () => { setFile(null); onClose(); });
     const isBusy = uploading;
     const handleUpload = () => startUpload(file);
-    const handleSkip = chooseManual;
 
     const dialogRef = useDialogFocus(open, () => {
         if (!uploading) { setFile(null); onClose(); }
@@ -47,7 +46,7 @@ export default function StudentUploadCapstoneModal({ open, onClose }) {
                     <div>
                         <h2 className="text-lg font-semibold text-white">Upload Capstone PDF</h2>
                         <p className="text-green-200 text-xs mt-0.5">
-                            {isBusy ? 'Processing your file…' : 'Select a PDF file to extract metadata automatically'}
+                            {isBusy ? 'Sending your file securely…' : 'Select a PDF file to extract metadata automatically'}
                         </p>
                     </div>
                     <div className="flex items-center gap-3">
@@ -79,7 +78,7 @@ export default function StudentUploadCapstoneModal({ open, onClose }) {
                                 </svg>
                                 <HiOutlineDocumentText className="absolute inset-0 m-auto w-8 h-8 text-green-600" />
                             </div>
-                            <UploadFeedback transfer={transfer} manual={manual} extractionRequested={extractionRequested} />
+                            <UploadFeedback transfer={transfer} />
                         </div>
                     ) : (
                         <div
@@ -111,20 +110,7 @@ export default function StudentUploadCapstoneModal({ open, onClose }) {
 
                 {/* Footer */}
                 <div className="upload-footer flex items-center justify-between gap-3 px-6 py-4 border-t border-gray-200 bg-gray-50">
-                    <div>
-                        {!isBusy && <button type="button" onClick={() => startUpload(file, true)} disabled={!file} className="btn-outline">Upload &amp; enter manually</button>}
-                        {uploading && !manual && (
-                            <button
-                                id="student-skip-extraction-btn"
-                                onClick={handleSkip}
-                                className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-amber-700 bg-amber-50 border border-amber-300 rounded-lg hover:bg-amber-100 active:scale-95 transition-all"
-                            >
-                                <HiOutlineArrowRight className="w-4 h-4" />
-                                Use manual entry when ready
-                            </button>
-                        )}
-                    </div>
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3 ml-auto">
                         {!isBusy && (
                             <>
                                 <button onClick={handleClose} className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">

@@ -4,11 +4,83 @@ namespace Tests\Feature;
 
 use App\Models\PasswordResetCode;
 use App\Models\User;
+use App\Services\GoogleIdentityService;
 use Illuminate\Support\Facades\Auth;
 use Tests\SecurityTestCase;
 
 class AuthenticationSecurityTest extends SecurityTestCase
 {
+    public function test_password_account_can_link_google_after_password_confirmation_then_sign_in(): void
+    {
+        $user = $this->user('student');
+        $identity = ['google_id' => 'google-subject-'.bin2hex(random_bytes(8)), 'email' => $user->email, 'name' => $user->name];
+        $google = \Mockery::mock(GoogleIdentityService::class);
+        $google->shouldReceive('configured')->andReturnTrue();
+        $google->shouldReceive('verifyCredential')->twice()->with('verified-google-token')->andReturn($identity);
+        $this->app->instance(GoogleIdentityService::class, $google);
+        $this->asUser($user);
+
+        $this->postJson('/api/v1/auth/google/link', [
+            'credential' => 'verified-google-token', 'current_password' => $this->password,
+        ])->assertOk()->assertJsonPath('data.user.google_linked', true);
+        self::assertSame($identity['google_id'], $user->fresh()->google_id);
+
+        $this->postJson('/api/v1/auth/google/login', ['credential' => 'verified-google-token'])
+            ->assertOk()->assertJsonPath('data.user.id', $user->id);
+    }
+
+    public function test_google_login_automatically_links_an_existing_verified_password_account(): void
+    {
+        $user = $this->user('student');
+        $identity = ['google_id' => 'google-subject-'.bin2hex(random_bytes(8)), 'email' => $user->email, 'name' => $user->name];
+        $google = \Mockery::mock(GoogleIdentityService::class);
+        $google->shouldReceive('configured')->once()->andReturnTrue();
+        $google->shouldReceive('verifyCredential')->once()->with('verified-google-token')->andReturn($identity);
+        $this->app->instance(GoogleIdentityService::class, $google);
+
+        $this->postJson('/api/v1/auth/google/login', ['credential' => 'verified-google-token'])
+            ->assertOk()->assertJsonPath('data.user.id', $user->id)
+            ->assertJsonPath('data.user.google_linked', true);
+        self::assertSame($identity['google_id'], $user->fresh()->google_id);
+    }
+
+    public function test_google_login_does_not_auto_link_an_unverified_password_account(): void
+    {
+        $user = $this->user('student');
+        $user->forceFill(['email_verified_at' => null])->save();
+        $google = \Mockery::mock(GoogleIdentityService::class);
+        $google->shouldReceive('configured')->once()->andReturnTrue();
+        $google->shouldReceive('verifyCredential')->once()->with('verified-google-token')->andReturn([
+            'google_id' => 'google-subject-'.bin2hex(random_bytes(8)), 'email' => $user->email, 'name' => $user->name,
+        ]);
+        $this->app->instance(GoogleIdentityService::class, $google);
+
+        $this->postJson('/api/v1/auth/google/login', ['credential' => 'verified-google-token'])
+            ->assertStatus(409)->assertJsonPath('message', 'This Acadex account has not verified its email yet. Sign in with your Acadex password and complete email verification, then try Google sign-in.');
+        self::assertNull($user->fresh()->google_id);
+    }
+
+    public function test_google_link_rejects_wrong_password_and_mismatched_verified_email(): void
+    {
+        $user = $this->user('student');
+        $google = \Mockery::mock(GoogleIdentityService::class);
+        $google->shouldReceive('configured')->andReturnTrue();
+        $google->shouldReceive('verifyCredential')->twice()->andReturn(
+            ['google_id' => 'subject-one', 'email' => $user->email, 'name' => $user->name],
+            ['google_id' => 'subject-two', 'email' => 'different@example.invalid', 'name' => 'Synthetic']
+        );
+        $this->app->instance(GoogleIdentityService::class, $google);
+        $this->asUser($user);
+
+        $this->postJson('/api/v1/auth/google/link', [
+            'credential' => 'token-one', 'current_password' => 'wrong-password',
+        ])->assertUnprocessable();
+        $this->postJson('/api/v1/auth/google/link', [
+            'credential' => 'token-two', 'current_password' => $this->password,
+        ])->assertUnprocessable();
+        self::assertNull($user->fresh()->google_id);
+    }
+
     public function test_stale_model_credential_changes_each_revoke_newer_sessions(): void
     {
         $user = $this->user('student');
@@ -89,12 +161,18 @@ class AuthenticationSecurityTest extends SecurityTestCase
 
     public function test_registration_requires_verified_single_use_email_proof(): void
     {
+        config(['acadex.registration_min_seconds' => 0]);
         $email = bin2hex(random_bytes(5)).'@example.invalid';
         $payload = ['name' => 'Synthetic Visitor', 'username' => 'synthetic_'.bin2hex(random_bytes(5)),
             'email' => $email, 'role' => 'visitor', 'password' => $this->password, 'password_confirmation' => $this->password];
         $this->postJson('/api/v1/register', $payload)->assertUnprocessable();
         $code = $this->code($email);
         $this->postJson('/api/v1/verify-email-code', ['email' => $email, 'code' => $code])->assertOk();
+
+        $payload['registration_challenge'] = $this->getJson('/api/v1/register/challenge')
+            ->assertOk()
+            ->json('data.challenge');
+
         $this->postJson('/api/v1/register', $payload)->assertCreated();
         self::assertNotNull(User::where('email', $email)->firstOrFail()->email_verified_at);
         $this->postJson('/api/v1/verify-email-code', ['email' => $email, 'code' => $code])->assertStatus(400);

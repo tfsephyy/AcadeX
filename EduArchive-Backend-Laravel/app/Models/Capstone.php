@@ -23,14 +23,28 @@ class Capstone extends Model
                 app(\App\Services\CapstoneAccess::class)->scope($query, request()->user());
             }
         });
+
+        // Slugs are assigned once. Title edits intentionally do not rewrite
+        // them, so old numeric and slug links remain stable.
+        static::creating(function (Capstone $capstone) {
+            if (empty($capstone->slug)) {
+                $capstone->slug = \App\Services\CapstoneSlug::forTitle((string) $capstone->title);
+            }
+        });
     }
 
     public function resolveRouteBinding($value, $field = null)
     {
+        $field = $field ?? $this->getRouteKeyName();
+        // Preserve every existing numeric URL while accepting readable slugs.
+        if ($field === 'id' && !ctype_digit((string) $value)) {
+            $field = 'slug';
+        }
+
         $method = request()->route()?->getActionMethod();
         if (in_array($method, ['unarchive', 'destroy'], true)) {
             $user = request()->user();
-            $query = static::withoutGlobalScope('request_access')->where($field ?? $this->getRouteKeyName(), $value);
+            $query = static::withoutGlobalScope('request_access')->where($field, $value);
             if (!$user || !app(\App\Services\CapstoneAccess::class)->active($user)) return null;
             if (!$user->hasRole('admin')) $query->where('uploaded_by', $user->id);
             return $query->first();
@@ -67,6 +81,7 @@ class Capstone extends Model
 
     protected $fillable = [
         'title',
+        'slug',
         'year',
         'author',
         'author_details',     // JSON: [{name, email, contact}, ...]
@@ -76,6 +91,7 @@ class Capstone extends Model
         'pdf_path',
         'pdf_original_name',
         'pdf_text',          // full extracted text from PDF — used by chatbot
+        'pdf_text_indexed_at',
         'status',
         'is_archived',
         'publication_status',
@@ -88,6 +104,10 @@ class Capstone extends Model
         'approved_at',
         'approval_status',
         'rejection_reason',
+        'processing_status',
+        'processing_error',
+        'processing_started_at',
+        'processing_completed_at',
         'view_count',
         'download_count',
         'bookmark_count',
@@ -100,6 +120,9 @@ class Capstone extends Model
             'approved_at'    => 'datetime',
             'year'           => 'integer',
             'author_details' => 'array',
+            'pdf_text_indexed_at' => 'datetime',
+            'processing_started_at' => 'datetime',
+            'processing_completed_at' => 'datetime',
         ];
     }
 
@@ -174,6 +197,11 @@ class Capstone extends Model
             'referenced_capstone_id',
             'capstone_id'
         )->withTimestamps();
+    }
+
+    public function citationEvents(): HasMany
+    {
+        return $this->hasMany(CitationEvent::class);
     }
 
     // --- Scopes ---

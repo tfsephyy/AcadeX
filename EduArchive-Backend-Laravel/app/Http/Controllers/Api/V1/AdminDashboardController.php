@@ -195,26 +195,32 @@ class AdminDashboardController extends Controller
     }
 
     /**
-     * Get the top 5 most-cited capstones (referenced by other capstones).
+     * Get the top capstones by generated-citation events.
+     * This is a count of citations generated through AcadeX, not a verified
+     * external citation index.
      */
     public function mostCited(): JsonResponse
     {
         $data = Capstone::with(['uploader:id,name'])
-            ->withCount('referencedBy as citation_count')
-            ->orderByDesc('citation_count')
-            ->having('citation_count', '>', 0)
+            ->withCount('citationEvents as citation_generations')
+            ->orderByDesc('citation_generations')
+            ->having('citation_generations', '>', 0)
             ->limit(5)
             ->get()
             ->map(fn($c) => [
-                'id'             => $c->id,
-                'title'          => $c->title,
-                'author'         => $c->author,
-                'year'           => $c->year,
-                'program'        => $c->program,
-                'citation_count' => $c->citation_count,
-                'uploader'       => $c->uploader?->name,
+                'id'                   => $c->id,
+                'slug'                 => $c->slug,
+                'title'                => $c->title,
+                'author'               => $c->author,
+                'year'                 => $c->year,
+                'program'              => $c->program,
+                'citation_generations' => (int) $c->citation_generations,
+                // Compatibility alias for existing consumers.
+                'citation_count'       => (int) $c->citation_generations,
+                'uploader'             => $c->uploader?->name,
             ]);
 
-        return $this->successResponse($data, 'Most cited capstones.');
+        return $this->successResponse($data, 'Most citation generations.')
+            ->header('X-Metric-Label', 'citation generations');
     }
 }

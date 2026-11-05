@@ -11,11 +11,12 @@ import CitationGenerator from '../../components/CitationGenerator';
 import CapstoneAnalyticsPanel from '../../components/CapstoneAnalyticsPanel';
 import AuthorDetailsModal from '../../components/AuthorDetailsModal';
 import Loading from '../../components/Loading';
+import PdfLoadState from '../../components/PdfLoadState';
 import { Document, pdfjs } from 'react-pdf';
 import ViewportPdfPage from '../../components/ViewportPdfPage';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
-import api from '../../api/axios';
+import { usePdfBlob } from '../../components/usePdfBlob';
 import { useChatbotContext } from '../../context/useChatbotContext';
 
 pdfjs.GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/build/pdf.worker.min.mjs', import.meta.url).toString();
@@ -27,12 +28,23 @@ export default function StudentCapstoneMainPage() {
     const { setCapstoneContext } = useChatbotContext();
     const [capstone, setCapstone] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [metaError, setMetaError] = useState(null);
     const [bookmarked, setBookmarked] = useState(false);
     const [showAuthors, setShowAuthors] = useState(false);
-    const [pdfUrl, setPdfUrl] = useState(null);
     const [imradUrl, setImradUrl] = useState(null);
     const [activePdf, setActivePdf] = useState('capstone');
-    const [pdfError, setPdfError] = useState(null);
+    const pdfEndpoint = capstone?.pdf_available === false ? null : `/capstones/${id}/pdf`;
+    const {
+        url: pdfUrl,
+        file: pdfFile,
+        status: pdfStatus,
+        progress: pdfProgress,
+        error: pdfError,
+        retry: retryPdf,
+        onLoadProgress: onPdfLoadProgress,
+        onLoadSuccess: onPdfLoadSuccess,
+        onLoadError: onPdfLoadError,
+    } = usePdfBlob(pdfEndpoint, { enabled: Boolean(capstone) });
     const [numPages, setNumPages] = useState(null);
     const [pdfWidth, setPdfWidth] = useState(600);
     const [fullscreen, setFullscreen] = useState(false);
@@ -41,8 +53,8 @@ export default function StudentCapstoneMainPage() {
     const pdfContainerRef = useRef(null);
     const fsContainerRef = useRef(null);
     const viewRecorded = useRef(false);
-    // Track blob URLs for safe revocation on unmount only
-    const blobUrlsRef = useRef({ pdf: null, imrad: null });
+    // The PDF blob URL is owned by usePdfBlob; only the on-demand IMRAD URL is local.
+    const blobUrlsRef = useRef({ imrad: null });
 
     // Push capstone context into chatbot when capstone loads, clear on unmount
     useEffect(() => {
@@ -96,10 +108,9 @@ export default function StudentCapstoneMainPage() {
         return () => window.removeEventListener('keydown', onKey);
     }, []);
 
-    // Cleanup blob URLs on unmount only (not on every state change)
+    // Cleanup local IMRAD blob URL on unmount only (not on every state change)
     useEffect(() => {
         return () => {
-            if (blobUrlsRef.current.pdf)   URL.revokeObjectURL(blobUrlsRef.current.pdf);
             if (blobUrlsRef.current.imrad) URL.revokeObjectURL(blobUrlsRef.current.imrad);
         };
     }, []);
@@ -107,40 +118,26 @@ export default function StudentCapstoneMainPage() {
     const fetchCapstone = async () => {
         try {
             setLoading(true);
+            setMetaError(null);
+            setCapstone(null);
             const res = await getCapstone(id);
             const data = res.data.data;
             setCapstone(data);
             setBookmarked(data.is_bookmarked ?? false);
 
-            // Record view â€” only once per session per capstone
+            // Record the view independently; it must never delay the record.
             const viewKey = `acadex_viewed_${id}`;
             if (!viewRecorded.current && !sessionStorage.getItem(viewKey)) {
                 viewRecorded.current = true;
-                try {
-                    await recordView(id);
+                recordView(id).then(() => {
                     sessionStorage.setItem(viewKey, '1');
-                    setCapstone(prev => ({ ...prev, view_count: (prev.view_count || 0) + 1 }));
-                } catch { /* Optional request failed; keep the current view. */ }
+                    setCapstone(prev => (prev ? { ...prev, view_count: (prev.view_count || 0) + 1 } : prev));
+                }).catch(() => { /* Optional analytics request failed; keep the record visible. */ });
             }
-
-            try {
-                const pdfRes = await api.get(`/capstones/${id}/pdf`, { responseType: 'blob' });
-                const blob = new Blob([pdfRes.data], { type: 'application/pdf' });
-                const url = URL.createObjectURL(blob);
-                blobUrlsRef.current.pdf = url;
-                setPdfUrl(url);
-                setPdfError(null);
-            } catch (e) {
-                const status = e?.response?.status;
-                if (status === 403) {
-                    setPdfError('You do not have permission to view this PDF.');
-                } else if (status === 404) {
-                    setPdfError('PDF file not found on the server.');
-                } else {
-                    setPdfError('Could not load PDF. Please try again.');
-                }
-            }
-        } catch {
+        } catch (error) {
+            setMetaError(error?.response?.status === 404
+                ? 'This capstone could not be found or you do not have access to it.'
+                : 'The capstone details could not be loaded. Check your connection and retry.');
             notify.error('Failed to load capstone.');
         } finally {
             setLoading(false);
@@ -198,7 +195,23 @@ export default function StudentCapstoneMainPage() {
     };
 
     if (loading) return <Loading text="Loading capstone..." />;
-    if (!capstone) return <div className="text-center py-16 text-gray-500">Capstone not found.</div>;
+    if (!capstone) {
+        return (
+            <div className="flex flex-col items-center justify-center py-20 gap-3 text-center px-6" role="alert">
+                <p className="text-sm font-medium text-gray-700">
+                    {metaError || 'This capstone could not be found or you do not have access to it.'}
+                </p>
+                <div className="flex items-center gap-2">
+                    <button onClick={fetchCapstone} className="px-4 py-2 bg-[#1B5E20] text-white text-sm font-medium rounded-lg hover:bg-green-800 transition-colors">
+                        Retry
+                    </button>
+                    <button onClick={() => navigate(-1)} className="px-4 py-2 bg-white text-gray-700 text-sm font-medium rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors">
+                        Go back
+                    </button>
+                </div>
+            </div>
+        );
+    }
 
     const uploadedDate = capstone.created_at
         ? new Date(capstone.created_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
@@ -370,7 +383,7 @@ export default function StudentCapstoneMainPage() {
                                 </summary>
                                 <div className="mt-2 flex flex-col gap-2">
                                     {refs.map((ref) => (
-                                        <ReferencedCard key={ref.id} item={ref} onOpen={() => navigate(`/student/capstones/${ref.id}`)} />
+                                        <ReferencedCard key={ref.id} item={ref} onOpen={() => navigate(`/student/capstones/${ref.slug || ref.id}`)} />
                                     ))}
                                 </div>
                             </details>
@@ -414,12 +427,42 @@ export default function StudentCapstoneMainPage() {
                         )}
                     </div>
                     <div className="flex-1 min-h-0 rounded-xl bg-gray-100 overflow-y-auto custom-scrollbar">
-                        {(activePdf === 'capstone' ? pdfUrl : imradUrl) ? (
+                        {activePdf === 'capstone' ? (
+                            pdfUrl && pdfStatus !== 'error' ? (
+                                <Document
+                                    file={pdfFile}
+                                    onLoadProgress={onPdfLoadProgress}
+                                    onLoadError={onPdfLoadError}
+                                    onLoadSuccess={({ numPages }) => { onPdfLoadSuccess(); setNumPages(numPages); }}
+                                    loading={<PdfLoadState status={pdfStatus} progress={pdfProgress} error={pdfError} onRetry={retryPdf} />}
+                                    error={<div className="text-center py-20 text-gray-500">The PDF was downloaded but could not be rendered. Try downloading it instead.</div>}
+                                >
+                                    {Array.from(new Array(numPages), (_, i) => (
+                                        <ViewportPdfPage
+                                            key={`page_${i + 1}`}
+                                            pageNumber={i + 1}
+                                            width={pdfWidth}
+                                            className="mb-1"
+                                            renderTextLayer={true}
+                                            renderAnnotationLayer={true}
+                                        />
+                                    ))}
+                                </Document>
+                            ) : (
+                                <PdfLoadState
+                                    status={pdfStatus}
+                                    progress={pdfProgress}
+                                    error={pdfError}
+                                    onRetry={retryPdf}
+                                    emptyText="No PDF available for this record."
+                                />
+                            )
+                        ) : imradUrl ? (
                             <Document
-                                file={activePdf === 'capstone' ? pdfUrl : imradUrl}
+                                file={imradUrl}
                                 onLoadSuccess={({ numPages }) => setNumPages(numPages)}
-                                loading={<div className="flex items-center justify-center py-20"><Loading text="Loading PDF..." /></div>}
-                                error={<div className="text-center py-20 text-gray-500">Failed to load PDF.</div>}
+                                loading={<div className="flex items-center justify-center py-20"><Loading text="Rendering IMRAD PDF..." /></div>}
+                                error={<div className="text-center py-20 text-gray-500">Failed to load IMRAD PDF.</div>}
                             >
                                 {Array.from(new Array(numPages), (_, i) => (
                                     <ViewportPdfPage
@@ -432,15 +475,8 @@ export default function StudentCapstoneMainPage() {
                                     />
                                 ))}
                             </Document>
-                        ) : pdfError && activePdf === 'capstone' ? (
-                            <div className="flex flex-col items-center justify-center py-20 gap-3 text-center px-6">
-                                <span className="text-4xl">⚠️</span>
-                                <p className="text-sm font-medium text-gray-600">{pdfError}</p>
-                            </div>
                         ) : (
-                            <div className="flex items-center justify-center py-20 text-gray-400">
-                                No PDF available.
-                            </div>
+                            <div className="flex items-center justify-center py-20 text-gray-400">No PDF available.</div>
                         )}
                     </div>
                 </div>
@@ -471,23 +507,35 @@ export default function StudentCapstoneMainPage() {
                     {/* FS scrollable PDF area */}
                     <div ref={fsContainerRef} className="flex-1 min-h-0 overflow-y-auto" style={{ scrollbarColor: '#4b5563 #111827' }}>
                         <div className="flex justify-center py-6 px-4">
-                            <Document
-                                file={activePdf === 'capstone' ? pdfUrl : imradUrl}
-                                onLoadSuccess={({ numPages }) => setFsNumPages(numPages)}
-                                loading={<div className="flex items-center justify-center py-20"><Loading text="Loading PDF..." /></div>}
-                                error={<div className="text-center py-20 text-gray-400">Failed to load PDF.</div>}
-                            >
-                                {Array.from(new Array(fsNumPages), (_, i) => (
-                                    <ViewportPdfPage
-                                        key={`fs_page_${i + 1}`}
-                                        pageNumber={i + 1}
-                                        width={fsWidth}
-                                        className="mb-3 shadow-2xl"
-                                        renderTextLayer={true}
-                                        renderAnnotationLayer={true}
-                                    />
-                                ))}
-                            </Document>
+                            {(activePdf === 'capstone' ? (pdfUrl && pdfStatus !== 'error') : imradUrl) ? (
+                                <Document
+                                    file={activePdf === 'capstone' ? pdfFile : imradUrl}
+                                    onLoadProgress={activePdf === 'capstone' ? onPdfLoadProgress : undefined}
+                                    onLoadError={activePdf === 'capstone' ? onPdfLoadError : undefined}
+                                    onLoadSuccess={({ numPages }) => { if (activePdf === 'capstone') onPdfLoadSuccess(); setFsNumPages(numPages); }}
+                                    loading={<div className="flex items-center justify-center py-20"><Loading text="Rendering PDF..." /></div>}
+                                    error={<div className="text-center py-20 text-gray-400">Failed to render PDF.</div>}
+                                >
+                                    {Array.from(new Array(fsNumPages), (_, i) => (
+                                        <ViewportPdfPage
+                                            key={`fs_page_${i + 1}`}
+                                            pageNumber={i + 1}
+                                            width={fsWidth}
+                                            className="mb-3 shadow-2xl"
+                                            renderTextLayer={true}
+                                            renderAnnotationLayer={true}
+                                        />
+                                    ))}
+                                </Document>
+                            ) : (
+                                <PdfLoadState
+                                    status={activePdf === 'capstone' ? pdfStatus : 'idle'}
+                                    progress={activePdf === 'capstone' ? pdfProgress : null}
+                                    error={activePdf === 'capstone' ? pdfError : null}
+                                    onRetry={activePdf === 'capstone' ? retryPdf : null}
+                                    emptyText="No PDF available."
+                                />
+                            )}
                         </div>
                     </div>
                 </div>

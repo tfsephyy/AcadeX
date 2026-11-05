@@ -81,10 +81,22 @@ export const downloadCapstoneResource = (capstoneId, resourceId) =>
 export const getFacultyList = (params = {}) => axios.get('/capstones/faculty-list', { params });
 
 // ── Notifications ──────────────────────────────────
-export const getAdminNotifications = (params = {}) => axios.get('/admin/notifications', { params });
-export const getUnreadNotificationCount = () => axios.get('/admin/notifications/unread-count');
-export const markNotificationRead = (id) => axios.put(`/admin/notifications/${id}/read`);
-export const markAllNotificationsRead = () => axios.put('/admin/notifications/mark-all-read');
+export const getNotifications = (params = {}) => axios.get('/notifications', { params });
+export const getAdminNotifications = getNotifications;
+export const getUnreadNotificationCount = () => axios.get('/notifications/unread-count');
+export const markNotificationRead = (id) => axios.put(`/notifications/${id}/read`);
+export const markAllNotificationsRead = () => axios.put('/notifications/mark-all-read');
+export const getRegistrationChallenge = () => axios.get('/register/challenge');
+export const registerWithGoogle = (data) => axios.post('/auth/google/register', data);
+export const loginWithGoogle = (data) => axios.post('/auth/google/login', data);
+export const linkGoogleAccount = (data) => axios.post('/auth/google/link', data);
+export const getFacultyDashboard = () => axios.get('/faculty/dashboard');
+export const getFacultyAssignedCapstones = (params = {}) => axios.get('/faculty/capstones/all', { params: { ...params, assigned: 1 } });
+export const getUploadStatus = (uploadId) => axios.get(`/uploads/${uploadId}/status`);
+export const retryUploadProcessing = (uploadId) => axios.post(`/uploads/${uploadId}/retry`);
+export const generateCitation = (id, format, action = 'generate') => axios.post(`/capstones/${id}/citation`, { format, action });
+export const getAdvisers = (params = {}) => axios.get('/admin/advisers', { params });
+export const setAdviserAvailability = (id, adviserAvailable) => axios.put(`/admin/advisers/${id}/availability`, { adviser_available: adviserAvailable });
 export const toggleBookmark = (id) => axios.post(`/capstones/${id}/bookmark`);
 export const getStudentBookmarkedCapstones = (params = {}) => axios.get('/capstones/bookmarked', { params });
 

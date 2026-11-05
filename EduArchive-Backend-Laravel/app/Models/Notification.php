@@ -9,15 +9,19 @@ class Notification extends Model
     protected $fillable = [
         'admin_id',
         'type',
+        'dedupe_key',
         'title',
         'message',
         'related_user_id',
         'related_capstone_id',
+        'related_upload_id',
         'is_read',
+        'email_sent_at',
     ];
 
     protected $casts = [
         'is_read' => 'boolean',
+        'email_sent_at' => 'datetime',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];

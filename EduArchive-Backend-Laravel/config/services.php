@@ -39,4 +39,12 @@ return [
         'key' => env('GROQ_API_KEY'),
     ],
 
+    // Google Identity Services uses the public client ID to verify signed ID
+    // tokens against Google's rotating signing keys.
+    'google' => [
+        'client_id' => env('GOOGLE_CLIENT_ID'),
+        'client_secret' => env('GOOGLE_CLIENT_SECRET'),
+        'redirect' => env('GOOGLE_REDIRECT_URI', env('APP_URL').'/api/auth/google/callback'),
+    ],
+
 ];

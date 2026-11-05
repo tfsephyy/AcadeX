@@ -20,7 +20,9 @@ return [
 
     'allowed_headers' => ['*'],
 
-    'exposed_headers' => [],
+    // PDF.js needs to read these cross-origin response headers to detect and
+    // use authenticated byte-range responses for large documents.
+    'exposed_headers' => ['Accept-Ranges', 'Content-Range', 'Content-Length', 'ETag'],
 
     'max_age' => 0,
 

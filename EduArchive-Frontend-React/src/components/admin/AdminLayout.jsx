@@ -23,6 +23,7 @@ import WorkspaceSidebar from '../WorkspaceSidebar';
 
 const navItems = [
     { to: '/admin/dashboard',      label: 'Dashboard',          icon: HiOutlineViewGrid },
+    { to: '/admin/advisers',       label: 'Adviser Pool',       icon: HiOutlineUsers },
     { to: '/admin/users',          label: 'User Management',    icon: HiOutlineUsers },
     { to: '/admin/capstone-library',label: 'Capstone Library',  icon: HiOutlineLibrary },
     { to: '/admin/published',      label: 'Uploaded Capstones', icon: HiOutlineBookOpen },

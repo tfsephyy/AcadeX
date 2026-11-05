@@ -2,6 +2,16 @@
 
 Read [ACADEX_CLIENT_AI_HANDOFF.md](ACADEX_CLIENT_AI_HANDOFF.md) before changing or deploying this project. It is the main handoff for the client and the client's next developer or AI agent.
 
+**Persistent working memory (read at the start of every session and after any context compaction):**
+
+1. [docs/ACADEX_REQUIREMENTS.md](docs/ACADEX_REQUIREMENTS.md) — the 16 improvement requirements, acceptance criteria, dependencies, and priorities.
+2. [docs/ACADEX_PROGRESS.md](docs/ACADEX_PROGRESS.md) — completed, in-progress, blocked, tested, and deployed state.
+3. [docs/ACADEX_DECISIONS.md](docs/ACADEX_DECISIONS.md) — architectural decisions, constraints, and reasons.
+
+Do not rely on conversation history for project state. Update these files after every significant
+milestone, before context compaction, and whenever verification results change. Distinguish local
+verification from deployed verification and never record unverified work as complete.
+
 Then inspect the actual repository, the user's current request, and the dated evidence under [docs/handoff](docs/handoff). The October 14 deployment report records a historical verified release; it does not establish current server health.
 
 - The client owns the application, AWS account, domain, repository, and future maintenance. The previous developer's laptop must not be required for ongoing operation or releases.

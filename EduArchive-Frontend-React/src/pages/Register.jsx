@@ -4,13 +4,14 @@ import { useState, useMemo, useEffect, useRef } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/useAuth'
 import { useTheme } from '../context/useTheme'
-import { sendVerificationCode, verifyEmailCode } from '../api/admin'
+import { sendVerificationCode, verifyEmailCode, getRegistrationChallenge, registerWithGoogle } from '../api/admin'
+import GoogleButton from '../components/GoogleButton'
 
 /* ─── Constants ──────────────────────────────────────────────── */
 const INITIAL = {
   name: '', username: '', id_number: '', email: '',
   role: 'student', program: '', year: '', section: '',
-  password: '', password_confirmation: '',
+  password: '', password_confirmation: '', website: '',
 }
 
 const VISITOR_ROLE = 'visitor'
@@ -183,6 +184,110 @@ export default function Register() {
   const [resendCooldown, setResendCooldown] = useState(0)
   const intervalRef = useRef(null)
 
+  // Registration bot check: signed challenge + optional Turnstile.
+  const [registrationChallenge, setRegistrationChallenge] = useState('')
+  const [turnstileSiteKey, setTurnstileSiteKey] = useState('')
+  const [turnstileToken, setTurnstileToken] = useState('')
+  const turnstileRenderedRef = useRef(false)
+  const [registrationStartedAt] = useState(() => Date.now())
+  useEffect(() => {
+    let cancelled = false
+    getRegistrationChallenge()
+      .then(res => {
+        if (cancelled) return
+        setRegistrationChallenge(res.data.data?.challenge || '')
+        setTurnstileSiteKey(res.data.data?.turnstile_site_key || '')
+      })
+      .catch(() => { if (!cancelled) setRegistrationChallenge('') })
+    return () => { cancelled = true }
+  }, [])
+
+  // Turnstile widget — backs the token sent with registration.
+  useEffect(() => {
+    if (!turnstileSiteKey) return
+    const load = () => {
+      if (!window.turnstile || turnstileRenderedRef.current) return
+      const container = document.querySelector('.cf-turnstile')
+      if (!container) return
+      try {
+        window.turnstile.render(container, {
+          sitekey: turnstileSiteKey,
+          callback: (token) => setTurnstileToken(token || ''),
+          'expired-callback': () => setTurnstileToken(''),
+        })
+        turnstileRenderedRef.current = true
+      } catch {
+        setGlobalError('Human verification could not be initialized. Reload the page and try again.')
+      }
+    }
+    if (window.turnstile) load()
+    else {
+      const s = document.createElement('script')
+      s.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js'
+      s.async = true
+      s.defer = true
+      s.onload = load
+      s.onerror = () => setGlobalError('Human verification could not be loaded. Reload the page and try again.')
+      document.head.appendChild(s)
+    }
+  }, [turnstileSiteKey])
+  // Google registration: the server verifies the credential and the email. The GIS
+  // request is issued by GoogleButton; this flow only receives its credential.
+  const [googleCredential, setGoogleCredential] = useState('')
+  const [googleError, setGoogleError] = useState('')
+  const [googleReady, setGoogleReady] = useState(false)
+
+  const handleGoogleCredential = (data) => {
+    const credential = data?.credential || data?.data?.credential
+    if (credential) {
+      setGoogleCredential(credential)
+      setGoogleReady(true)
+      setGoogleError('')
+    }
+  }
+
+  const handleGoogleRegister = async () => {
+    if (!googleCredential) {
+      setGoogleError('Choose Continue with Google first, then complete the fields and continue.')
+      return
+    }
+    if (!canProceedStep1) {
+      setGlobalError('Please fill in all personal information fields.')
+      return
+    }
+    if (!canProceedStep2Google) {
+      setGlobalError('Please complete all academic information for your role.')
+      return
+    }
+    setLoading(true)
+    setErrors({})
+    setGlobalError('')
+    setGoogleError('')
+    try {
+      const res = await registerWithGoogle({
+        ...form,
+        credential: googleCredential,
+        website: form.website || '',
+        registration_challenge: registrationChallenge,
+        'cf-turnstile-response': turnstileToken || undefined,
+        started_at: registrationStartedAt,
+      })
+      if (res?.data?.data?.user) navigate('/login', { replace: true, state: { registered: true } })
+      else setGlobalError('Google registration completed. Please sign in.')
+    } catch (err) {
+      const data = err.response?.data
+      if (data?.errors) setErrors(data.errors)
+      if (data?.account_exists) {
+        setGoogleError(data.message || 'That email already has an account. Sign in with your existing credentials instead.')
+      } else {
+        setGoogleError(data?.message || 'Google registration could not be completed. Try the standard form.')
+        setGlobalError('')
+      }
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const strength = useMemo(() => passwordStrength(form.password), [form.password])
 
   const passwordChecks = {
@@ -255,6 +360,8 @@ export default function Register() {
   /* Step navigation */
   const isVisitor = form.role === VISITOR_ROLE
   const canProceedStep1 = form.name.trim() && form.username.trim() && (isVisitor || form.id_number.trim())
+  const canProceedStep2Google = form.role &&
+    (isVisitor || (form.program && (form.role === 'faculty' || (form.year && form.section))))
   const canProceedStep2 = form.role && emailVerified &&
     (isVisitor || (form.program && (form.role === 'faculty' || (form.year && form.section))))
 
@@ -300,7 +407,13 @@ export default function Register() {
     }
 
     try {
-      await register({ ...form, email: form.email.toLowerCase() })
+      await register({
+        ...form,
+        email: form.email.toLowerCase(),
+        website: form.website || '',
+        registration_challenge: registrationChallenge,
+        'cf-turnstile-response': turnstileToken || undefined,
+      })
       navigate('/login', { replace: true, state: { registered: true } })
     } catch (err) {
       const data = err.response?.data
@@ -357,6 +470,12 @@ export default function Register() {
 
         {/* Card */}
         <div className="glass-card p-5">
+
+          {/* Honeypot — hidden from real users */}
+          <div style={{ position: 'absolute', width: 0, height: 0, overflow: 'hidden', opacity: 0 }} aria-hidden="true">
+            <label htmlFor="website">Website</label>
+            <input id="website" name="website" type="text" value={form.website} onChange={handleChange} autoComplete="off" tabIndex={-1} />
+          </div>
 
           {/* Step progress */}
           <StepProgress currentStep={step} />
@@ -687,7 +806,48 @@ export default function Register() {
               </div>
             )}
 
-            {/* Navigation buttons */}
+                {/* Google registration — Step 2 only; email code and password are skipped */}
+                {step === 2 && (
+                  <div className="rounded-xl border p-3 mt-1" style={{ borderColor: 'var(--input-border)', background: 'var(--color-bg-secondary)' }}>
+                    <div className="flex items-center gap-3 mb-2">
+                      <span className="h-px flex-1" style={{ background: 'var(--input-border)' }} />
+                      <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>or</span>
+                      <span className="h-px flex-1" style={{ background: 'var(--input-border)' }} />
+                    </div>
+                    <GoogleButton
+                      mode="signup"
+                      disabled={!canProceedStep1}
+                      onSuccess={handleGoogleCredential}
+                      onError={setGoogleError}
+                      className="w-full"
+                    />
+                    <p className="text-[11px] mt-2" style={{ color: 'var(--color-text-faint)' }}>
+                      Uses your verified Google email. You will not need an email code or password here. Accounts still require administrator approval.
+                    </p>
+                    {googleError && <p className="text-xs mt-2" style={{ color: '#f87171' }}>{googleError}</p>}
+                    {googleReady && (
+                      <button
+                        type="button"
+                        onClick={handleGoogleRegister}
+                        disabled={loading || !canProceedStep2Google}
+                        className="btn-primary w-full mt-3"
+                        style={{ padding: '0.6rem', fontSize: '0.875rem', opacity: (loading || !canProceedStep2Google) ? 0.65 : 1 }}
+                      >
+                        {loading ? 'Creating Google account…' : 'Create Account with Google'}
+                      </button>
+                    )}
+                  </div>
+                )}
+
+                {/* Turnstile — rendered only when the server says it is required */}
+                {turnstileSiteKey && (
+                  <div
+                    className="cf-turnstile mt-3"
+                    data-sitekey={turnstileSiteKey}
+                  />
+                )}
+
+                {/* Navigation buttons */}
             <div className="flex gap-3 mt-5">
               {step > 1 && (
                 <button

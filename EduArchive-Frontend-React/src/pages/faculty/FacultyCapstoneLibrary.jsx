@@ -190,7 +190,8 @@ export default function FacultyCapstoneLibrary() {
                             </div>
                             <div className="flex items-center gap-1.5 text-xs text-gray-500 mt-auto">
                                 <HiOutlineUser className="w-3.5 h-3.5 flex-shrink-0" />
-                                <span className="truncate">{cap.author || '—'}</span>
+                                <span className="text-xs font-semibold text-gray-500 uppercase">Uploaded By</span>
+                                <span className="truncate">{cap.uploader?.name || cap.author || '—'}</span>
                             </div>
                             <div className="text-xs text-gray-400">{new Date(cap.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</div>
                         </div>
@@ -235,7 +236,7 @@ export default function FacultyCapstoneLibrary() {
                                 className={`border-b border-gray-100 hover:bg-green-50 transition-colors cursor-pointer ${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
                                 <td className="py-3 px-4 text-sm">
                                     <div className="font-semibold text-gray-900 line-clamp-2 max-w-xs hover:text-[#1B5E20]">{cap.title}</div>
-                                    <div className="text-xs text-gray-500 mt-0.5">{cap.author || '—'}</div>
+                                    <div className="text-xs text-gray-500 mt-0.5">Uploaded by {cap.uploader?.name || cap.author || '—'}</div>
                                 </td>
                                 <td className="py-3 px-4 text-sm">
                                     <div className="text-gray-800">{cap.program || '—'}</div>

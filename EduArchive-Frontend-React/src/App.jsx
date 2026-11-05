@@ -10,6 +10,8 @@ import GuestRoute from './components/GuestRoute'
 import Landing from './pages/Landing'
 const Login = lazy(() => import('./pages/Login'))
 const Register = lazy(() => import('./pages/Register'))
+const PrivacyPolicy = lazy(() => import('./pages/PrivacyPolicy'))
+const TermsOfService = lazy(() => import('./pages/TermsOfService'))
 const Dashboard = lazy(() => import('./pages/Dashboard'))
 import RouteTitle from './components/RouteTitle'
 import NotFound from './pages/NotFound'
@@ -24,6 +26,7 @@ const PublishedCapstones = lazy(() => import('./pages/admin/PublishedCapstones')
 const AdminProfile = lazy(() => import('./pages/admin/AdminProfile'))
 const ActivityLogs = lazy(() => import('./pages/admin/ActivityLogs'))
 const CapstoneApproval = lazy(() => import('./pages/admin/CapstoneApproval'))
+const AdminAdvisers = lazy(() => import('./pages/admin/AdminAdvisers'))
 
 // Faculty pages
 const FacultyLayout = lazy(() => import('./components/faculty/FacultyLayout'))
@@ -31,6 +34,9 @@ const FacultyCapstoneLibrary = lazy(() => import('./pages/faculty/FacultyCapston
 const FacultyUploadedCapstones = lazy(() => import('./pages/faculty/FacultyUploadedCapstones'))
 const FacultyProfile = lazy(() => import('./pages/faculty/FacultyProfile'))
 const FacultyCapstoneApproval = lazy(() => import('./pages/faculty/FacultyCapstoneApproval'))
+const FacultyDashboard = lazy(() => import('./pages/faculty/FacultyDashboard'))
+const FacultyAssignedCapstones = lazy(() => import('./pages/faculty/FacultyAssignedCapstones'))
+const FacultyNotifications = lazy(() => import('./pages/faculty/FacultyNotifications'))
 
 // Student pages
 const StudentLayout = lazy(() => import('./components/student/StudentLayout'))
@@ -125,6 +131,8 @@ function App() {
               <Suspense fallback={<Loading text="Loading page…" />}><Routes>
                 {/* Public landing page */}
                 <Route path="/" element={<Landing />} />
+                <Route path="/privacy" element={<PrivacyPolicy />} />
+                <Route path="/terms" element={<TermsOfService />} />
 
                 {/* Guest-only (redirect to dashboard if logged in) */}
                 <Route path="/login" element={<GuestRoute><Login /></GuestRoute>} />
@@ -135,6 +143,7 @@ function App() {
 
                 {/* Admin routes */}
                 <Route path="/admin/dashboard" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
+                <Route path="/admin/advisers" element={<AdminRoute><AdminAdvisers /></AdminRoute>} />
                 <Route path="/admin/capstones/:id" element={<AdminRoute><CapstoneMainPage /></AdminRoute>} />
                 <Route path="/admin/capstone-library" element={<AdminRoute><CapstoneLibrary /></AdminRoute>} />
                 <Route path="/admin/capstone-library/review-data" element={<AdminBareRoute><ReviewExtractedDataPage nextPath="/admin/capstone-library/upload-details" backPath="/admin/capstone-library" /></AdminBareRoute>} />
@@ -154,8 +163,10 @@ function App() {
                 <Route path="/faculty/approvals" element={<FacultyRoute><FacultyCapstoneApproval /></FacultyRoute>} />
                 <Route path="/faculty/capstones/:id" element={<FacultyRoute><CapstoneMainPage /></FacultyRoute>} />
                 <Route path="/faculty/profile" element={<FacultyRoute><FacultyProfile /></FacultyRoute>} />
-                <Route path="/faculty" element={<Navigate to="/faculty/uploads" replace />} />
-                <Route path="/faculty/dashboard" element={<Navigate to="/faculty/uploads" replace />} />
+                <Route path="/faculty/dashboard" element={<FacultyRoute><FacultyDashboard /></FacultyRoute>} />
+                <Route path="/faculty/assigned" element={<FacultyRoute><FacultyAssignedCapstones /></FacultyRoute>} />
+                <Route path="/faculty/notifications" element={<FacultyRoute><FacultyNotifications /></FacultyRoute>} />
+                <Route path="/faculty" element={<Navigate to="/faculty/dashboard" replace />} />
 
                 {/* Student routes */}
                 <Route path="/student/uploads" element={<StudentRoute><StudentUploadedCapstones /></StudentRoute>} />

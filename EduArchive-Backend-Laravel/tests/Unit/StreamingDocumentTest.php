@@ -51,18 +51,79 @@ class StreamingDocumentTest extends TestCase
         $path = $service->encryptAndStore('capstones', UploadedFile::fake()->createWithContent('synthetic.pdf', str_repeat('a', 2200000)));
         $original = Storage::disk('local')->get($path);
         $tampered = $original;
-        $tampered[1500000] = chr(ord($tampered[1500000]) ^ 1);
-        $start = strlen(\App\Services\EncryptedFileStream::MAGIC) + 24;
-        $frameLength = 4 + 1048576 + 17;
-        $reordered = substr($original, 0, $start)
-            .substr($original, $start + $frameLength, $frameLength)
-            .substr($original, $start, $frameLength)
-            .substr($original, $start + 2 * $frameLength);
-        $missing = substr($original, 0, $start).substr($original, $start + $frameLength);
+        $headerBytes = strlen(\App\Services\ChunkedEncryptedFile::MAGIC)
+            + \App\Services\ChunkedEncryptedFile::FILE_ID_BYTES;
+        $frameBytes = \App\Services\EncryptedFileStream::CHUNK_BYTES
+            + SODIUM_CRYPTO_AEAD_XCHACHA20POLY1305_IETF_ABYTES;
+        $footerBytes = \App\Services\ChunkedEncryptedFile::FOOTER_BYTES;
+        $tamperOffset = $headerBytes + 100;
+        $tampered[$tamperOffset] = chr(ord($tampered[$tamperOffset]) ^ 1);
+        $header = substr($original, 0, $headerBytes);
+        $frame0 = substr($original, $headerBytes, $frameBytes);
+        $frame1 = substr($original, $headerBytes + $frameBytes, $frameBytes);
+        $frame2 = substr($original, $headerBytes + 2 * $frameBytes, -$footerBytes);
+        $footer = substr($original, -$footerBytes);
+        $reordered = $header.$frame1.$frame0.$frame2.$footer;
+        $missing = $header.$frame0.$frame2.$footer;
         foreach ([$tampered, substr($original, 0, -1), substr($original, 0, -21), $original.'extra', $reordered, $missing] as $invalid) {
             Storage::disk('local')->put($path, $invalid);
             self::assertNull($service->openVerifiedDocument($path));
         }
+    }
+
+    public function test_authenticated_byte_ranges_return_only_requested_plaintext(): void
+    {
+        $bytes = '%PDF-1.4'.str_repeat('synthetic range fixture ', 100000);
+        $path = (new PdfEncryptorService())->encryptAndStore(
+            'capstones', UploadedFile::fake()->createWithContent('range.pdf', $bytes)
+        );
+        $document = (new PdfEncryptorService())->openForViewing($path);
+        self::assertInstanceOf(\App\Services\ChunkedEncryptedFile::class, $document);
+
+        $start = 1048576 - 10;
+        $end = $start + 29;
+        $request = \Illuminate\Http\Request::create('/pdf', 'GET', [], [], [], [
+            'HTTP_RANGE' => "bytes={$start}-{$end}",
+        ]);
+        $response = $document->response($request, ['Content-Type' => 'application/pdf']);
+        self::assertSame(206, $response->getStatusCode());
+        self::assertSame("bytes {$start}-{$end}/".strlen($bytes), $response->headers->get('Content-Range'));
+
+        ob_start();
+        $response->sendContent();
+        $actual = ob_get_clean();
+        self::assertSame(substr($bytes, $start, $end - $start + 1), $actual);
+    }
+
+    public function test_corrupt_range_chunk_is_not_written_before_authentication(): void
+    {
+        $service = new PdfEncryptorService();
+        $path = $service->encryptAndStore(
+            'capstones', UploadedFile::fake()->createWithContent('range.pdf', str_repeat('private-range-bytes', 100000))
+        );
+        $ciphertext = Storage::disk('local')->get($path);
+        $offset = strlen(\App\Services\ChunkedEncryptedFile::MAGIC)
+            + \App\Services\ChunkedEncryptedFile::FILE_ID_BYTES + 100;
+        $ciphertext[$offset] = chr(ord($ciphertext[$offset]) ^ 1);
+        Storage::disk('local')->put($path, $ciphertext);
+
+        $document = $service->openForViewing($path);
+        self::assertInstanceOf(\App\Services\ChunkedEncryptedFile::class, $document);
+        $response = $document->response(
+            \Illuminate\Http\Request::create('/pdf', 'GET', [], [], [], ['HTTP_RANGE' => 'bytes=0-99']),
+            ['Content-Type' => 'application/pdf'],
+        );
+
+        ob_start();
+        try {
+            $response->sendContent();
+            self::fail('Corrupt range data must not be returned.');
+        } catch (\RuntimeException $error) {
+            self::assertStringContainsString('authentication failed', strtolower($error->getMessage()));
+        } finally {
+            $body = ob_get_clean();
+        }
+        self::assertSame('', $body);
     }
 
     public function test_explicit_legacy_conversion_skips_new_encrypted_files_without_modifying_them(): void

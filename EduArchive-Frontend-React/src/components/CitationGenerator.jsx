@@ -1,13 +1,52 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { HiOutlineClipboardCopy, HiOutlineDownload, HiOutlineDocumentText } from 'react-icons/hi';
+import api from '../api/axios';
 
 /**
- * CitationGenerator — generates APA 7th and MLA 9th citations
- * for capstone projects based on extracted metadata.
+ * CitationGenerator — APA 7th, MLA 9th and IEEE citations for capstones.
+ *
+ * The backend formatter is the source of truth when reachable; a local
+ * fallback keeps the tool usable offline. Successful generations are recorded
+ * server-side and labelled "citation generations", never as external citations.
  */
 export default function CitationGenerator({ capstone }) {
-    const [tab, setTab] = useState('apa'); // 'apa' | 'mla'
+    const [tab, setTab] = useState('apa'); // 'apa' | 'mla' | 'ieee'
     const [copied, setCopied] = useState(false);
+    const [open, setOpen] = useState(false);
+    const [serverCitations, setServerCitations] = useState({});
+    const [generationCount, setGenerationCount] = useState(
+        Number.isFinite(Number(capstone?.citation_generations)) ? Number(capstone.citation_generations) : null
+    );
+    const tracked = useRef(new Set());
+
+    const capstoneKey = capstone?.slug || capstone?.id;
+    const otherKey = capstone?.id || capstone?.slug;
+
+    useEffect(() => {
+        if (!open || !capstoneKey) return;
+        const format = tab;
+        if (tracked.current.has(format)) return;
+        tracked.current.add(format);
+
+        let cancelled = false;
+        api.post(`/capstones/${encodeURIComponent(capstoneKey)}/citation`, { format, action: 'generate' })
+            .then(res => {
+                if (cancelled) return;
+                const data = res.data?.data || {};
+                if (data.citation) {
+                    setServerCitations(prev => ({ ...prev, [format]: data.citation }));
+                }
+                if (Number.isFinite(Number(data.citation_generations))) {
+                    setGenerationCount(Number(data.citation_generations));
+                }
+            })
+            .catch(() => {
+                // Local formatting remains available; tracking is best-effort.
+                tracked.current.delete(format);
+            });
+
+        return () => { cancelled = true; };
+    }, [open, tab, capstoneKey, otherKey]);
 
     if (!capstone) return null;
 
@@ -18,19 +57,16 @@ export default function CitationGenerator({ capstone }) {
 
     // ── Parse author names ──────────────────────────────
     const parseAuthors = (raw) => {
-        // Split by comma, "&", "and"
         const parts = raw
             .split(/,\s*(?=[A-Z])|\s+(?:and|&)\s+/i)
             .map(a => a.trim())
             .filter(a => a.length > 0);
 
         return parts.map(name => {
-            // Handle "Last, First Middle" format already
             if (name.includes(',')) {
                 const [last, ...rest] = name.split(',').map(s => s.trim());
                 return { last, first: rest.join(' ') };
             }
-            // Handle "First Middle Last" format
             const words = name.split(/\s+/);
             if (words.length === 1) return { last: words[0], first: '' };
             const last = words[words.length - 1];
@@ -43,10 +79,8 @@ export default function CitationGenerator({ capstone }) {
 
     // ── APA 7th Edition ─────────────────────────────────
     const toSentenceCase = (str) => {
-        // Capitalize first letter, lowercase the rest, preserve after colon
         return str.replace(/^(.)(.*)$/, (_, first, rest) => {
             let result = first.toUpperCase() + rest.toLowerCase();
-            // Re-capitalize after colon + space
             result = result.replace(/:\s*([a-z])/g, (m, c) => ': ' + c.toUpperCase());
             return result;
         });
@@ -54,7 +88,6 @@ export default function CitationGenerator({ capstone }) {
 
     const formatApaAuthor = (author) => {
         if (!author.first) return author.last;
-        // Convert first name(s) to initials: "Jamaica Rhea" → "J. R."
         const initials = author.first
             .split(/\s+/)
             .map(n => n.charAt(0).toUpperCase() + '.')
@@ -67,7 +100,6 @@ export default function CitationGenerator({ capstone }) {
         if (authors.length === 2) {
             return `${formatApaAuthor(authors[0])} & ${formatApaAuthor(authors[1])}`;
         }
-        // 3+ authors: all names separated by commas, & before last
         const formatted = authors.map(formatApaAuthor);
         return formatted.slice(0, -1).join(', ') + ', & ' + formatted[formatted.length - 1];
     };
@@ -97,15 +129,34 @@ export default function CitationGenerator({ capstone }) {
             const second = a2.first ? `${a2.first} ${a2.last}` : a2.last;
             return `${first}, and ${second}`;
         }
-        // 3+ authors: first author + "et al."
         const a = authors[0];
         return a.first ? `${a.last}, ${a.first}, et al` : `${a.last}, et al`;
     };
 
     const mlaCitation = `${getMlaAuthors()}. ${toTitleCase(title)}. ${school}, ${year}. Unpublished capstone project.`;
 
-    const currentCitation = tab === 'apa' ? apaCitation : mlaCitation;
-    const currentLabel = tab === 'apa' ? 'APA 7th Edition' : 'MLA 9th Edition';
+    // ── IEEE ────────────────────────────────────────────
+    const formatIeeeAuthor = (author) => {
+        const initials = author.first
+            .split(/\s+/)
+            .filter(Boolean)
+            .map(n => n.charAt(0).toUpperCase() + '.')
+            .join(' ');
+        return initials ? `${initials} ${author.last}` : author.last;
+    };
+
+    const getIeeeAuthors = () => {
+        const names = authors.map(formatIeeeAuthor);
+        if (names.length === 1) return names[0];
+        if (names.length === 2) return `${names[0]} and ${names[1]}`;
+        return `${names.slice(0, -1).join(', ')}, and ${names[names.length - 1]}`;
+    };
+
+    const ieeeCitation = `[1] ${getIeeeAuthors()}, "${title}," unpublished capstone project, ${school}, ${year}.`;
+
+    const localCitations = { apa: apaCitation, mla: mlaCitation, ieee: ieeeCitation };
+    const currentCitation = serverCitations[tab] || localCitations[tab];
+    const currentLabel = tab === 'apa' ? 'APA 7th Edition' : tab === 'mla' ? 'MLA 9th Edition' : 'IEEE';
 
     // ── Actions ─────────────────────────────────────────
     const handleCopy = () => {
@@ -145,8 +196,14 @@ export default function CitationGenerator({ capstone }) {
         );
     };
 
+    const tabs = [
+        { id: 'apa', label: 'APA 7th' },
+        { id: 'mla', label: 'MLA 9th' },
+        { id: 'ieee', label: 'IEEE' },
+    ];
+
     return (
-        <details className="group">
+        <details className="group" onToggle={(event) => setOpen(event.currentTarget.open)}>
             <summary className="text-xs font-semibold text-gray-500 uppercase cursor-pointer select-none flex items-center gap-1">
                 <HiOutlineDocumentText className="w-3.5 h-3.5" />
                 Citation
@@ -158,26 +215,19 @@ export default function CitationGenerator({ capstone }) {
             <div className="mt-3 rounded-lg border border-green-200 bg-white overflow-hidden">
                 {/* Tab switcher */}
                 <div className="flex border-b border-green-200">
-                    <button
-                        onClick={() => { setTab('apa'); setCopied(false); }}
-                        className={`flex-1 px-4 py-2.5 text-xs font-semibold transition-colors ${
-                            tab === 'apa'
-                                ? 'bg-green-50 text-green-700 border-b-2 border-green-600'
-                                : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
-                        }`}
-                    >
-                        APA 7th Edition
-                    </button>
-                    <button
-                        onClick={() => { setTab('mla'); setCopied(false); }}
-                        className={`flex-1 px-4 py-2.5 text-xs font-semibold transition-colors ${
-                            tab === 'mla'
-                                ? 'bg-green-50 text-green-700 border-b-2 border-green-600'
-                                : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
-                        }`}
-                    >
-                        MLA 9th Edition
-                    </button>
+                    {tabs.map(item => (
+                        <button
+                            key={item.id}
+                            onClick={() => { setTab(item.id); setCopied(false); }}
+                            className={`flex-1 px-3 py-2.5 text-xs font-semibold transition-colors ${
+                                tab === item.id
+                                    ? 'bg-green-50 text-green-700 border-b-2 border-green-600'
+                                    : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+                            }`}
+                        >
+                            {item.label}
+                        </button>
+                    ))}
                 </div>
 
                 {/* Citation text */}
@@ -185,6 +235,12 @@ export default function CitationGenerator({ capstone }) {
                     <div className="text-sm text-gray-700 leading-relaxed bg-gray-50 rounded-lg p-3 border border-gray-100" style={{ fontFamily: "'Times New Roman', Georgia, serif" }}>
                         {renderCitation()}
                     </div>
+
+                    {generationCount !== null && (
+                        <p className="text-[11px] text-gray-400 mt-2">
+                            {generationCount} citation generation{generationCount === 1 ? '' : 's'} recorded. This counts uses of the citation tool, not verified external citations.
+                        </p>
+                    )}
 
                     {/* Action buttons */}
                     <div className="flex items-center gap-2 mt-3">

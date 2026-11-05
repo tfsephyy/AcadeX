@@ -2,9 +2,11 @@
 
 use App\Http\Controllers\Api\V1\ActivityLogController;
 use App\Http\Controllers\Api\V1\AdminDashboardController;
+use App\Http\Controllers\Api\V1\AdviserController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\CapstoneController;
 use App\Http\Controllers\Api\V1\ChatbotController;
+use App\Http\Controllers\Api\V1\FacultyDashboardController;
 use App\Http\Controllers\Api\V1\NotificationController;
 use App\Http\Controllers\Api\V1\PasswordResetController;
 use App\Http\Controllers\Api\V1\PublishedCapstoneController;
@@ -27,18 +29,27 @@ Route::prefix('v1')->group(function () {
     });
 
     // ── Public routes ────────────────────────────────────
+    Route::get('/register/challenge', [AuthController::class, 'registrationChallenge'])
+        ->middleware('throttle:30,1');
+
     Route::post('/register', [AuthController::class, 'register'])
-        ->middleware('throttle:10,1');
+        ->middleware('throttle:register');
 
     Route::post('/login', [AuthController::class, 'login'])
-        ->middleware('throttle:5,1');
+        ->middleware('throttle:login');
+
+    // Google Identity Services: the credential is verified server-side.
+    Route::post('/auth/google/register', [AuthController::class, 'googleRegister'])
+        ->middleware('throttle:google-auth');
+    Route::post('/auth/google/login', [AuthController::class, 'googleLogin'])
+        ->middleware('throttle:google-auth');
 
     // ── Password reset & email verification (public) ─────
-    Route::post('/forgot-password',        [PasswordResetController::class, 'sendCode'])->middleware('throttle:5,1');
-    Route::post('/verify-reset-code',      [PasswordResetController::class, 'verifyCode'])->middleware('throttle:10,1');
-    Route::post('/reset-password',         [PasswordResetController::class, 'resetPassword'])->middleware('throttle:5,1');
-    Route::post('/send-verification-code', [PasswordResetController::class, 'sendVerificationCode'])->middleware('throttle:5,1');
-    Route::post('/verify-email-code',      [PasswordResetController::class, 'verifyEmailCode'])->middleware('throttle:10,1');
+    Route::post('/forgot-password',        [PasswordResetController::class, 'sendCode'])->middleware('throttle:forgot-password');
+    Route::post('/verify-reset-code',      [PasswordResetController::class, 'verifyCode'])->middleware('throttle:verification-check');
+    Route::post('/reset-password',         [PasswordResetController::class, 'resetPassword'])->middleware('throttle:reset-password');
+    Route::post('/send-verification-code', [PasswordResetController::class, 'sendVerificationCode'])->middleware('throttle:verification-send');
+    Route::post('/verify-email-code',      [PasswordResetController::class, 'verifyEmailCode'])->middleware('throttle:verification-check');
 
     // ── Protected routes (Sanctum) ───────────────────────
     Route::middleware(['auth:sanctum', \App\Http\Middleware\EnsureActiveAccount::class, \App\Http\Middleware\TrackLastActive::class])->group(function () {
@@ -47,6 +58,17 @@ Route::prefix('v1')->group(function () {
         Route::get('/user',    [AuthController::class, 'user']);
         Route::put('/profile', [AuthController::class, 'updateProfile']);
         Route::post('/change-password', [PasswordResetController::class, 'changePassword']);
+        Route::post('/auth/google/link', [AuthController::class, 'linkGoogle'])->middleware('throttle:google-auth');
+
+        // ── Notifications (every authenticated recipient) ─────
+        Route::get('/notifications',                      [NotificationController::class, 'index']);
+        Route::get('/notifications/unread-count',         [NotificationController::class, 'unreadCount']);
+        Route::put('/notifications/mark-all-read',        [NotificationController::class, 'markAllAsRead']);
+        Route::put('/notifications/{notification}/read',  [NotificationController::class, 'markAsRead']);
+
+        // ── Background upload status / retry (owner-scoped) ───
+        Route::get('/uploads/{upload}/status',  [CapstoneController::class, 'uploadStatus']);
+        Route::post('/uploads/{upload}/retry',  [CapstoneController::class, 'retryUpload']);
 
         // ── Published capstones (all authenticated users) ────
         Route::prefix('published')->group(function () {
@@ -82,6 +104,8 @@ Route::prefix('v1')->group(function () {
         Route::get('/capstones/{capstone}/resources/{resource}/download', [CapstoneController::class, 'downloadResource'])
             ->middleware('throttle:20,60');
         Route::post('/capstones/{capstone}/bookmark',      [CapstoneController::class, 'toggleBookmark']);
+        Route::post('/capstones/{capstone}/citation',      [CapstoneController::class, 'citation'])
+            ->middleware('throttle:30,1');
         Route::get('/capstones/{capstone}',                [CapstoneController::class, 'show']);
 
         // ── Admin-only routes ────────────────────────────
@@ -132,6 +156,10 @@ Route::prefix('v1')->group(function () {
             Route::post('/users/{user}/unarchive',      [UserManagementController::class, 'unarchive']);
             Route::delete('/users/{user}',              [UserManagementController::class, 'remove']);
 
+            // Adviser pool (uses existing faculty accounts)
+            Route::get('/advisers',                     [AdviserController::class, 'index']);
+            Route::put('/advisers/{user}/availability', [AdviserController::class, 'updateAvailability']);
+
             // Notifications
             Route::get('/notifications',                      [NotificationController::class, 'index']);
             Route::get('/notifications/unread-count',         [NotificationController::class, 'unreadCount']);
@@ -147,6 +175,8 @@ Route::prefix('v1')->group(function () {
 
         // ── Faculty routes ───────────────────────────────
         Route::middleware('role:admin,faculty')->prefix('faculty')->group(function () {
+            // Adviser-scoped dashboard
+            Route::get('/dashboard',                         [FacultyDashboardController::class, 'stats']);
             // Faculty Capstone Management (scoped to own uploads)
             Route::get('/capstones/filter-options',          [CapstoneController::class, 'filterOptions']);
             Route::get('/capstones/pending',                 [CapstoneController::class, 'getPendingCapstones']);

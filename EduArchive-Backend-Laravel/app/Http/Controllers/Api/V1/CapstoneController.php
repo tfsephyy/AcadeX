@@ -3,17 +3,22 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Jobs\ExtractPdfTextJob;
+use App\Jobs\ExtractUploadMetadataJob;
+use App\Jobs\SendAdviserSubmissionEmailJob;
 use App\Models\AuditLog;
 use App\Models\Bookmark;
 use App\Models\Capstone;
 use App\Models\CapstoneResource;
+use App\Models\CitationEvent;
+use App\Models\DocumentUpload;
 use App\Models\Keyword;
 use App\Models\Notification;
 use App\Models\User;
+use App\Services\CitationService;
 use App\Services\NlpSearchService;
 use App\Services\PdfEncryptorService;
 use App\Services\PdfExtractorService;
-use App\Services\PdfTextService;
 use App\Services\UploadLimits;
 use App\Traits\ApiResponses;
 use Illuminate\Http\JsonResponse;
@@ -94,9 +99,21 @@ class CapstoneController extends Controller
      */
     public function browse(Request $request): JsonResponse
     {
+        $assignedOnly = $request->boolean('assigned')
+            && $request->user()
+            && $request->user()->hasRole('faculty');
+
         $query = Capstone::with(['keywords', 'uploader:id,name', 'approver:id,name', 'adviser:id,name'])
-            ->where('is_archived', false)
-            ->where('approval_status', 'approved'); // Only show approved capstones in the browse/uploaded view
+            ->where('is_archived', false);
+
+        if ($assignedOnly) {
+            // Adviser-assigned view includes pending submissions so the adviser
+            // can find and review them. Access is still enforced by the model's
+            // request scope and this explicit adviser filter.
+            $query->where('adviser_id', $request->user()->id);
+        } else {
+            $query->where('approval_status', 'approved');
+        }
 
         // NLP-enhanced search: synonym/abbreviation expansion + FULLTEXT + keyword table
         if ($request->has('search') && $request->search) {
@@ -218,8 +235,43 @@ class CapstoneController extends Controller
                 ->where('capstone_id', $capstone->id)
                 ->exists()
             : false;
+        $data['citation_generations'] = $capstone->citationEvents()->count();
 
         return $this->successResponse($data, 'Capstone retrieved.');
+    }
+
+    /**
+     * Generate an APA/MLA/IEEE citation and record a citation-generation event.
+     * This metric counts generated citations, not verified external citations.
+     */
+    public function citation(Request $request, Capstone $capstone): JsonResponse
+    {
+        $this->authorize('interact', $capstone);
+
+        $validator = Validator::make($request->all(), [
+            'format' => 'required|in:apa,mla,ieee',
+            'action' => 'nullable|in:generate,copy,download',
+        ]);
+        if ($validator->fails()) return $this->validationFailure($validator);
+
+        $format = $validator->validated()['format'];
+        $action = $validator->validated()['action'] ?? 'generate';
+        $service = app(CitationService::class);
+
+        CitationEvent::create([
+            'capstone_id' => $capstone->id,
+            'user_id' => $request->user()->id,
+            'format' => $format,
+            'action' => $action,
+            'ip_hash' => hash_hmac('sha256', (string) $request->ip(), (string) config('app.key')),
+        ]);
+
+        return $this->successResponse([
+            'format' => $format,
+            'label' => $service->label($format),
+            'citation' => $service->format($capstone, $format),
+            'citation_generations' => $capstone->citationEvents()->count(),
+        ], 'Citation generated.');
     }
 
     /**
@@ -256,31 +308,124 @@ class CapstoneController extends Controller
         $skipExtraction = $request->boolean('skip_extraction', false);
         $this->prepareUploadEnvironment($file);
 
-        // Persist securely first. Metadata extraction is optional and can never
-        // send a large accepted capstone into an unbounded parser/OCR path.
+        // Persist securely first. The response can return as soon as the bytes
+        // are encrypted and owned; extraction/OCR runs behind a queued job.
         $encryptor = new PdfEncryptorService();
         $path = $encryptor->encryptAndStore('capstones', $file);
-        $reference = app(\App\Services\DocumentUploads::class)->stage($request->user(), 'pdf', $path);
-        $extracted = PdfExtractorService::emptyMetadata();
-        $extractionStatus = $skipExtraction ? 'skipped' : 'manual_required';
-        if (!$skipExtraction && PdfExtractorService::maxAutomaticBytes() > 0) {
-            try {
-                $extracted = app(PdfExtractorService::class)->extract($file);
-                $extractionStatus = array_filter($extracted) ? 'complete' : 'unavailable';
-            } catch (\Throwable $error) {
-                // Do not include PDF contents or private exception details.
-                \Log::warning('Automatic capstone extraction unavailable.', ['type' => get_class($error)]);
-                $extractionStatus = 'unavailable';
-            }
+        $status = $skipExtraction
+            ? \App\Models\DocumentUpload::STATUS_SKIPPED
+            : \App\Models\DocumentUpload::STATUS_QUEUED;
+        $reference = app(\App\Services\DocumentUploads::class)->stage(
+            $request->user(), 'pdf', $path, $status, $file->getClientOriginalName()
+        );
+        $uploadId = substr($reference, 7);
+
+        if (!$skipExtraction) {
+            \App\Jobs\ExtractUploadMetadataJob::dispatch($uploadId);
         }
 
-        return $this->successResponse([
-            'pdf_path'          => $reference,
+        $upload = \App\Models\DocumentUpload::find($uploadId);
+        $payload = $this->uploadPayload($upload, $reference);
+
+        return $this->successResponse($payload + [
             'pdf_original_name' => $file->getClientOriginalName(),
-            'extracted'         => $extracted,
+        ], $skipExtraction
+            ? 'PDF uploaded. Review or enter the document details.'
+            : 'PDF uploaded. Document processing has started.');
+    }
+
+    /**
+     * Poll a staged upload's processing state. Only the owner can read it.
+     */
+    public function uploadStatus(Request $request, string $upload): JsonResponse
+    {
+        $record = \App\Models\DocumentUpload::whereKey($upload)
+            ->where('user_id', $request->user()->id)
+            ->first();
+        if (!$record) return $this->errorResponse('Upload reference not found.', 404);
+
+        return $this->successResponse($this->uploadPayload($record, $record->reference()));
+    }
+
+    /**
+     * Retry a failed extraction without re-uploading the PDF.
+     */
+    public function retryUpload(Request $request, string $upload): JsonResponse
+    {
+        $record = \App\Models\DocumentUpload::whereKey($upload)
+            ->where('user_id', $request->user()->id)
+            ->first();
+        if (!$record) return $this->errorResponse('Upload reference not found.', 404);
+        if ($record->purpose !== 'pdf') return $this->errorResponse('Only PDF uploads can be reprocessed.', 422);
+        if ($record->capstone_id !== null) return $this->errorResponse('This upload has already been submitted.', 409);
+        if (in_array($record->processing_status, [
+            \App\Models\DocumentUpload::STATUS_QUEUED,
+            \App\Models\DocumentUpload::STATUS_PROCESSING,
+        ], true)) {
+            return $this->errorResponse('This upload is already being processed.', 409);
+        }
+        if (!Storage::disk('local')->exists($record->path)) {
+            return $this->errorResponse('The stored file is no longer available. Upload the PDF again.', 410);
+        }
+
+        $record->update([
+            'processing_status' => \App\Models\DocumentUpload::STATUS_QUEUED,
+            'processing_error' => null,
+            'processing_started_at' => null,
+            'processing_completed_at' => null,
+            'extraction_result' => null,
+        ]);
+        \App\Jobs\ExtractUploadMetadataJob::dispatch($record->id);
+
+        return $this->successResponse(
+            $this->uploadPayload($record->refresh(), $record->reference()),
+            'Document processing was queued again.'
+        );
+    }
+
+    /** Stable shape used by the upload response and the polling endpoint. */
+    private function uploadPayload(?\App\Models\DocumentUpload $record, string $reference): array
+    {
+        if (!$record) {
+            return [
+                'upload_id' => null, 'pdf_path' => $reference,
+                'processing_status' => 'failed', 'extraction_status' => 'failed',
+                'extracted' => PdfExtractorService::emptyMetadata(),
+                'extraction_scope' => 'unavailable', 'processing_error' => 'Upload record unavailable.',
+                'retryable' => false, 'notes' => [],
+            ];
+        }
+
+        $metadata = $record->extractedMetadata();
+        $hasMetadata = (bool) array_filter($metadata);
+        $processing = $record->processing_status;
+        $extractionStatus = match (true) {
+            $processing === \App\Models\DocumentUpload::STATUS_SKIPPED => 'skipped',
+            $processing === \App\Models\DocumentUpload::STATUS_FAILED => 'failed',
+            in_array($processing, [
+                \App\Models\DocumentUpload::STATUS_QUEUED,
+                \App\Models\DocumentUpload::STATUS_PROCESSING,
+            ], true) => $processing,
+            $hasMetadata => 'complete',
+            default => 'unavailable',
+        };
+
+        return [
+            'upload_id' => $record->id,
+            'pdf_path' => $reference,
+            'processing_status' => $processing,
             'extraction_status' => $extractionStatus,
-            'extraction_scope'  => $file->getSize() > PdfExtractorService::maxAutomaticBytes() ? 'first_12_pages' : 'full_document',
-        ], 'PDF uploaded. Review or enter the document details.');
+            'extracted' => $metadata,
+            'extraction_scope' => $record->extractionScope(),
+            'processing_error' => $record->processing_error,
+            'retryable' => $record->capstone_id === null
+                && in_array($processing, [
+                    \App\Models\DocumentUpload::STATUS_FAILED,
+                    \App\Models\DocumentUpload::STATUS_COMPLETED,
+                ], true) && !$hasMetadata,
+            'notes' => $record->extraction_result['notes'] ?? [],
+            'expires_at' => $record->expires_at?->toIso8601String(),
+        ];
     }
 
 
@@ -361,6 +506,11 @@ class CapstoneController extends Controller
      */
     public function store(Request $request): JsonResponse
     {
+        // Accept either a comma-separated string or an array from the client.
+        if (is_string($request->input('keywords'))) {
+            $request->merge(['keywords' => [$request->input('keywords')]]);
+        }
+
         $validator = Validator::make($request->all(), [
             'title'              => 'required|string|max:255|unique:capstones,title',
             'year'               => 'nullable|integer|min:2000|max:2099',
@@ -424,8 +574,9 @@ class CapstoneController extends Controller
             if (!Capstone::find($id)) abort(403, 'Referenced capstone unavailable.');
         }
         if ($request->adviser_id && !User::whereKey($request->adviser_id)->where('is_approved', true)
-            ->where('is_archived', false)->whereHas('role', fn ($q) => $q->where('name', 'faculty'))->exists()) {
-            throw \Illuminate\Validation\ValidationException::withMessages(['adviser_id' => 'Select an active faculty adviser.']);
+            ->where('is_archived', false)->where('adviser_available', true)
+            ->whereHas('role', fn ($q) => $q->where('name', 'faculty'))->exists()) {
+            throw \Illuminate\Validation\ValidationException::withMessages(['adviser_id' => 'Select an active, available faculty adviser.']);
         }
         $pdfPath = $uploads->resolve($user, $request->pdf_path, 'pdf');
         $paths = array_merge([$pdfPath, $imradPath], array_column($resources, 'file_path'));
@@ -452,11 +603,13 @@ class CapstoneController extends Controller
             'adviser_id'         => $request->adviser_id,
         ]);
 
-        // Attach keywords
-        if ($request->has('keywords') && is_array($request->keywords)) {
+        // Normalize keyword input on the server as well as in the UI: split
+        // comma-separated values, trim, ignore empties and dedupe case-insensitively.
+        $keywordNames = $this->normalizeKeywords($request->input('keywords', []));
+        if (!empty($keywordNames)) {
             $keywordIds = [];
-            foreach ($request->keywords as $name) {
-                $keyword = Keyword::withoutGlobalScope('request_access')->firstOrCreate(['name' => strtolower(trim($name))]);
+            foreach ($keywordNames as $name) {
+                $keyword = Keyword::withoutGlobalScope('request_access')->firstOrCreate(['name' => $name]);
                 $keywordIds[] = $keyword->id;
             }
             $capstone->keywords()->sync($keywordIds);
@@ -480,78 +633,81 @@ class CapstoneController extends Controller
             }
         }
 
-        // ── Extract full PDF text and store in DB for chatbot ──────────────
-        // Done after creation so a failure never blocks the upload.
         $uploads->claim($capstone, $paths);
         return $capstone;
         });
 
-        try {
-            $pdfTextService = new PdfTextService();
-            $pdfText = $pdfTextService->extractFromEncryptedPath($capstone->pdf_path);
-            if (!empty($pdfText)) {
-                $capstone->update(['pdf_text' => $pdfText]);
-            }
-        } catch (\Throwable $e) {
-            \Log::warning('PDF text extraction failed for capstone ' . $capstone->id . ': ' . $e->getMessage());
-        }
+        // Whole-document text extraction is intentionally queued. The upload
+        // response never waits for OCR/full-text parsing.
+        ExtractPdfTextJob::dispatch($capstone->id);
 
         AuditLog::log('upload_capstone', $user->id, Capstone::class, $capstone->id);
-
-        // Create notifications based on user role:
-        // - Student upload: Notify admin AND adviser (if assigned)
-        // - Admin/Faculty upload: Notify all admins
-        if ($isStudent) {
-            // Notify all admins about student upload requiring approval
-            $admins = User::whereHas('role', function ($query) {
-                $query->where('name', 'admin');
-            })->get();
-
-            foreach ($admins as $admin) {
-                Notification::create([
-                    'admin_id'            => $admin->id,
-                    'type'                => 'capstone_pending_approval',
-                    'title'               => 'New Capstone Awaiting Approval',
-                    'message'             => "Student {$user->name} uploaded capstone '{$capstone->title}' for approval",
-                    'related_user_id'     => $user->id,
-                    'related_capstone_id' => $capstone->id,
-                    'is_read'             => false,
-                ]);
-            }
-
-            // If adviser is assigned, notify them too
-            if ($capstone->adviser_id) {
-                Notification::create([
-                    'admin_id'            => $capstone->adviser_id,
-                    'type'                => 'capstone_pending_approval',
-                    'title'               => 'New Capstone Awaiting Your Approval',
-                    'message'             => "Student {$user->name} uploaded capstone '{$capstone->title}' where you are the adviser",
-                    'related_user_id'     => $user->id,
-                    'related_capstone_id' => $capstone->id,
-                    'is_read'             => false,
-                ]);
-            }
-        } else {
-            // Admin/Faculty upload - notify all admins
-            $admins = User::whereHas('role', function ($query) {
-                $query->where('name', 'admin');
-            })->get();
-
-            foreach ($admins as $admin) {
-                Notification::create([
-                    'admin_id'            => $admin->id,
-                    'type'                => 'capstone_uploaded',
-                    'title'               => 'New Capstone Uploaded',
-                    'message'             => "Capstone '{$capstone->title}' uploaded by {$user->name}",
-                    'related_user_id'     => $user->id,
-                    'related_capstone_id' => $capstone->id,
-                    'is_read'             => false,
-                ]);
-            }
-        }
+        $this->notifyCapstoneSubmitted($capstone, $user, $isStudent);
 
         $capstone->load(['keywords', 'resources', 'referencedCapstones', 'adviser:id,name']);
         return $this->successResponse($capstone, 'Capstone saved successfully.', 201);
+    }
+
+    /**
+     * Create deduplicated in-app notifications for admins and the adviser.
+     * Adviser email is dispatched through a separate queued job.
+     */
+    private function notifyCapstoneSubmitted(Capstone $capstone, User $uploader, bool $isStudent): void
+    {
+        $recipients = User::whereHas('role', fn ($query) => $query->where('name', 'admin'))
+            ->get()
+            ->keyBy('id');
+
+        if ($capstone->adviser_id) {
+            $adviser = User::find($capstone->adviser_id);
+            if ($adviser) $recipients->put($adviser->id, $adviser);
+        }
+
+        $submittedAt = optional($capstone->created_at)->format('F j, Y') ?: now()->format('F j, Y');
+
+        foreach ($recipients as $recipient) {
+            if ((int) $recipient->id === (int) $uploader->id) continue;
+
+            $isAdviser = $capstone->adviser_id && (int) $recipient->id === (int) $capstone->adviser_id;
+            $notification = Notification::firstOrCreate(
+                ['dedupe_key' => "capstone_submitted:{$capstone->id}:{$recipient->id}"],
+                [
+                    'admin_id' => $recipient->id,
+                    'type' => $isAdviser ? 'capstone_pending_approval' : ($isStudent ? 'capstone_pending_approval' : 'capstone_uploaded'),
+                    'title' => $isAdviser ? 'New Capstone Awaiting Your Review' : ($isStudent ? 'New Capstone Awaiting Approval' : 'New Capstone Uploaded'),
+                    'message' => $isAdviser
+                        ? "{$uploader->name} submitted '{$capstone->title}' on {$submittedAt}; you are listed as adviser."
+                        : ($isStudent
+                            ? "Student {$uploader->name} uploaded capstone '{$capstone->title}' for approval on {$submittedAt}"
+                            : "Capstone '{$capstone->title}' uploaded by {$uploader->name} on {$submittedAt}"),
+                    'related_user_id' => $uploader->id,
+                    'related_capstone_id' => $capstone->id,
+                    'is_read' => false,
+                ]
+            );
+
+            if ($isAdviser && !$notification->email_sent_at && $recipient->email) {
+                SendAdviserSubmissionEmailJob::dispatch($notification->id);
+            }
+        }
+    }
+
+    /** @return string[] */
+    private function normalizeKeywords(mixed $raw): array
+    {
+        if (is_string($raw)) $raw = [$raw];
+        if (!is_array($raw)) return [];
+
+        $normalized = [];
+        foreach ($raw as $value) {
+            if (!is_string($value)) continue;
+            foreach (preg_split('/,/', $value) ?: [] as $name) {
+                $name = mb_strtolower(trim(preg_replace('/\s+/', ' ', $name) ?? ''));
+                if ($name === '' || mb_strlen($name) > 100) continue;
+                $normalized[$name] = $name;
+            }
+        }
+        return array_values($normalized);
     }
 
     /**
@@ -564,8 +720,9 @@ class CapstoneController extends Controller
             })
             ->where('is_approved', true)
             ->where('is_archived', false)
+            ->where('adviser_available', true)
             ->orderBy('name')
-            ->get(['id', 'name']);
+            ->get(['id', 'name', 'faculty_program']);
 
         if ($request->has('search') && $request->search) {
             $search = strtolower($request->search);
@@ -1145,7 +1302,7 @@ class CapstoneController extends Controller
     /**
      * Serve PDF from an authenticated stream without plaintext disk storage.
      */
-    public function servePdf(Request $request, Capstone $capstone): \Symfony\Component\HttpFoundation\StreamedResponse|JsonResponse
+    public function servePdf(Request $request, Capstone $capstone): \Symfony\Component\HttpFoundation\Response
     {
         $this->authorize('view', $capstone);
         $user = $request->user();
@@ -1158,27 +1315,31 @@ class CapstoneController extends Controller
         }
 
         $encryptor = new PdfEncryptorService();
-        $document = $encryptor->openVerifiedDocument($capstone->pdf_path);
+        $document = $encryptor->openForViewing($capstone->pdf_path);
 
         if ($document === null) {
             return $this->errorResponse('PDF could not be decrypted.', 500);
         }
 
 
-        return $document->response([
+        $headers = [
                 'Content-Type'              => 'application/pdf',
                 'Content-Disposition'       => 'inline',
                 'Cache-Control'             => 'no-store, no-cache, must-revalidate, max-age=0',
                 'Pragma'                    => 'no-cache',
                 'X-Content-Type-Options'    => 'nosniff',
-            ]);
+            ];
+
+        return $document instanceof \App\Services\ChunkedEncryptedFile
+            ? $document->response($request, $headers)
+            : $document->response($headers);
     }
 
     /**
      * Serve IMRAD PDF from an authenticated stream; no raw file is exposed.
      * Available to all authenticated users (same auth as servePdf).
      */
-    public function serveImrad(Request $request, Capstone $capstone): \Symfony\Component\HttpFoundation\StreamedResponse|JsonResponse
+    public function serveImrad(Request $request, Capstone $capstone): \Symfony\Component\HttpFoundation\Response
     {
         $this->authorize('view', $capstone);
         if (!$capstone->imrad_path || !Storage::disk('local')->exists($capstone->imrad_path)) {
@@ -1186,27 +1347,31 @@ class CapstoneController extends Controller
         }
 
         $encryptor = new PdfEncryptorService();
-        $document = $encryptor->openVerifiedDocument($capstone->imrad_path);
+        $document = $encryptor->openForViewing($capstone->imrad_path);
 
         if ($document === null) {
             return $this->errorResponse('IMRAD file could not be decrypted.', 500);
         }
 
 
-        return $document->response([
+        $headers = [
                 'Content-Type'           => 'application/pdf',
                 'Content-Disposition'    => 'inline',
                 'Cache-Control'          => 'no-store, no-cache, must-revalidate, max-age=0',
                 'Pragma'                 => 'no-cache',
                 'X-Content-Type-Options' => 'nosniff',
-            ]);
+            ];
+
+        return $document instanceof \App\Services\ChunkedEncryptedFile
+            ? $document->response($request, $headers)
+            : $document->response($headers);
     }
 
     /**
      * Serve an additional resource file inline (for viewing in a new tab).
      * Available to all authenticated users.
      */
-    public function serveResource(Request $request, Capstone $capstone, CapstoneResource $resource): \Symfony\Component\HttpFoundation\StreamedResponse|JsonResponse
+    public function serveResource(Request $request, Capstone $capstone, CapstoneResource $resource): \Symfony\Component\HttpFoundation\Response
     {
         $this->authorize('view', $capstone);
         // Ensure the resource belongs to this capstone
@@ -1219,7 +1384,7 @@ class CapstoneController extends Controller
         }
 
         $encryptor = new PdfEncryptorService();
-        $document = $encryptor->openVerifiedDocument($resource->file_path);
+        $document = $encryptor->openForViewing($resource->file_path);
 
         if ($document === null) {
             return $this->errorResponse('Resource file could not be decrypted.', 500);
@@ -1252,13 +1417,17 @@ class CapstoneController extends Controller
         }
 
 
-        return $document->response([
+        $headers = [
                 'Content-Type'           => $mimeType,
                 'Content-Disposition'    => 'inline; filename="' . addslashes($originalName) . '"',
                 'Cache-Control'          => 'no-store, no-cache, must-revalidate, max-age=0',
                 'Pragma'                 => 'no-cache',
                 'X-Content-Type-Options' => 'nosniff',
-            ]);
+            ];
+
+        return $document instanceof \App\Services\ChunkedEncryptedFile
+            ? $document->response($request, $headers)
+            : $document->response($headers);
     }
 
     /**
@@ -1342,6 +1511,10 @@ class CapstoneController extends Controller
             return $this->errorResponse('You can only edit your own capstones.', 403);
         }
 
+        if (is_string($request->input('keywords'))) {
+            $request->merge(['keywords' => [$request->input('keywords')]]);
+        }
+
         $validator = Validator::make($request->all(), [
             'title'               => 'sometimes|string|max:255',
             'year'                => 'nullable|integer|min:2000|max:2099',
@@ -1384,8 +1557,9 @@ class CapstoneController extends Controller
             if (!Capstone::find($id)) abort(403, 'Referenced capstone unavailable.');
         }
         if ($request->adviser_id && !User::whereKey($request->adviser_id)->where('is_approved', true)
-            ->where('is_archived', false)->whereHas('role', fn ($q) => $q->where('name', 'faculty'))->exists()) {
-            throw \Illuminate\Validation\ValidationException::withMessages(['adviser_id' => 'Select an active faculty adviser.']);
+            ->where('is_archived', false)->where('adviser_available', true)
+            ->whereHas('role', fn ($q) => $q->where('name', 'faculty'))->exists()) {
+            throw \Illuminate\Validation\ValidationException::withMessages(['adviser_id' => 'Select an active, available faculty adviser.']);
         }
         $paths = array_merge([$imradPath], array_column($resources, 'file_path'));
         if (count(array_filter($paths)) !== count(array_unique(array_filter($paths)))) {
@@ -1428,8 +1602,8 @@ class CapstoneController extends Controller
 
         if ($request->has('keywords')) {
             $keywordIds = [];
-            foreach ($request->keywords as $name) {
-                $keyword = Keyword::withoutGlobalScope('request_access')->firstOrCreate(['name' => strtolower(trim($name))]);
+            foreach ($this->normalizeKeywords($request->input('keywords', [])) as $name) {
+                $keyword = Keyword::withoutGlobalScope('request_access')->firstOrCreate(['name' => $name]);
                 $keywordIds[] = $keyword->id;
             }
             $capstone->keywords()->sync($keywordIds);

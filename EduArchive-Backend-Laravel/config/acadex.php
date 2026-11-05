@@ -18,4 +18,28 @@ return [
     // Defaults to null (resolving to cache.default). In production, must be an
     // inter-process atomic store (database, file, redis, etc.); process-local stores (array, null) are rejected.
     'upload_lock_store' => env('UPLOAD_LOCK_STORE', null),
+
+    // ── Background metadata extraction (R5/R6) ─────────────────────────
+    'upload_queue' => env('ACADEX_UPLOAD_QUEUE', 'default'),
+    'upload_extraction_timeout' => (int) env('ACADEX_UPLOAD_EXTRACTION_TIMEOUT', 300),
+    'upload_extraction_tries' => (int) env('ACADEX_UPLOAD_EXTRACTION_TRIES', 3),
+    // Bound the amount of cleaned source text sent to a local model.
+    'ai_source_chars' => (int) env('ACADEX_AI_SOURCE_CHARS', 12000),
+
+    // ── Optional local AI (Ollama) ─────────────────────────────────────
+    // Disabled unless OLLAMA_URL is explicitly configured. Every value the
+    // model suggests is checked against the document text before use.
+    'ollama_url' => env('OLLAMA_URL'),
+    'ollama_model' => env('OLLAMA_MODEL', 'llama3.1:8b'),
+    'ollama_timeout' => (int) env('OLLAMA_TIMEOUT', 45),
+
+    // ── Registration hardening (R4) ────────────────────────────────────
+    'registration_challenge' => (bool) env('ACADEX_REGISTRATION_CHALLENGE', true),
+    'registration_min_seconds' => (int) env('ACADEX_REGISTRATION_MIN_SECONDS', 4),
+    'turnstile_site_key' => env('TURNSTILE_SITE_KEY'),
+    'turnstile_secret' => env('TURNSTILE_SECRET_KEY'),
+    'turnstile_verify_url' => env('TURNSTILE_VERIFY_URL', 'https://challenges.cloudflare.com/turnstile/v0/siteverify'),
+
+    // ── Documentation links used in generated notification email ───────
+    'frontend_url' => rtrim((string) env('FRONTEND_URL', env('APP_URL', 'http://localhost')), '/'),
 ];

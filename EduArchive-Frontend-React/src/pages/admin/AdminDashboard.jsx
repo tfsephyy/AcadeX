@@ -99,7 +99,7 @@ export default function AdminDashboard() {
     if (loading) return <Loading text="Loading dashboard..." />;
 
     const maxViews = mostViewed[0]?.unique_views || 1;
-    const maxCitations = mostCited[0]?.citation_count || 1;
+    const maxCitations = mostCited[0]?.citation_generations ?? mostCited[0]?.citation_count ?? 1;
 
     const statCards = [
         { label: 'Students',             value: stats?.students  ?? 0, icon: HiOutlineAcademicCap,  color: 'text-blue-600',   bg: 'bg-blue-50'   },
@@ -260,8 +260,8 @@ export default function AdminDashboard() {
                             <HiOutlineBookOpen className="w-4 h-4 text-purple-500" />
                         </div>
                         <div>
-                            <h3 className="text-sm font-semibold text-gray-700">Most Cited Capstones</h3>
-                            <p className="text-xs text-gray-400">Referenced by other capstones</p>
+                            <h3 className="text-sm font-semibold text-gray-700">Most Citation Generations</h3>
+                            <p className="text-xs text-gray-400">Citations generated with the AcadeX citation tool</p>
                         </div>
                     </div>
 
@@ -277,11 +277,11 @@ export default function AdminDashboard() {
                                     <div className="flex-1 min-w-0">
                                         <p className="text-sm font-medium text-gray-800 truncate group-hover:text-purple-700 transition-colors">{cap.title}</p>
                                         <p className="text-xs text-gray-400 truncate">{cap.author}{cap.year ? ` · ${cap.year}` : ''}{cap.program ? ` · ${cap.program}` : ''}</p>
-                                        <MetricBar value={cap.citation_count} max={maxCitations} color="#8b5cf6" />
+                                        <MetricBar value={cap.citation_generations ?? cap.citation_count} max={maxCitations} color="#8b5cf6" />
                                     </div>
                                     <div className="text-right flex-shrink-0">
-                                        <span className="text-sm font-bold text-purple-600">{cap.citation_count}</span>
-                                        <p className="text-xs text-gray-400">citations</p>
+                                        <span className="text-sm font-bold text-purple-600">{cap.citation_generations ?? cap.citation_count}</span>
+                                        <p className="text-xs text-gray-400">generations</p>
                                     </div>
                                 </div>
                             ))}

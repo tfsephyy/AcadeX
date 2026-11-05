@@ -218,7 +218,7 @@ class VisitorCapstoneController extends Controller
      * Serve the capstone PDF — only if visitor is permitted (published or copyrighted).
      * IMRAD-only capstones are NOT allowed here.
      */
-    public function servePdf(Request $request, Capstone $capstone): \Symfony\Component\HttpFoundation\StreamedResponse|JsonResponse
+    public function servePdf(Request $request, Capstone $capstone): \Symfony\Component\HttpFoundation\Response
     {
         if (!$this->visitorCanViewRecord($capstone)) {
             return $this->errorResponse('Capstone not found.', 404);
@@ -232,19 +232,23 @@ class VisitorCapstoneController extends Controller
         }
 
         $encryptor = new PdfEncryptorService();
-        $document = $encryptor->openVerifiedDocument($capstone->pdf_path);
+        $document = $encryptor->openForViewing($capstone->pdf_path);
 
         if ($document === null) {
             return $this->errorResponse('PDF could not be decrypted.', 500);
         }
 
-        return $document->response([
+        $headers = [
                 'Content-Type'           => 'application/pdf',
                 'Content-Disposition'    => 'inline',
                 'Cache-Control'          => 'no-store, no-cache, must-revalidate, max-age=0',
                 'Pragma'                 => 'no-cache',
                 'X-Content-Type-Options' => 'nosniff',
-            ]);
+            ];
+
+        return $document instanceof \App\Services\ChunkedEncryptedFile
+            ? $document->response($request, $headers)
+            : $document->response($headers);
     }
 
     /**
@@ -252,7 +256,7 @@ class VisitorCapstoneController extends Controller
      * Available when approved AND (published/copyrighted/has imrad_path).
      * i.e. available in all three visitor-visibility tiers.
      */
-    public function serveImrad(Request $request, Capstone $capstone): \Symfony\Component\HttpFoundation\StreamedResponse|JsonResponse
+    public function serveImrad(Request $request, Capstone $capstone): \Symfony\Component\HttpFoundation\Response
     {
         // Must be approved and visitor-visible
         if (!$this->visitorCanViewRecord($capstone)) {
@@ -264,19 +268,23 @@ class VisitorCapstoneController extends Controller
         }
 
         $encryptor = new PdfEncryptorService();
-        $document = $encryptor->openVerifiedDocument($capstone->imrad_path);
+        $document = $encryptor->openForViewing($capstone->imrad_path);
 
         if ($document === null) {
             return $this->errorResponse('IMRAD file could not be decrypted.', 500);
         }
 
-        return $document->response([
+        $headers = [
                 'Content-Type'           => 'application/pdf',
                 'Content-Disposition'    => 'inline',
                 'Cache-Control'          => 'no-store, no-cache, must-revalidate, max-age=0',
                 'Pragma'                 => 'no-cache',
                 'X-Content-Type-Options' => 'nosniff',
-            ]);
+            ];
+
+        return $document instanceof \App\Services\ChunkedEncryptedFile
+            ? $document->response($request, $headers)
+            : $document->response($headers);
     }
 
     // ──────────────────────────────────────────────────────────────

@@ -10,15 +10,20 @@ import {
     HiOutlineUser,
     HiChevronDown,
     HiOutlineClipboardCheck,
+    HiOutlineViewGrid,
+    HiOutlineBell,
 } from 'react-icons/hi';
 import ConfirmDialog from '../ConfirmDialog';
 import Chatbot from '../Chatbot';
 import WorkspaceSidebar from '../WorkspaceSidebar';
 
 const navItems = [
+    { to: '/faculty/dashboard',        label: 'Dashboard',           icon: HiOutlineViewGrid },
+    { to: '/faculty/assigned',         label: 'Assigned Capstones',  icon: HiOutlineClipboardCheck },
     { to: '/faculty/capstone-library', label: 'Capstone Library',    icon: HiOutlineLibrary },
     { to: '/faculty/uploads',          label: 'Uploaded Capstones',  icon: HiOutlineBookOpen },
     { to: '/faculty/approvals',        label: 'Pending Approvals',   icon: HiOutlineClipboardCheck },
+    { to: '/faculty/notifications',    label: 'Notifications',       icon: HiOutlineBell },
 ];
 
 export default function FacultyLayout({ children }) {

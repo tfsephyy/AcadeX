@@ -22,10 +22,12 @@ class User extends Authenticatable
         'id_number',
         'role_id',
         'password',
+        'google_id',
         'is_locked',
         'is_approved',
         'is_archived',
         'faculty_program',
+        'adviser_available',
         'login_attempts',
         'locked_until',
         'last_active_at',
@@ -35,6 +37,7 @@ class User extends Authenticatable
         'password',
         'remember_token',
         'auth_version',
+        'google_id',
     ];
 
     protected function casts(): array
@@ -47,6 +50,7 @@ class User extends Authenticatable
             'is_locked'         => 'boolean',
             'is_approved'       => 'boolean',
             'is_archived'       => 'boolean',
+            'adviser_available' => 'boolean',
             'auth_version'      => 'integer',
         ];
     }

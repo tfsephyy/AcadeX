@@ -571,7 +571,7 @@ export default function CapstoneLibrary() {
             {showViewModal && selectedCapstone && (
                 <CapstoneModal capstone={selectedCapstone} open={true}
                     onClose={() => { setShowViewModal(false); setSelectedCapstone(null); }}
-                    onViewFull={() => navigate(`/admin/capstones/${selectedCapstone.id}`)} />
+                    onViewFull={() => navigate(`/admin/capstones/${selectedCapstone.slug || selectedCapstone.id}`)} />
             )}
             {showEditModal && selectedCapstone && (
                 <EditCapstoneModal capstone={selectedCapstone}

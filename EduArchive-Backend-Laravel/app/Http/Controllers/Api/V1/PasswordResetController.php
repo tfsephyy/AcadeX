@@ -34,25 +34,26 @@ class PasswordResetController extends Controller
             return $this->errorResponse('Validation failed.', 422, $validator->errors());
         }
 
-        $email = strtolower($request->email);
+        $email = strtolower(trim($request->email));
         $user = User::where('email', $email)->first();
 
+        // Never disclose whether an account exists. The same response is used
+        // for unknown emails, cooldown hits, and successful sends.
+        $genericMessage = 'If an account exists for that email, a verification code has been sent.';
+
         if (! $user) {
-            return $this->errorResponse('No account found with this email address.', 404);
+            \Log::info('Password reset requested for an unknown email.', ['ip_hash' => $this->ipHash($request)]);
+            return $this->successResponse(null, $genericMessage);
         }
 
-        // Check cooldown — prevent spam
+        // Check cooldown — prevent spam without revealing account state.
         $recent = PasswordResetCode::where('email', $email)
             ->where('type', 'password_reset')
             ->where('created_at', '>', now()->subSeconds(self::RESEND_COOLDOWN_SECONDS))
             ->first();
 
         if ($recent) {
-            $secondsLeft = self::RESEND_COOLDOWN_SECONDS - now()->diffInSeconds($recent->created_at);
-            return $this->errorResponse(
-                "Please wait {$secondsLeft} seconds before requesting a new code.",
-                429
-            );
+            return $this->successResponse(null, $genericMessage);
         }
 
         // Invalidate old codes
@@ -68,6 +69,7 @@ class PasswordResetController extends Controller
             'email'      => $email,
             'code'       => PasswordResetCode::hashCode($code),
             'type'       => 'password_reset',
+            'ip_hash'    => $this->ipHash($request),
             'expires_at' => now()->addMinutes(self::CODE_EXPIRY_MINUTES),
         ]);
 
@@ -91,10 +93,21 @@ class PasswordResetController extends Controller
                     );
             });
         } catch (\Exception $e) {
-            return $this->errorResponse('Failed to send email. Please try again later.', 500);
+            // The response stays generic so mail failures cannot be used to
+            // probe which addresses are registered.
+            \Log::error('Failed to send password reset email.', [
+                'email_hash' => hash('sha256', $email),
+                'type' => get_class($e),
+            ]);
+            return $this->successResponse(null, $genericMessage);
         }
 
-        return $this->successResponse(null, 'Verification code sent to your email.');
+        return $this->successResponse(null, $genericMessage);
+    }
+
+    private function ipHash(Request $request): string
+    {
+        return hash_hmac('sha256', (string) $request->ip(), (string) config('app.key'));
     }
 
     /* ─────────────────────────────────────────────────────
@@ -270,6 +283,7 @@ class PasswordResetController extends Controller
             'email'      => $email,
             'code'       => PasswordResetCode::hashCode($code),
             'type'       => 'email_verification',
+            'ip_hash'    => $this->ipHash($request),
             'expires_at' => now()->addMinutes(self::CODE_EXPIRY_MINUTES),
         ]);
 

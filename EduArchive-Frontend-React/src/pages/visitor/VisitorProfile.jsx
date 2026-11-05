@@ -3,6 +3,7 @@ import { useAuth } from '../../context/useAuth';
 import { updateProfile } from '../../api/admin';
 import { useNotification } from '../../components/useNotification';
 import ChangePasswordModal from '../../components/ChangePasswordModal';
+import GoogleAccountLink from '../../components/GoogleAccountLink';
 import { HiOutlineUser, HiOutlineMail, HiOutlinePencil, HiOutlineKey } from 'react-icons/hi';
 
 export default function VisitorProfile() {
@@ -35,6 +36,7 @@ export default function VisitorProfile() {
 
     return (
         <div className="max-w-xl mx-auto space-y-6">
+            <GoogleAccountLink />
             <ChangePasswordModal open={changePwdOpen} onClose={() => setChangePwdOpen(false)} />
 
             <div>

@@ -37,7 +37,7 @@ foreach ($pdo->query('SHOW GRANTS')->fetchAll(PDO::FETCH_COLUMN) as $grant) {
 }
 echo 'Verified disposable MySQL connection: '.$database.PHP_EOL;
 chdir($base);
-if (in_array($argv[1] ?? '', ['--migrate', '--inspect', '--http-check', '--large-http-check', '--ocr-check'], true)) {
+if (in_array($argv[1] ?? '', ['--migrate', '--fresh', '--inspect', '--http-check', '--large-http-check', '--ocr-check'], true)) {
     $app = require $base.'/bootstrap/app.php';
     $kernel = $app->make(Illuminate\Contracts\Console\Kernel::class);
     $kernel->bootstrap();
@@ -46,6 +46,7 @@ if (in_array($argv[1] ?? '', ['--migrate', '--inspect', '--http-check', '--large
         throw new RuntimeException('Laravel database guard failed.');
     }
     if ($argv[1] === '--migrate') exit($kernel->call('migrate', ['--force' => true], new Symfony\Component\Console\Output\ConsoleOutput));
+    if ($argv[1] === '--fresh') exit($kernel->call('migrate:fresh', ['--force' => true], new Symfony\Component\Console\Output\ConsoleOutput));
     if (in_array($argv[1], ['--http-check', '--large-http-check'], true)) {
         require __DIR__.'/http-security-probe.php';
         exit(0);

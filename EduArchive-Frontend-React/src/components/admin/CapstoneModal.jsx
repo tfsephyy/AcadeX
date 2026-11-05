@@ -14,7 +14,7 @@ export default function CapstoneModal({ capstone, open, onClose, onViewFull }) {
             onViewFull();
         } else {
             onClose();
-            navigate(`/admin/capstones/${capstone.id}`);
+            navigate(`/admin/capstones/${capstone.slug || capstone.id}`);
         }
     };
 
@@ -39,6 +39,7 @@ export default function CapstoneModal({ capstone, open, onClose, onViewFull }) {
                         <InfoField label="Year" value={capstone.year || '—'} />
                         <InfoField label="Program" value={capstone.program || '—'} />
                         <InfoField label="Author" value={capstone.author || '—'} />
+                        <InfoField label="Uploaded By" value={capstone.uploader?.name || '—'} />
                         <InfoField label="Category" value={capstone.category || '—'} />
                     </div>
 

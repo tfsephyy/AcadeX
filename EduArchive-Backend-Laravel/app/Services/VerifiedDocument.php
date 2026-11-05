@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use Closure;
+use Generator;
 use RuntimeException;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -18,7 +19,14 @@ final class VerifiedDocument
     public function copyTo($output): void
     {
         if (!is_resource($this->source)) throw new RuntimeException('Document is closed.');
-        foreach (($this->reader)() as $chunk) self::writeAll($output, $chunk);
+        foreach ($this->chunks() as $chunk) self::writeAll($output, $chunk);
+    }
+
+    /** @return Generator<int, string> */
+    public function chunks(): Generator
+    {
+        if (!is_resource($this->source)) throw new RuntimeException('Document is closed.');
+        yield from ($this->reader)();
     }
 
     /** Compatibility helper for small callers only; large responses must stream. */

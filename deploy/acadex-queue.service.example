@@ -1,15 +1,19 @@
 # TEMPLATE ONLY. Replace every <placeholder>; no shared service/global changes.
 [Unit]
-Description=AcadeX PDF text maintenance queue
-After=network.target
+Description=AcadeX background processing queue
+After=docker.service network-online.target
+Wants=network-online.target
+StartLimitIntervalSec=0
 
 [Service]
 Type=simple
 User=<application-worker-user>
 Group=<application-worker-group>
 WorkingDirectory=<approved-backend-release-directory>
-ExecStart=<verified-php-cli-path> artisan queue:work --sleep=3 --tries=2 --timeout=600
-Restart=on-failure
+ExecStart=<verified-php-cli-path> artisan queue:work --sleep=3 --tries=3 --timeout=600 --max-time=3600
+# Laravel's queue:restart makes a healthy worker exit successfully. Always
+# restart it so deployments do not leave the service stopped.
+Restart=always
 RestartSec=5
 TimeoutStopSec=660
 UMask=0077

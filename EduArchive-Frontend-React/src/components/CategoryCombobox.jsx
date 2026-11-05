@@ -5,7 +5,7 @@ import { getPublishedCategories } from '../api/admin';
  * Category Combobox — a dropdown that shows existing categories
  * but also allows typing a new custom category.
  */
-export default function CategoryCombobox({ value, onChange, className = '', id, 'aria-label': ariaLabel = 'Category' }) {
+export default function CategoryCombobox({ value, onChange, className = '', id, disabled = false, 'aria-label': ariaLabel = 'Category' }) {
     const generatedId = useId();
     const inputId = id || generatedId;
     const [activeIndex, setActiveIndex] = useState(-1);
@@ -56,6 +56,7 @@ export default function CategoryCombobox({ value, onChange, className = '', id, 
     };
 
     const handleFocus = () => {
+        if (disabled) return;
         setOpen(true);
         setFilter('');
     };
@@ -86,6 +87,7 @@ export default function CategoryCombobox({ value, onChange, className = '', id, 
                 aria-activedescendant={open && activeIndex >= 0 ? `${inputId}-option-${activeIndex}` : undefined}
                 type="text"
                 value={value}
+                disabled={disabled}
                 onChange={handleInputChange}
                 onFocus={handleFocus}
                 onKeyDown={handleKeyDown}
@@ -98,6 +100,7 @@ export default function CategoryCombobox({ value, onChange, className = '', id, 
                 type="button"
                 aria-label="Show category suggestions" aria-expanded={open}
                 tabIndex={-1}
+                disabled={disabled}
                 onClick={() => { setOpen(!open); inputRef.current?.focus(); }}
                 className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-0.5"
             >

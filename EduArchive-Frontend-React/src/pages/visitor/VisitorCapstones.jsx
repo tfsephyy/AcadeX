@@ -280,7 +280,7 @@ export default function VisitorCapstones() {
                         </thead>
                         <tbody>
                             {capstones.map((cap, idx) => (
-                                <tr key={cap.id} onClick={() => navigate(`/visitor/capstones/${cap.id}`)}
+                                <tr key={cap.id} onClick={() => navigate(`/visitor/capstones/${cap.slug || cap.id}`)}
                                     className="border-b cursor-pointer transition-colors hover:bg-green-50/30"
                                     style={{ background: idx % 2 === 0 ? 'transparent' : 'var(--color-bg-tertiary)', borderColor: 'var(--color-border)' }}>
                                     <td className="py-3 px-4 text-sm font-medium max-w-xs truncate" style={{ color: 'var(--color-text)' }}>{cap.title}</td>
@@ -341,7 +341,7 @@ export default function VisitorCapstones() {
                                 <div key={b.id}
                                     className="flex items-start gap-3 p-3 rounded-xl border cursor-pointer hover:shadow-sm transition-all"
                                     style={{ background: 'var(--color-bg-tertiary)', borderColor: 'var(--color-border)' }}
-                                    {...cardInteraction(() => { setSavedOpen(false); navigate(`/visitor/capstones/${b.id}`); })}>
+                                    {...cardInteraction(() => { setSavedOpen(false); navigate(`/visitor/capstones/${b.slug || b.id}`); })}>
                                     <HiOutlineDocumentText className="w-8 h-8 text-green-400 flex-shrink-0 mt-0.5" />
                                     <div className="flex-1 min-w-0">
                                         <p className="text-sm font-semibold line-clamp-2" style={{ color: 'var(--color-text)' }}>{b.title}</p>

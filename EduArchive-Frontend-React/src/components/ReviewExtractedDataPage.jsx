@@ -1,34 +1,59 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
     HiArrowLeft, HiArrowRight, HiOutlineDocumentText,
     HiOutlinePlus, HiOutlineX, HiOutlineUserGroup, HiOutlineInformationCircle, HiCheck,
+    HiOutlineRefresh, HiOutlineClock,
 } from 'react-icons/hi';
 import CategoryCombobox from './CategoryCombobox';
 import { useNotification } from './useNotification';
 import { getExtractionNotice } from './extractionNotice';
+import api from '../api/axios';
+import { getApiErrorMessage } from '../api/errors';
+
+const splitKeywordInput = (raw) => String(raw || '')
+    .split(',')
+    .map(value => value.trim().toLowerCase())
+    .filter(Boolean)
+    .filter((value, index, list) => list.indexOf(value) === index);
 
 export default function ReviewExtractedDataPage({ nextPath, backPath }) {
     const navigate = useNavigate();
     const location = useLocation();
     const notify = useNotification();
 
-    const { pdfInfo, extracted } = location.state || {};
+    const state = location.state || {};
+    const { pdfInfo } = state;
+    const initialExtracted = state.extracted || {};
+    const uploadId = state.uploadId || pdfInfo?.upload_id || null;
+    const initialStatus = state.processingStatus || state.extractionStatus || 'completed';
 
     useEffect(() => {
-        if (!pdfInfo || !extracted) navigate(backPath, { replace: true });
+        if (!pdfInfo) navigate(backPath, { replace: true });
     }, []);
 
     const [form, setForm] = useState({
-        title:    extracted?.title    || '',
-        year:     extracted?.year     || '',
-        author:   extracted?.author   || '',
-        program:  extracted?.program  || '',
-        category: extracted?.category || '',
-        abstract: extracted?.abstract || '',
-        keywords: extracted?.keywords || [],
+        title:    initialExtracted.title    || '',
+        year:     initialExtracted.year     || '',
+        author:   initialExtracted.author   || '',
+        program:  initialExtracted.program  || '',
+        category: initialExtracted.category || '',
+        abstract: initialExtracted.abstract || '',
+        keywords: initialExtracted.keywords || [],
     });
     const [newKeyword, setNewKeyword] = useState('');
+    const [processingStatus, setProcessingStatus] = useState(initialStatus);
+    const [processingError, setProcessingError] = useState(state.processingError || '');
+    const [extractionStatus, setExtractionStatus] = useState(state.extractionStatus || initialStatus);
+    const [extractionScope, setExtractionScope] = useState(state.extractionScope || '');
+    const [notes, setNotes] = useState(state.notes || []);
+    const [retrying, setRetrying] = useState(false);
+    const [pollExpired, setPollExpired] = useState(false);
+    const [retryable, setRetryable] = useState(Boolean(state.retryable));
+    const pollTimer = useRef(null);
+
+    const isStillProcessing = ['queued', 'processing'].includes(processingStatus);
+    const processing = isStillProcessing && !pollExpired;
 
     // ── Author details: [{name, email, contact}] — synced from author field
     const parseAuthorsFromString = (authorStr) => {
@@ -36,14 +61,113 @@ export default function ReviewExtractedDataPage({ nextPath, backPath }) {
     };
 
     const [authorDetails, setAuthorDetails] = useState(() => {
-        // Prefer pre-extracted details from PDF extractor
-        if (extracted?.author_details && Array.isArray(extracted.author_details) && extracted.author_details.length > 0) {
-            return extracted.author_details;
+        if (initialExtracted?.author_details && Array.isArray(initialExtracted.author_details) && initialExtracted.author_details.length > 0) {
+            return initialExtracted.author_details;
         }
-        return parseAuthorsFromString(extracted?.author || '');
+        return parseAuthorsFromString(initialExtracted?.author || '');
     });
 
-    if (!pdfInfo || !extracted) return null;
+    const mergeExtracted = useCallback((data) => {
+        if (!data || typeof data !== 'object') return;
+        setForm(prev => ({
+            ...prev,
+            title: prev.title.trim() ? prev.title : (data.title || ''),
+            year: prev.year ? prev.year : (data.year || ''),
+            author: prev.author.trim() ? prev.author : (data.author || ''),
+            program: prev.program || data.program || '',
+            abstract: prev.abstract.trim() ? prev.abstract : (data.abstract || ''),
+            keywords: prev.keywords.length ? prev.keywords : (Array.isArray(data.keywords) ? data.keywords : []),
+        }));
+        setAuthorDetails(prev => {
+            if (prev.length > 0) return prev;
+            if (Array.isArray(data.author_details) && data.author_details.length > 0) return data.author_details;
+            return parseAuthorsFromString(data.author || '');
+        });
+    }, []);
+
+    // ── Poll the queued server job. The job keeps running if this page is
+    //    closed; this effect only controls what is displayed here.
+    useEffect(() => {
+        if (!uploadId || !processing) {
+            if (pollTimer.current) clearTimeout(pollTimer.current);
+            return;
+        }
+
+        let cancelled = false;
+        let attempts = 0;
+
+        const poll = async () => {
+            if (cancelled) return;
+            attempts += 1;
+            try {
+                const res = await api.get(`/uploads/${uploadId}/status`);
+                if (cancelled) return;
+                const data = res.data.data || {};
+
+                setProcessingStatus(data.processing_status || 'completed');
+                setProcessingError(data.processing_error || '');
+                setExtractionStatus(data.extraction_status || data.processing_status);
+                setExtractionScope(data.extraction_scope || '');
+                setNotes(Array.isArray(data.notes) ? data.notes : []);
+                setRetryable(Boolean(data.retryable));
+
+                if (data.processing_status === 'completed') {
+                    mergeExtracted(data.extracted || {});
+                    notify.success('Document processing completed. Review the suggestions below.');
+                    return;
+                }
+                if (data.processing_status === 'failed') {
+                    notify.error(data.processing_error || 'Processing did not finish. You can retry or enter the details manually.');
+                    return;
+                }
+                if (attempts >= 300) {
+                    setPollExpired(true);
+                    notify.info?.('Processing is taking longer than usual. You can keep this page open or enter details manually.');
+                    return;
+                }
+                pollTimer.current = setTimeout(poll, 3000);
+            } catch (error) {
+                if (cancelled) return;
+                if (error?.response?.status === 404 || error?.response?.status === 410) {
+                    setProcessingStatus('failed');
+                    setProcessingError(getApiErrorMessage(error, 'This upload is no longer available. Upload the PDF again.'));
+                    return;
+                }
+                if (attempts >= 8) {
+                    // The job itself is not cancelled; polling just backs off.
+                    pollTimer.current = setTimeout(poll, 10000);
+                } else {
+                    pollTimer.current = setTimeout(poll, 4000);
+                }
+            }
+        };
+
+        poll();
+        return () => {
+            cancelled = true;
+            if (pollTimer.current) clearTimeout(pollTimer.current);
+        };
+    }, [uploadId, processing, mergeExtracted, notify]);
+
+    if (!pdfInfo) return null;
+
+    const retryProcessing = async () => {
+        if (!uploadId || retrying) return;
+        setRetrying(true);
+        try {
+            const res = await api.post(`/uploads/${uploadId}/retry`);
+            const data = res.data.data || {};
+            setProcessingStatus(data.processing_status || 'queued');
+            setProcessingError('');
+            setExtractionStatus(data.extraction_status || 'queued');
+            setPollExpired(false);
+            notify.success('Document processing was queued again.');
+        } catch (error) {
+            notify.error(getApiErrorMessage(error, 'Processing could not be retried.'));
+        } finally {
+            setRetrying(false);
+        }
+    };
 
     // Keep authorDetails rows in sync when the author field changes
     const handleAuthorFieldChange = (newAuthorStr) => {
@@ -63,11 +187,17 @@ export default function ReviewExtractedDataPage({ nextPath, backPath }) {
     };
 
     const addKeyword = () => {
-        const kw = newKeyword.trim().toLowerCase();
-        if (kw && !form.keywords.includes(kw)) {
-            setForm(prev => ({ ...prev, keywords: [...prev.keywords, kw] }));
-            setNewKeyword('');
-        }
+        const incoming = splitKeywordInput(newKeyword);
+        if (incoming.length === 0) return;
+        setForm(prev => {
+            const existing = new Set(prev.keywords.map(kw => String(kw).toLowerCase()));
+            const merged = [...prev.keywords];
+            incoming.forEach(kw => {
+                if (!existing.has(kw)) { existing.add(kw); merged.push(kw); }
+            });
+            return { ...prev, keywords: merged };
+        });
+        setNewKeyword('');
     };
 
     const removeKeyword = (idx) => {
@@ -75,6 +205,7 @@ export default function ReviewExtractedDataPage({ nextPath, backPath }) {
     };
 
     const handleNext = () => {
+        if (processing) { notify.info?.('Please wait for document processing to finish, or retry if it failed.'); return; }
         if (!form.title.trim()) { notify.error('Title is required.'); return; }
         if (!form.author.trim()) { notify.error('Author is required.'); return; }
         const reviewed = { ...form, author_details: authorDetails };
@@ -140,12 +271,61 @@ export default function ReviewExtractedDataPage({ nextPath, backPath }) {
                         </div>
                     </div>
 
-                    {/* Notice */}
-                    <div className="p-3.5 rounded-xl border" style={{ background: 'rgba(245,158,11,0.1)', borderColor: 'rgba(245,158,11,0.3)' }}>
-                        <p className="extraction-notice" style={{ color: 'var(--color-text-secondary)' }}><HiOutlineInformationCircle aria-hidden="true" />
-                            {getExtractionNotice(location.state)}
-                        </p>
-                    </div>
+                    {/* Processing state / extraction notice */}
+                    {processing ? (
+                        <div className="p-4 rounded-xl border flex items-start gap-3" style={{ background: 'rgba(59,130,246,0.10)', borderColor: 'rgba(59,130,246,0.3)' }} role="status" aria-live="polite">
+                            <HiOutlineClock className="w-5 h-5 flex-shrink-0 animate-pulse" style={{ color: '#2563eb' }} aria-hidden="true" />
+                            <div>
+                                <p className="text-sm font-semibold" style={{ color: 'var(--color-text)' }}>
+                                    {processingStatus === 'queued' ? 'Document queued for processing' : 'Reading your document'}
+                                </p>
+                                <p className="text-xs mt-1" style={{ color: 'var(--color-text-secondary)' }}>
+                                    You can leave this page safely — processing continues in the background and you will be notified when it finishes. The fields unlock when suggestions are ready.
+                                </p>
+                            </div>
+                        </div>
+                    ) : isStillProcessing && pollExpired ? (
+                        <div className="p-3.5 rounded-xl border" style={{ background: 'rgba(245,158,11,0.1)', borderColor: 'rgba(245,158,11,0.3)' }}>
+                            <p className="extraction-notice" style={{ color: 'var(--color-text-secondary)' }}><HiOutlineInformationCircle aria-hidden="true" />
+                                Processing is taking longer than usual and continues in the background. You may enter the details manually now; suggestions that finish later will not overwrite what you type.
+                            </p>
+                        </div>
+                    ) : processingStatus === 'failed' || extractionStatus === 'failed' ? (
+                        <div className="p-4 rounded-xl border" style={{ background: 'rgba(239,68,68,0.08)', borderColor: 'rgba(239,68,68,0.3)' }} role="alert">
+                            <p className="text-sm font-semibold" style={{ color: 'var(--color-text)' }}>Automatic processing did not finish</p>
+                            <p className="text-xs mt-1" style={{ color: 'var(--color-text-secondary)' }}>
+                                {processingError || 'The file is safe. You can retry processing or continue by entering the details manually.'}
+                            </p>
+                            {uploadId && (
+                                <button type="button" onClick={retryProcessing} disabled={retrying}
+                                    className="mt-3 inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg border transition-colors disabled:opacity-50"
+                                    style={{ color: 'var(--color-primary)', borderColor: 'var(--color-border-strong)', background: 'var(--color-bg-secondary)' }}>
+                                    <HiOutlineRefresh className={`w-4 h-4 ${retrying ? 'animate-spin' : ''}`} />
+                                    {retrying ? 'Queuing again…' : 'Retry processing'}
+                                </button>
+                            )}
+                        </div>
+                    ) : (
+                        <div className="p-3.5 rounded-xl border" style={{ background: 'rgba(245,158,11,0.1)', borderColor: 'rgba(245,158,11,0.3)' }}>
+                            <p className="extraction-notice" style={{ color: 'var(--color-text-secondary)' }}><HiOutlineInformationCircle aria-hidden="true" />
+                                {getExtractionNotice({ extractionStatus, extractionScope, extracted: form })}
+                            </p>
+                            {retryable && uploadId && (
+                                <button type="button" onClick={retryProcessing} disabled={retrying}
+                                    className="mt-3 inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg border transition-colors disabled:opacity-50"
+                                    style={{ color: 'var(--color-primary)', borderColor: 'var(--color-border-strong)', background: 'var(--color-bg-secondary)' }}>
+                                    <HiOutlineRefresh className={`w-4 h-4 ${retrying ? 'animate-spin' : ''}`} />
+                                    {retrying ? 'Queuing again…' : 'Retry processing'}
+                                </button>
+                            )}
+                        </div>
+                    )}
+
+                    {!processing && Array.isArray(notes) && notes.length > 0 && (
+                        <ul className="text-xs space-y-1 px-1" style={{ color: 'var(--color-text-muted)' }}>
+                            {notes.map((note, index) => <li key={index}>• {note}</li>)}
+                        </ul>
+                    )}
 
                     {/* ── Row 1: Title + Author ─────────────── */}
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
@@ -155,6 +335,7 @@ export default function ReviewExtractedDataPage({ nextPath, backPath }) {
                             </label>
                             <input id="metadata-title" type="text" value={form.title}
                                 onChange={(e) => setForm(prev => ({ ...prev, title: e.target.value }))}
+                                disabled={processing}
                                 className={inputCls} placeholder="Capstone title..." />
                         </div>
                         <div className="rounded-2xl border p-5 space-y-1" style={{ background: 'var(--color-surface)', borderColor: 'var(--color-border)' }}>
@@ -163,6 +344,7 @@ export default function ReviewExtractedDataPage({ nextPath, backPath }) {
                             </label>
                             <input id="metadata-author" type="text" value={form.author}
                                 onChange={(e) => handleAuthorFieldChange(e.target.value)}
+                                disabled={processing}
                                 className={inputCls} placeholder="Author name(s) separated by commas..." />
                             <p className="text-xs mt-1" style={{ color: 'var(--color-text-muted)' }}>Separate multiple authors with commas</p>
                         </div>
@@ -174,12 +356,14 @@ export default function ReviewExtractedDataPage({ nextPath, backPath }) {
                             <label htmlFor="metadata-year" className="block text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--color-text-muted)' }}>Year</label>
                             <input id="metadata-year" type="number" value={form.year}
                                 onChange={(e) => setForm(prev => ({ ...prev, year: e.target.value }))}
+                                disabled={processing}
                                 className={inputCls} min="2000" max="2099" placeholder="2024" />
                         </div>
                         <div className="rounded-2xl border p-5" style={{ background: 'var(--color-surface)', borderColor: 'var(--color-border)' }}>
                             <label htmlFor="metadata-program" className="block text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--color-text-muted)' }}>Program</label>
                             <select id="metadata-program" value={form.program}
                                 onChange={(e) => setForm(prev => ({ ...prev, program: e.target.value }))}
+                                disabled={processing}
                                 className={inputCls} style={{ background: 'var(--input-bg)', color: 'var(--input-text)' }}>
                                 <option value="" style={{ background: 'var(--select-option-bg)' }}>Select program</option>
                                 <option value="BSIT" style={{ background: 'var(--select-option-bg)' }}>BSIT</option>
@@ -190,6 +374,7 @@ export default function ReviewExtractedDataPage({ nextPath, backPath }) {
                             <label htmlFor="metadata-category" className="block text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--color-text-muted)' }}>Category</label>
                             <CategoryCombobox id="metadata-category" value={form.category}
                                 onChange={(v) => setForm(prev => ({ ...prev, category: v }))}
+                                disabled={processing}
                                 className={inputCls} />
                         </div>
                     </div>
@@ -200,6 +385,7 @@ export default function ReviewExtractedDataPage({ nextPath, backPath }) {
                             <label htmlFor="metadata-abstract" className="block text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--color-text-muted)' }}>Abstract</label>
                             <textarea id="metadata-abstract" value={form.abstract}
                                 onChange={(e) => setForm(prev => ({ ...prev, abstract: e.target.value }))}
+                                disabled={processing}
                                 rows={7}
                                 className={inputCls + ' resize-y'}
                                 placeholder="Capstone abstract..." />
@@ -212,7 +398,7 @@ export default function ReviewExtractedDataPage({ nextPath, backPath }) {
                                     <span key={idx} className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-full border"
                                         style={{ background: 'rgba(91,190,99,0.12)', color: 'var(--color-primary)', borderColor: 'var(--color-border-strong)' }}>
                                         {kw}
-                                        <button aria-label={`Remove keyword ${kw}`} onClick={() => removeKeyword(idx)} className="ml-0.5 hover:text-red-400 transition-colors">
+                                        <button aria-label={`Remove keyword ${kw}`} onClick={() => removeKeyword(idx)} disabled={processing} className="ml-0.5 hover:text-red-400 transition-colors disabled:opacity-40">
                                             <HiOutlineX className="w-3 h-3" />
                                         </button>
                                     </span>
@@ -222,17 +408,21 @@ export default function ReviewExtractedDataPage({ nextPath, backPath }) {
                                 )}
                             </div>
                             <div className="flex gap-2">
-                                <input aria-label="Add a keyword" type="text" value={newKeyword}
+                                <input aria-label="Add keywords" type="text" value={newKeyword}
                                     onChange={(e) => setNewKeyword(e.target.value)}
                                     onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addKeyword())}
-                                    placeholder="Add keyword & press Enter…"
+                                    disabled={processing}
+                                    placeholder="Add keywords, separated by commas…"
                                     className={inputCls + ' flex-1 min-w-0'} />
-                                <button onClick={addKeyword}
-                                    className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium rounded-lg border transition-colors"
+                                <button onClick={addKeyword} disabled={processing}
+                                    className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium rounded-lg border transition-colors disabled:opacity-40"
                                     style={{ background: 'rgba(91,190,99,0.12)', color: 'var(--color-primary)', borderColor: 'var(--color-border-strong)' }}>
                                     <HiOutlinePlus className="w-4 h-4" /> Add
                                 </button>
                             </div>
+                            <p className="text-xs mt-2" style={{ color: 'var(--color-text-muted)' }}>
+                                Separate entries with commas. Duplicates are removed automatically; click a keyword to remove it.
+                            </p>
                         </div>
                     </div>
 
@@ -301,10 +491,10 @@ export default function ReviewExtractedDataPage({ nextPath, backPath }) {
                         style={{ color: 'var(--color-text-secondary)', borderColor: 'var(--color-border-strong)', background: 'var(--color-bg-secondary)' }}>
                         ← Back
                     </button>
-                    <button onClick={handleNext}
-                        className="inline-flex items-center gap-2 px-6 py-2.5 text-white text-sm font-semibold rounded-lg transition-all shadow-md hover:shadow-lg"
+                    <button onClick={handleNext} disabled={processing}
+                        className="inline-flex items-center gap-2 px-6 py-2.5 text-white text-sm font-semibold rounded-lg transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
                         style={{ background: 'linear-gradient(135deg, #1B5E20, #2E7D32)' }}>
-                        Next — Additional Info
+                        {processing ? 'Waiting for processing…' : 'Next — Additional Info'}
                         <HiArrowRight className="w-4 h-4" />
                     </button>
                 </div>

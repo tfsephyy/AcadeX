@@ -16,6 +16,7 @@ class PasswordResetCode extends Model
         'email',
         'code',
         'type',
+        'ip_hash',
         'expires_at',
         'used',
     ];
