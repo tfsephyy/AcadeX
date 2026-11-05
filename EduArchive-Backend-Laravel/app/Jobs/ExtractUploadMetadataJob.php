@@ -73,6 +73,8 @@ class ExtractUploadMetadataJob implements ShouldQueue, ShouldBeUnique
                 throw new \RuntimeException('The stored document could not be opened for extraction.');
             }
 
+            app(\App\Services\PdfPreviewService::class)->prepare($upload->path, $temp);
+
             try {
                 $result = $extractor->extractPathWithSource($temp);
                 $metadata = $assistant->enrich($result['metadata'], $result['source']);

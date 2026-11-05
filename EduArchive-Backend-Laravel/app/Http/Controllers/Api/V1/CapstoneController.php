@@ -1315,7 +1315,7 @@ class CapstoneController extends Controller
         }
 
         $encryptor = new PdfEncryptorService();
-        $document = $encryptor->openForViewing($capstone->pdf_path);
+        $document = app(\App\Services\PdfPreviewService::class)->openForViewing($capstone->pdf_path);
 
         if ($document === null) {
             return $this->errorResponse('PDF could not be decrypted.', 500);
