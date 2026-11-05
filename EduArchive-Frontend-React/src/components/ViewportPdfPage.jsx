@@ -21,7 +21,7 @@ export default function ViewportPdfPage({ pageNumber, width, className = '', loa
     setRatio(viewport.width / viewport.height)
   }, [])
   const renderCanvas = nearViewport || typeof window === 'undefined' || !('IntersectionObserver' in window)
-  return <div ref={container} className={`viewport-pdf-page ${className}`} style={{ width, aspectRatio: ratio }}>
+  return <div ref={container} data-document-page={pageNumber} className={`viewport-pdf-page ${className}`} style={{ width, aspectRatio: ratio }}>
     {(visited || renderCanvas || loadText) && <Page {...props} pageNumber={pageNumber} width={width} renderMode={renderCanvas ? 'canvas' : 'none'} onLoadSuccess={onLoadSuccess} />}
   </div>
 }

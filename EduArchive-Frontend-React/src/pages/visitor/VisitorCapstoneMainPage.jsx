@@ -56,6 +56,11 @@ export default function VisitorCapstoneMainPage() {
 
     const pdfContainerRef = useRef(null);
     const fsContainerRef  = useRef(null);
+    const navigateToPdfPage = ({ pageNumber, pageIndex }) => {
+        const targetPage = pageNumber ?? (pageIndex + 1);
+        const container = fullscreen ? fsContainerRef.current : pdfContainerRef.current;
+        container?.querySelector(`[data-document-page="${targetPage}"]`)?.scrollIntoView({ block: 'start' });
+    };
     // The primary PDF blob URL is owned by usePdfBlob; only the IMRAD URL is local.
     const blobUrlsRef = useRef({ imrad: null });
 
@@ -425,6 +430,7 @@ export default function VisitorCapstoneMainPage() {
                         {activePdf === 'capstone' ? (
                             pdfUrl && pdfStatus !== 'error' ? (
                                 <Document
+                                    onItemClick={navigateToPdfPage}
                                     file={pdfFile}
                                     onLoadProgress={onPdfLoadProgress}
                                     onLoadError={onPdfLoadError}
@@ -444,6 +450,7 @@ export default function VisitorCapstoneMainPage() {
                         ) : activePdf === 'imrad' ? (
                             imradUrl ? (
                                 <Document
+                                    onItemClick={navigateToPdfPage}
                                     file={imradUrl}
                                     onLoadSuccess={({ numPages }) => setNumPages(numPages)}
                                     loading={<div className="flex items-center justify-center py-20"><Loading text="Rendering IMRAD PDF..." /></div>}
@@ -486,6 +493,7 @@ export default function VisitorCapstoneMainPage() {
                         <div className="flex justify-center py-6 px-4">
                             {currentUrl && !(activePdf === 'capstone' && pdfStatus === 'error') ? (
                                 <Document
+                                    onItemClick={navigateToPdfPage}
                                     file={activePdf === 'capstone' ? pdfFile : currentUrl}
                                     onLoadProgress={activePdf === 'capstone' ? onPdfLoadProgress : undefined}
                                     onLoadError={activePdf === 'capstone' ? onPdfLoadError : undefined}
