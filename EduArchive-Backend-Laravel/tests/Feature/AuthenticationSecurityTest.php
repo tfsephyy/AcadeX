@@ -10,6 +10,63 @@ use Tests\SecurityTestCase;
 
 class AuthenticationSecurityTest extends SecurityTestCase
 {
+    public function test_google_registration_skips_email_code_and_password_preserves_profile_and_approval_and_prevents_duplicates(): void
+    {
+        \App\Models\Role::firstOrCreate(['name' => 'student']);
+        config(['acadex.registration_min_seconds' => 0]);
+        $email = bin2hex(random_bytes(6)).'@example.invalid';
+        $subject = 'synthetic-subject-'.bin2hex(random_bytes(8));
+        $google = \Mockery::mock(GoogleIdentityService::class);
+        $google->shouldReceive('configured')->andReturnTrue();
+        $google->shouldReceive('verifyCredential')->twice()->with('verified-token')->andReturn([
+            'google_id' => $subject, 'email' => $email, 'name' => 'Synthetic Student',
+        ]);
+        $this->app->instance(GoogleIdentityService::class, $google);
+        $payload = ['credential' => 'verified-token', 'name' => 'Synthetic Student',
+            'username' => 'synthetic_'.bin2hex(random_bytes(5)), 'email' => 'forged@example.invalid',
+            'id_number' => 'MBC2026-'.random_int(10000,99999), 'role' => 'student',
+            'program' => 'BSIT', 'year' => '4', 'section' => '1',
+            'registration_challenge' => $this->getJson('/api/v1/register/challenge')->json('data.challenge')];
+        $this->postJson('/api/v1/auth/google/register', $payload)->assertCreated()
+            ->assertJsonPath('data.email_verified', true);
+        $user = User::where('email',$email)->firstOrFail();
+        self::assertNotNull($user->email_verified_at);
+        self::assertSame($subject,$user->google_id);
+        self::assertFalse($user->is_approved);
+        self::assertSame('BSIT',$user->studentProfile->program);
+        $payload['username'] = 'synthetic_'.bin2hex(random_bytes(5));
+        $payload['id_number'] = 'MBC2026-'.random_int(10000,99999);
+        $this->postJson('/api/v1/auth/google/register', $payload)->assertStatus(409);
+        self::assertSame(1,User::where('email',$email)->count());
+    }
+
+    public function test_google_registration_identity_returns_only_server_verified_profile_without_creating_an_account(): void
+    {
+        $before = User::count();
+        $google = \Mockery::mock(GoogleIdentityService::class);
+        $google->shouldReceive('configured')->once()->andReturnTrue();
+        $google->shouldReceive('verifyCredential')->once()->with('verified-token')->andReturn([
+            'google_id' => 'synthetic-subject', 'email' => 'verified@example.invalid', 'name' => 'Synthetic',
+        ]);
+        $this->app->instance(GoogleIdentityService::class, $google);
+        $this->postJson('/api/v1/auth/google/registration-identity', ['credential' => 'verified-token', 'email' => 'forged@example.invalid'])
+            ->assertOk()->assertJsonPath('data.email', 'verified@example.invalid')->assertJsonMissingPath('data.google_id');
+        self::assertSame($before, User::count());
+    }
+
+    public function test_google_registration_identity_rejects_an_existing_account_without_linking_it(): void
+    {
+        $user = $this->user('student');
+        $google = \Mockery::mock(GoogleIdentityService::class);
+        $google->shouldReceive('configured')->once()->andReturnTrue();
+        $google->shouldReceive('verifyCredential')->once()->andReturn([
+            'google_id' => 'synthetic-subject', 'email' => $user->email, 'name' => $user->name,
+        ]);
+        $this->app->instance(GoogleIdentityService::class, $google);
+        $this->postJson('/api/v1/auth/google/registration-identity', ['credential' => 'verified-token'])->assertStatus(409);
+        self::assertNull($user->fresh()->google_id);
+    }
+
     public function test_password_account_can_link_google_after_password_confirmation_then_sign_in(): void
     {
         $user = $this->user('student');

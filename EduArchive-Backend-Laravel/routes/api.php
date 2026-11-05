@@ -41,6 +41,8 @@ Route::prefix('v1')->group(function () {
     // Google Identity Services: the credential is verified server-side.
     Route::post('/auth/google/register', [AuthController::class, 'googleRegister'])
         ->middleware('throttle:google-auth');
+    Route::post('/auth/google/registration-identity', [AuthController::class, 'googleRegistrationIdentity'])
+        ->middleware('throttle:google-auth');
     Route::post('/auth/google/login', [AuthController::class, 'googleLogin'])
         ->middleware('throttle:google-auth');
 

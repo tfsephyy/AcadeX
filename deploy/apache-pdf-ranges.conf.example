@@ -1,0 +1,8 @@
+# In the existing private Laravel vhost only. Merge into its configuration;
+# retain the real DocumentRoot, access rules and PHP handler.
+# Apache security updates may otherwise discard the app's Content-Length,
+# preventing PDF.js from discovering range support on its initial request.
+# Trust only the application's reviewed front controller, never uploaded scripts.
+<Files "index.php">
+    SetEnv ap_trust_cgilike_cl 1
+</Files>

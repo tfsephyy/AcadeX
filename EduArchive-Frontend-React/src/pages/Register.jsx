@@ -4,7 +4,7 @@ import { useState, useMemo, useEffect, useRef } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/useAuth'
 import { useTheme } from '../context/useTheme'
-import { sendVerificationCode, verifyEmailCode, getRegistrationChallenge, registerWithGoogle } from '../api/admin'
+import { sendVerificationCode, verifyEmailCode, getRegistrationChallenge, registerWithGoogle, verifyGoogleRegistration } from '../api/admin'
 import GoogleButton from '../components/GoogleButton'
 
 /* ─── Constants ──────────────────────────────────────────────── */
@@ -122,7 +122,7 @@ function PwdCheck({ ok, label }) {
 }
 
 /* ─── Step Progress ──────────────────────────────────────────── */
-function StepProgress({ currentStep }) {
+function StepProgress({ currentStep, googleReady }) {
   return (
     <div className="flex items-center mb-5">
       {STEPS.map((step, i) => (
@@ -142,7 +142,7 @@ function StepProgress({ currentStep }) {
             </div>
             <div className="mt-1 text-center" style={{ minWidth: 52 }}>
               <p className="font-semibold" style={{ color: currentStep >= step.id ? 'var(--color-text)' : 'var(--color-text-faint)', fontSize: '0.7rem' }}>
-                {step.label}
+                {step.id === 3 && googleReady ? 'Password skipped' : step.label}
               </p>
             </div>
           </div>
@@ -237,12 +237,24 @@ export default function Register() {
   const [googleError, setGoogleError] = useState('')
   const [googleReady, setGoogleReady] = useState(false)
 
-  const handleGoogleCredential = (data) => {
+  const handleGoogleCredential = async (data) => {
     const credential = data?.credential || data?.data?.credential
     if (credential) {
-      setGoogleCredential(credential)
-      setGoogleReady(true)
+      setLoading(true)
       setGoogleError('')
+      setGoogleReady(false)
+      setGoogleCredential('')
+      try {
+        const response = await verifyGoogleRegistration({ credential })
+        const identity = response.data.data
+        setForm(previous => ({ ...previous, email: identity.email, password: '', password_confirmation: '' }))
+        setGoogleCredential(credential)
+        setGoogleReady(true)
+      } catch (err) {
+        setGoogleError(err.response?.data?.message || 'Google could not verify your email. Please try again.')
+      } finally {
+        setLoading(false)
+      }
     }
   }
 
@@ -366,6 +378,10 @@ export default function Register() {
     (isVisitor || (form.program && (form.role === 'faculty' || (form.year && form.section))))
 
   const nextStep = () => {
+    if (step === 2 && googleReady) {
+      handleGoogleRegister()
+      return
+    }
     if (step === 1 && !canProceedStep1) {
       setGlobalError('Please fill in all personal information fields.')
       return
@@ -386,6 +402,10 @@ export default function Register() {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+    if (step < 3) {
+      nextStep()
+      return
+    }
     setLoading(true)
     setErrors({})
     setGlobalError('')
@@ -478,7 +498,7 @@ export default function Register() {
           </div>
 
           {/* Step progress */}
-          <StepProgress currentStep={step} />
+          <StepProgress currentStep={step} googleReady={googleReady} />
 
           {/* Step label */}
           <div className="mb-3">
@@ -565,7 +585,14 @@ export default function Register() {
                 </div>
 
                 {/* Email + verification */}
-                <div>
+                {googleReady ? (
+                  <div className="rounded-xl border p-3" style={{ borderColor: 'var(--color-primary)' }}>
+                    <p className="text-sm font-semibold">Google email verified</p>
+                    <p className="text-sm mt-1">{form.email}</p>
+                    <p className="text-xs mt-2">Complete your profile below. Email verification and password creation are skipped.</p>
+                    <button type="button" className="text-xs underline mt-2" onClick={() => { setGoogleReady(false); setGoogleCredential(''); setEmailVerified(false); setGoogleError('') }}>Use manual email registration instead</button>
+                  </div>
+                ) : <div>
                   <label htmlFor="email" className="block font-medium mb-1.5" style={{ color: 'var(--color-text-secondary)', fontSize: '0.8rem' }}>
                     Email Address <span style={{ color: 'var(--color-primary)' }}>*</span>
                   </label>
@@ -649,7 +676,7 @@ export default function Register() {
                     </div>
                   )}
                   {emailError && <p className="text-xs mt-1.5" style={{ color: '#f87171' }}>{emailError}</p>}
-                </div>
+                </div>}
 
                 {/* Program, Year, Section — hidden for visitors */}
                 {!isVisitor && (
@@ -816,7 +843,7 @@ export default function Register() {
                     </div>
                     <GoogleButton
                       mode="signup"
-                      disabled={!canProceedStep1}
+                      disabled={!canProceedStep1 || loading}
                       onSuccess={handleGoogleCredential}
                       onError={setGoogleError}
                       className="w-full"
@@ -825,17 +852,7 @@ export default function Register() {
                       Uses your verified Google email. You will not need an email code or password here. Accounts still require administrator approval.
                     </p>
                     {googleError && <p className="text-xs mt-2" style={{ color: '#f87171' }}>{googleError}</p>}
-                    {googleReady && (
-                      <button
-                        type="button"
-                        onClick={handleGoogleRegister}
-                        disabled={loading || !canProceedStep2Google}
-                        className="btn-primary w-full mt-3"
-                        style={{ padding: '0.6rem', fontSize: '0.875rem', opacity: (loading || !canProceedStep2Google) ? 0.65 : 1 }}
-                      >
-                        {loading ? 'Creating Google account…' : 'Create Account with Google'}
-                      </button>
-                    )}
+                    {loading && <p className="text-xs mt-2" role="status">Verifying Google identity...</p>}
                   </div>
                 )}
 
@@ -863,10 +880,11 @@ export default function Register() {
                 <button
                   type="button"
                   onClick={nextStep}
+                  disabled={loading}
                   className="btn-primary flex-1"
                   style={{ padding: '0.6rem', fontSize: '0.875rem' }}
                 >
-                  Continue →
+                  {step === 2 && googleReady ? (loading ? 'Creating account...' : 'Create account with Google') : 'Continue \u2192'}
                 </button>
               ) : (
                 <button

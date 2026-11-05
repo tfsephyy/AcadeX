@@ -1,6 +1,6 @@
 # AcadeX implementation progress
 
-Last updated: 2026-11-05 (implementation reviewed and corrected locally; deployment pending production access).
+Last updated: 2026-11-05. First feature release deployed; viewer and registration follow-up tested and being released. See the latest dated entries for current evidence.
 Read first: [ACADEX_REQUIREMENTS.md](ACADEX_REQUIREMENTS.md) and
 [ACADEX_DECISIONS.md](ACADEX_DECISIONS.md).
 
@@ -286,3 +286,13 @@ The running local code failed with `Unknown column google_id` because the Google
 ## 2026-11-05 — Production deployment access check
 
 The user authorized deployment with explicit protection of existing data. Confirmed the release branch commit is `4b21b2a`, DNS for `veload.site` currently resolves to the existing public host, and a direct HTTPS probe returns 200. Strict-host-key SSH attempts to both the DNS host and configured SSH alias timed out on port 22. The Chrome computer-use layer could not identify the active tab URL confidently and stopped, so no browser-console actions were taken. AWS CLI and Python SDK are unavailable on this workstation. No production host was reached, no backup was made or verified in this attempt, and no production command, migration, configuration, or data was changed. Deployment is pending a working authorized SSH or AWS Systems Manager access path; do not broaden public SSH ingress or switch targets based only on the timeout.
+
+## 2026-11-05 — Feature release and follow-up
+
+Deployed source `309e37a` to `/srv/acadex-staging/releases/acadex-20261105-309e37a` after four integrity-checked private backup archives in `/var/backups/acadex/release-20261105-309e37a`. Original values in 17 non-transient tables, six accounts, one capstone, 30 private file hashes and APP_KEY matched before reopening. Eight forward migrations applied. A systemd worker processes the existing database queue; Redis/Docker and Ollama are not enabled. Public pages, CSRF/challenge endpoints and authenticated document metadata pass. A controlled upload moved queued to completed; its owned staged file/reference/notification and verification tokens were removed without saving a capstone.
+
+The referenced 97 MB PDF was converted with a byte-identical encrypted backup. Streaming hashes confirm decrypted content is identical; the other original files remain identical, account/capstone counts are unchanged and no verification tokens remain. Authenticated range response: 206, 1,024 bytes in about 0.06 s. Google branding uses the live home/privacy/terms URLs; audience now reads External / In production.
+
+Live browser inspection found two remaining viewer costs: Apache stripped the initial Content-Length, and all 176 page text/annotation components mounted at once. The trusted Laravel front controller now retains its calculated length through Apache; a portable vhost example is included. The follow-up mounts pages near the viewport, retains visited text/links and provides an explicit all-page text option for browser Find. Registration Step 2 verifies the Google token before displaying its email, hides manual verification for that choice, skips the password page, and uses the main action to submit after profile completion. Final registration verifies the token again; existing accounts are rejected without linking during signup.
+
+Follow-up local checks: 17 authentication tests / 93 assertions on the guarded disposable schema, 15 frontend tests, quiet lint and production build passed. Preparing a second immutable release; follow-up browser changes are not yet deployed at this checkpoint.

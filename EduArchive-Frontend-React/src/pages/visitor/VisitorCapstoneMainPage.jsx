@@ -48,6 +48,7 @@ export default function VisitorCapstoneMainPage() {
         onLoadError: onPdfLoadError,
     } = usePdfBlob(`/visitor/capstones/${id}/pdf`, { enabled: canSeeCapstonePdf });
     const [numPages, setNumPages]       = useState(null);
+    const [loadAllText, setLoadAllText] = useState(false);
     const [pdfWidth, setPdfWidth]       = useState(600);
     const [fullscreen, setFullscreen]   = useState(false);
     const [fsNumPages, setFsNumPages]   = useState(null);
@@ -401,6 +402,11 @@ export default function VisitorCapstoneMainPage() {
                             <span className="text-xs font-medium" style={{ color: 'var(--color-text-muted)' }}>
                                 {numPages ? `${numPages} page${numPages !== 1 ? 's' : ''}` : ''}
                             </span>
+                            {numPages > 1 && <button type="button" onClick={() => setLoadAllText(true)} disabled={loadAllText}
+                                className="text-xs text-gray-500 underline disabled:no-underline"
+                                title="Load text on every page for your browser's Find command. Large documents may take longer.">
+                                {loadAllText ? 'All-page text enabled' : 'Load all page text'}
+                            </button>}
                             {activePdf === 'imrad' && (
                                 <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold rounded-full bg-cyan-100 text-cyan-700 border border-cyan-200">
                                     IMRAD View
@@ -427,7 +433,7 @@ export default function VisitorCapstoneMainPage() {
                                     error={<div className="text-center py-20 text-gray-500">The document was downloaded but could not be rendered.</div>}
                                 >
                                     {Array.from(new Array(numPages), (_, i) => (
-                                        <ViewportPdfPage key={`page_${i + 1}`} pageNumber={i + 1} width={pdfWidth} className="mb-1"
+                                        <ViewportPdfPage key={`page_${i + 1}`} loadText={loadAllText} pageNumber={i + 1} width={pdfWidth} className="mb-1"
                                             renderTextLayer={true} renderAnnotationLayer={true} />
                                     ))}
                                 </Document>
@@ -444,7 +450,7 @@ export default function VisitorCapstoneMainPage() {
                                     error={<div className="text-center py-20 text-gray-500">Failed to render IMRAD PDF.</div>}
                                 >
                                     {Array.from(new Array(numPages), (_, i) => (
-                                        <ViewportPdfPage key={`page_${i + 1}`} pageNumber={i + 1} width={pdfWidth} className="mb-1"
+                                        <ViewportPdfPage key={`page_${i + 1}`} loadText={loadAllText} pageNumber={i + 1} width={pdfWidth} className="mb-1"
                                             renderTextLayer={true} renderAnnotationLayer={true} />
                                     ))}
                                 </Document>
@@ -488,7 +494,7 @@ export default function VisitorCapstoneMainPage() {
                                     error={<div className="text-center py-20 text-gray-400">Failed to render PDF.</div>}
                                 >
                                     {Array.from(new Array(fsNumPages), (_, i) => (
-                                        <ViewportPdfPage key={`fs_page_${i + 1}`} pageNumber={i + 1} width={fsWidth} className="mb-3 shadow-2xl"
+                                        <ViewportPdfPage key={`fs_page_${i + 1}`} loadText={loadAllText} pageNumber={i + 1} width={fsWidth} className="mb-3 shadow-2xl"
                                             renderTextLayer={true} renderAnnotationLayer={true} />
                                     ))}
                                 </Document>

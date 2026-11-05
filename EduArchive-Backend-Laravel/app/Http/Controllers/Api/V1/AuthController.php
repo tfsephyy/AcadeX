@@ -86,6 +86,22 @@ class AuthController extends Controller
     /* ────────────────────────────────────────────────────
      *  GOOGLE REGISTRATION
      * ──────────────────────────────────────────────────── */
+    public function googleRegistrationIdentity(Request $request): JsonResponse
+    {
+        $request->validate(['credential' => ['required', 'string', 'max:8192']]);
+        $service = app(GoogleIdentityService::class);
+        if (!$service->configured()) return $this->errorResponse('Google registration is not configured.', 503);
+        $identity = $service->verifyCredential((string) $request->input('credential'));
+        if (!$identity) return $this->errorResponse('Google could not verify your email. Choose Google again or use email registration.', 422);
+        if (User::where('email', $identity['email'])->exists() || User::where('google_id', $identity['google_id'])->exists()) {
+            return $this->errorResponse('This Google account already has an Acadex account. Use Google on the sign-in page instead.', 409);
+        }
+        // This previews verified identity only. Final registration revalidates
+        // the signed credential and enforces uniqueness and approval rules.
+        return $this->successResponse(['email' => $identity['email'], 'name' => $identity['name']], 'Google email verified.')
+            ->header('Cache-Control', 'no-store');
+    }
+
     public function googleRegister(GoogleRegisterRequest $request): JsonResponse
     {
         app(RegistrationGuardService::class)->verify($request);

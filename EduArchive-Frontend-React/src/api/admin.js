@@ -88,6 +88,7 @@ export const markNotificationRead = (id) => axios.put(`/notifications/${id}/read
 export const markAllNotificationsRead = () => axios.put('/notifications/mark-all-read');
 export const getRegistrationChallenge = () => axios.get('/register/challenge');
 export const registerWithGoogle = (data) => axios.post('/auth/google/register', data);
+export const verifyGoogleRegistration = (data) => axios.post('/auth/google/registration-identity', data);
 export const loginWithGoogle = (data) => axios.post('/auth/google/login', data);
 export const linkGoogleAccount = (data) => axios.post('/auth/google/link', data);
 export const getFacultyDashboard = () => axios.get('/faculty/dashboard');

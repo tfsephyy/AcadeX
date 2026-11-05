@@ -46,6 +46,7 @@ export default function StudentCapstoneMainPage() {
         onLoadError: onPdfLoadError,
     } = usePdfBlob(pdfEndpoint, { enabled: Boolean(capstone) });
     const [numPages, setNumPages] = useState(null);
+    const [loadAllText, setLoadAllText] = useState(false);
     const [pdfWidth, setPdfWidth] = useState(600);
     const [fullscreen, setFullscreen] = useState(false);
     const [fsNumPages, setFsNumPages] = useState(null);
@@ -66,6 +67,7 @@ export default function StudentCapstoneMainPage() {
 
     useEffect(() => {
         viewRecorded.current = false;
+        setLoadAllText(false);
         fetchCapstone();
     }, [id]);
 
@@ -410,6 +412,11 @@ export default function StudentCapstoneMainPage() {
                             <span className="text-xs text-gray-500 font-medium">
                                 {numPages ? `${numPages} page${numPages !== 1 ? 's' : ''}` : ''}
                             </span>
+                            {numPages > 1 && <button type="button" onClick={() => setLoadAllText(true)} disabled={loadAllText}
+                                className="text-xs text-gray-500 underline disabled:no-underline"
+                                title="Load text on every page for your browser's Find command. Large documents may take longer.">
+                                {loadAllText ? 'All-page text enabled' : 'Load all page text'}
+                            </button>}
                             {activePdf === 'imrad' && (
                                 <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold rounded-full bg-cyan-100 text-cyan-700 border border-cyan-200">
                                     IMRAD View
@@ -440,7 +447,7 @@ export default function StudentCapstoneMainPage() {
                                     {Array.from(new Array(numPages), (_, i) => (
                                         <ViewportPdfPage
                                             key={`page_${i + 1}`}
-                                            pageNumber={i + 1}
+                                            loadText={loadAllText} pageNumber={i + 1}
                                             width={pdfWidth}
                                             className="mb-1"
                                             renderTextLayer={true}
@@ -467,7 +474,7 @@ export default function StudentCapstoneMainPage() {
                                 {Array.from(new Array(numPages), (_, i) => (
                                     <ViewportPdfPage
                                         key={`page_${i + 1}`}
-                                        pageNumber={i + 1}
+                                        loadText={loadAllText} pageNumber={i + 1}
                                         width={pdfWidth}
                                         className="mb-1"
                                         renderTextLayer={true}
@@ -519,7 +526,7 @@ export default function StudentCapstoneMainPage() {
                                     {Array.from(new Array(fsNumPages), (_, i) => (
                                         <ViewportPdfPage
                                             key={`fs_page_${i + 1}`}
-                                            pageNumber={i + 1}
+                                            loadText={loadAllText} pageNumber={i + 1}
                                             width={fsWidth}
                                             className="mb-3 shadow-2xl"
                                             renderTextLayer={true}
