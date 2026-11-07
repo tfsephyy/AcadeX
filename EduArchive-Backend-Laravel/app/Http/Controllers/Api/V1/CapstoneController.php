@@ -235,43 +235,42 @@ class CapstoneController extends Controller
                 ->where('capstone_id', $capstone->id)
                 ->exists()
             : false;
-        $data['citation_generations'] = $capstone->citationEvents()->count();
+        $data['reference_count'] = $capstone->referenceTotal();
+        $data['citation_generations'] = $data['reference_count'];
 
         return $this->successResponse($data, 'Capstone retrieved.');
     }
 
-    /**
-     * Generate an APA/MLA/IEEE citation and record a citation-generation event.
-     * This metric counts generated citations, not verified external citations.
-     */
+    /** Formatting is read-only. Only a successful clipboard copy records an event. */
     public function citation(Request $request, Capstone $capstone): JsonResponse
     {
         $this->authorize('interact', $capstone);
-
         $validator = Validator::make($request->all(), [
-            'format' => 'required|in:apa,mla,ieee',
+            'format' => 'required|in:apa,mla',
             'action' => 'nullable|in:generate,copy,download',
+            'event_key' => 'required_if:action,copy|nullable|uuid',
         ]);
         if ($validator->fails()) return $this->validationFailure($validator);
-
         $format = $validator->validated()['format'];
-        $action = $validator->validated()['action'] ?? 'generate';
+        if ($request->input('action') === 'copy') {
+            $event = CitationEvent::firstOrCreate([
+                'user_id' => $request->user()->id,
+                'event_key' => $request->input('event_key'),
+            ], [
+                'capstone_id' => $capstone->id, 'format' => $format, 'action' => 'copy',
+                'ip_hash' => hash_hmac('sha256', (string) $request->ip(), (string) config('app.key')),
+            ]);
+            if ((int) $event->capstone_id !== (int) $capstone->id || $event->format !== $format) {
+                return $this->errorResponse('This copy event belongs to another citation.', 409);
+            }
+        }
         $service = app(CitationService::class);
-
-        CitationEvent::create([
-            'capstone_id' => $capstone->id,
-            'user_id' => $request->user()->id,
-            'format' => $format,
-            'action' => $action,
-            'ip_hash' => hash_hmac('sha256', (string) $request->ip(), (string) config('app.key')),
-        ]);
-
+        $total = $capstone->referenceTotal();
         return $this->successResponse([
-            'format' => $format,
-            'label' => $service->label($format),
+            'format' => $format, 'label' => $service->label($format),
             'citation' => $service->format($capstone, $format),
-            'citation_generations' => $capstone->citationEvents()->count(),
-        ], 'Citation generated.');
+            'reference_count' => $total, 'citation_count' => $total, 'citation_generations' => $total,
+        ], 'Citation ready.');
     }
 
     /**
@@ -321,7 +320,7 @@ class CapstoneController extends Controller
         $uploadId = substr($reference, 7);
 
         if (!$skipExtraction) {
-            \App\Jobs\ExtractUploadMetadataJob::dispatch($uploadId);
+            \App\Jobs\ExtractUploadMetadataJob::dispatch($uploadId)->afterCommit();
         }
 
         $upload = \App\Models\DocumentUpload::find($uploadId);
@@ -368,13 +367,16 @@ class CapstoneController extends Controller
             return $this->errorResponse('The stored file is no longer available. Upload the PDF again.', 410);
         }
 
-        $record->update([
+        $claimed = \App\Models\DocumentUpload::whereKey($record->id)
+            ->whereIn('processing_status', [\App\Models\DocumentUpload::STATUS_FAILED, \App\Models\DocumentUpload::STATUS_COMPLETED, \App\Models\DocumentUpload::STATUS_SKIPPED])
+            ->whereNull('capstone_id')->update([
             'processing_status' => \App\Models\DocumentUpload::STATUS_QUEUED,
             'processing_error' => null,
             'processing_started_at' => null,
             'processing_completed_at' => null,
             'extraction_result' => null,
         ]);
+        if (!$claimed) return $this->errorResponse('This upload is already being processed or submitted.', 409);
         \App\Jobs\ExtractUploadMetadataJob::dispatch($record->id);
 
         return $this->successResponse(
@@ -413,6 +415,8 @@ class CapstoneController extends Controller
         return [
             'upload_id' => $record->id,
             'pdf_path' => $reference,
+            'pdf_original_name' => $record->original_name,
+            'capstone_id' => $record->capstone_id,
             'processing_status' => $processing,
             'extraction_status' => $extractionStatus,
             'extracted' => $metadata,
@@ -502,9 +506,45 @@ class CapstoneController extends Controller
     }
 
     /**
+     * Check whether a capstone title already exists.
+     * Returns { exists: true/false } so the frontend can block
+     * step progression before files are uploaded.
+     */
+    public function checkTitle(Request $request): JsonResponse
+    {
+        $request->validate(['title' => 'required|string|max:255']);
+
+        $exists = Capstone::whereRaw('LOWER(title) = ?', [mb_strtolower(trim($request->title))])->exists();
+
+        return $this->successResponse(['exists' => $exists], $exists ? 'Title already exists.' : 'Title is available.');
+    }
+
+    /**
      * Store capstone with extracted/edited data and additional info.
      */
     public function store(Request $request): JsonResponse
+    {
+        return DB::transaction(function () use ($request) {
+            $reference = $request->input('pdf_path');
+            if (is_string($reference) && str_starts_with($reference, 'upload:')) {
+                // Serialize submission on the durable upload reference. A replay
+                // returns the original record without sending more jobs or notices.
+                User::whereKey($request->user()->id)->lockForUpdate()->firstOrFail();
+                $upload = \App\Models\DocumentUpload::whereKey(substr($reference, 7))
+                    ->where('user_id', $request->user()->id)->where('purpose', 'pdf')->lockForUpdate()->first();
+                if ($upload?->capstone_id) {
+                    $existing = Capstone::whereKey($upload->capstone_id)->firstOrFail();
+                    if ($existing->title !== $request->input('title') || $existing->author !== $request->input('author')) {
+                        throw \Illuminate\Validation\ValidationException::withMessages(['documents' => 'This upload has already been submitted.']);
+                    }
+                    return $this->successResponse($existing->load(['keywords', 'resources', 'referencedCapstones', 'adviser:id,name']), 'Capstone already saved.');
+                }
+            }
+            return $this->storeNew($request);
+        });
+    }
+
+    private function storeNew(Request $request): JsonResponse
     {
         // Accept either a comma-separated string or an array from the client.
         if (is_string($request->input('keywords'))) {
@@ -617,7 +657,7 @@ class CapstoneController extends Controller
 
         // Attach referenced capstones
         if ($request->has('references') && is_array($request->references)) {
-            $refs = array_filter($request->references, fn($id) => $id !== $capstone->id);
+            $refs = array_filter(array_unique(array_map('intval', $request->references)), fn($id) => $id !== (int) $capstone->id);
             $capstone->referencedCapstones()->sync($refs);
         }
 
@@ -639,7 +679,7 @@ class CapstoneController extends Controller
 
         // Whole-document text extraction is intentionally queued. The upload
         // response never waits for OCR/full-text parsing.
-        ExtractPdfTextJob::dispatch($capstone->id);
+        ExtractPdfTextJob::dispatch($capstone->id)->afterCommit();
 
         AuditLog::log('upload_capstone', $user->id, Capstone::class, $capstone->id);
         $this->notifyCapstoneSubmitted($capstone, $user, $isStudent);
@@ -708,28 +748,6 @@ class CapstoneController extends Controller
             }
         }
         return array_values($normalized);
-    }
-
-    /**
-     * Return a list of faculty users (for adviser picker).
-     */
-    public function getFacultyList(Request $request): JsonResponse
-    {
-        $faculty = User::whereHas('role', function ($q) {
-                $q->where('name', 'faculty');
-            })
-            ->where('is_approved', true)
-            ->where('is_archived', false)
-            ->where('adviser_available', true)
-            ->orderBy('name')
-            ->get(['id', 'name', 'faculty_program']);
-
-        if ($request->has('search') && $request->search) {
-            $search = strtolower($request->search);
-            $faculty = $faculty->filter(fn($u) => str_contains(strtolower($u->name), $search))->values();
-        }
-
-        return $this->successResponse($faculty, 'Faculty list retrieved.');
     }
 
     /**
@@ -1546,6 +1564,7 @@ class CapstoneController extends Controller
         }
 
         return DB::transaction(function () use ($request, $capstone) {
+        Capstone::whereKey($capstone->id)->lockForUpdate()->firstOrFail();
         $uploads = app(\App\Services\DocumentUploads::class);
         $resources = $request->input('resources', []);
         foreach ($resources as &$resource) {
@@ -1610,7 +1629,7 @@ class CapstoneController extends Controller
         }
 
         if ($request->has('references')) {
-            $refs = array_filter($request->references ?? [], fn($id) => $id !== $capstone->id);
+            $refs = array_filter(array_unique(array_map('intval', $request->references ?? [])), fn($id) => $id !== (int) $capstone->id);
             $capstone->referencedCapstones()->sync($refs);
         }
 

@@ -12,3 +12,11 @@ test('falls back to the first validation field message and then the caller fallb
   assert.equal(getApiErrorMessage(new Error('network')), 'Something went wrong. Please try again.')
   assert.equal(getApiErrorMessage(null, 'Upload failed.'), 'Upload failed.')
 })
+
+test('raw SQL and HTML failures never appear as upload notifications', () => {
+  for (const data of [
+    { message: "SQLSTATE[42S02]: Table 'eduarchivedb.upload_transfers' doesn't exist" },
+    '<!DOCTYPE html><html>Private exception trace</html>',
+    { message: 'Illuminate\\Database\\QueryException: private SQL' },
+  ]) assert.equal(getApiErrorMessage({ response: { status: 500, data } }, 'Please resume your upload or try again shortly.'), 'Please resume your upload or try again shortly.')
+})

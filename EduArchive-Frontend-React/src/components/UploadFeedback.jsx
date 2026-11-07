@@ -2,31 +2,30 @@ import { useEffect, useState } from 'react'
 import { formatElapsed } from './uploadProgress'
 
 /**
- * Transfer-only feedback. Extraction happens in the background after the
- * review page opens, so this component must never imply that the modal has to
- * stay open for OCR/AI work.
+ * Transfer-only feedback. The app tracks server processing separately, so this
+ * component never implies that the modal has to stay open for OCR/AI work.
  */
-export default function UploadFeedback({ transfer }) {
-  const [elapsed, setElapsed] = useState(0)
+export default function UploadFeedback({ transfer, startedAt }) {
+  const [elapsed, setElapsed] = useState(() => startedAt ? (Date.now() - startedAt) / 1000 : 0)
   useEffect(() => {
-    const started = Date.now()
+    const started = startedAt || Date.now()
     const timer = setInterval(() => setElapsed((Date.now() - started) / 1000), 1000)
     return () => clearInterval(timer)
-  }, [])
+  }, [startedAt])
   const unknownTransfer = transfer.percent === null && transfer.loaded > 0
   const title = unknownTransfer
     ? 'Preparing your file…'
     : transfer.sent
-      ? 'File sent. Opening the review form…'
+      ? 'File sent. Confirming storage…'
       : 'Uploading file…'
   return <div className="upload-feedback">
     <div role="status" aria-live="polite" className="text-center">
       <p className="text-sm font-semibold" style={{ color: 'var(--color-text)' }}>{title}</p>
       <p className="text-xs mt-2" style={{ color: 'var(--color-text-muted)' }}>
         {unknownTransfer
-          ? 'Transfer progress is unavailable. The review form will open when the file is safely stored.'
+          ? 'Transfer progress is unavailable. You can review the file once it is safely stored.'
           : transfer.sent
-            ? 'Processing continues in the background; you can close this window safely.'
+            ? 'Waiting for AcadeX to confirm the upload. You can close this window safely.'
             : 'Sending the PDF to AcadeX.'}
       </p>
     </div>

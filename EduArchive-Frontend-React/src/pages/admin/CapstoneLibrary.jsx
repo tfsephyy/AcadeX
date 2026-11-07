@@ -1,3 +1,4 @@
+import { useResponsiveDisplayMode } from '../../components/useResponsiveDisplayMode';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -32,7 +33,7 @@ export default function CapstoneLibrary() {
     // ── UI state ─────────────────────────────────────────────────────────────────
     const [uploadOpen, setUploadOpen] = useState(false);
     const [viewing, setViewing] = useState('active');       // 'active' | 'archived'
-    const [displayMode, setDisplayMode] = useState('card'); // 'card' | 'table'
+    const [displayMode, setDisplayMode] = useResponsiveDisplayMode(); // 'card' | 'table'
     const [showFilters, setShowFilters] = useState(false);
 
     // ── Search & filters ──────────────────────────────────────────────────────────
@@ -268,7 +269,7 @@ export default function CapstoneLibrary() {
     // ── Card View ─────────────────────────────────────────────────────────────────
     const CardView = () => (
         <div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4 p-4 lg:p-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 p-4 lg:p-6">
                 {capstones.map((cap) => (
                     <div key={cap.id}
                         onClick={() => handleView(cap)}
@@ -374,7 +375,7 @@ export default function CapstoneLibrary() {
                                 </button>
                             )}
                             <div>
-                                <h1 className="text-3xl font-bold text-gray-900">{viewing === 'archived' ? 'Archived Capstones' : 'Capstone Library'}</h1>
+                                <h1 className="text-3xl font-bold text-gray-900">{viewing === 'archived' ? 'Archived Capstones' : 'My Uploads'}</h1>
                                 <p className="text-sm text-gray-500 mt-2">{viewing === 'archived' ? 'Manage archived capstone projects' : 'Manage all capstone projects'}</p>
                             </div>
                         </div>
@@ -413,7 +414,7 @@ export default function CapstoneLibrary() {
                                 </button>
                             )}
                             <div>
-                                <h1 className="text-2xl font-bold text-gray-900">{viewing === 'archived' ? 'Archived Capstones' : 'Capstone Library'}</h1>
+                                <h1 className="text-2xl font-bold text-gray-900">{viewing === 'archived' ? 'Archived Capstones' : 'My Uploads'}</h1>
                                 <p className="text-xs text-gray-500 mt-1">{viewing === 'archived' ? 'Manage archived capstone projects' : 'Manage all capstone projects'}</p>
                             </div>
                         </div>

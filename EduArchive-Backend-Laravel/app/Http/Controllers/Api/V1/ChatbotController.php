@@ -469,6 +469,20 @@ class ChatbotController extends Controller
             'intent'              => $intent,
         ];
 
+        // Resolve generated links in one access-scoped query. Existing saved
+        // conversations can still contain numeric links, which remain valid.
+        preg_match_all('/\[LINK:(\d+)\]/', $payload['reply'], $matches);
+        $ids = array_unique(array_merge($matches[1], array_column($payload['suggested_capstones'], 'id')));
+        if ($ids) {
+            $slugs = Capstone::whereIn('id', $ids)->pluck('slug', 'id');
+            $payload['reply'] = preg_replace_callback('/\[LINK:(\d+)\]/',
+                fn ($match) => '[LINK:'.(($slugs[$match[1]] ?? null) ?: $match[1]).']', $payload['reply']);
+            $payload['suggested_capstones'] = array_map(function ($capstone) use ($slugs) {
+                $capstone['slug'] = $slugs[$capstone['id']] ?? null;
+                return $capstone;
+            }, $payload['suggested_capstones']);
+        }
+
         // Pass faculty_list through when present (adviser selection flow)
         if (!empty($data['faculty_list'])) {
             $payload['faculty_list'] = $data['faculty_list'];

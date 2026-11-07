@@ -1,3 +1,4 @@
+import CategoryVisibilityToggle from '../../components/CategoryVisibilityToggle';
 import { cardInteraction } from '../../components/cardInteraction';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -33,6 +34,7 @@ export default function StudentUploadedCapstones() {
     // ── UI state ─────────────────────────────────────────────────────────────────
     const [displayMode, setDisplayMode] = useState('card'); // 'card' | 'table'
     const [showFilters, setShowFilters] = useState(false);
+    const [showCategories, setShowCategories] = useState(true);
 
     // ── Search & filters ──────────────────────────────────────────────────────────
     const [search, setSearch] = useState('');
@@ -198,7 +200,7 @@ export default function StudentUploadedCapstones() {
     // ── Card grid JSX ─────────────────────────────────────────────────────────────
     const cardGridJsx = (
         <>
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4">
+            <div className="library-grid grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {capstones.map((cap) => (
                     <div key={cap.id} {...cardInteraction(() => openCapstoneModal(cap))}
                         className="group bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 flex flex-col overflow-hidden cursor-pointer">
@@ -287,8 +289,8 @@ export default function StudentUploadedCapstones() {
             <div className="px-4 lg:px-8 pt-6 lg:pt-8 pb-4">
                 <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Uploaded Capstones</h1>
-                        <p className="text-sm text-gray-500 mt-2">Browse all <span className="font-medium text-green-700">approved</span> capstone projects · Track your pending submissions in <span className="font-medium">My Capstone Library</span></p>
+                        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Capstone Library</h1>
+                        <p className="text-sm text-gray-500 mt-2">Browse all <span className="font-medium text-green-700">approved</span> capstone projects · Track your pending submissions in <span className="font-medium">My Uploads</span></p>
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0">
                         {/* Card / Table toggle */}
@@ -403,11 +405,13 @@ export default function StudentUploadedCapstones() {
             </div>
 
             {/* ── Content Area with Category Sidebar ── */}
-            <div className="flex gap-0">
+            <div className="px-4 lg:px-8 py-3">
+                <CategoryVisibilityToggle expanded={showCategories} onToggle={() => setShowCategories(value => !value)} />
+            </div>
+            <div className="library-content flex flex-col lg:flex-row gap-0" data-categories-hidden={!showCategories}>
 
                 {/* Category Sidebar */}
-                <aside className="hidden lg:flex flex-col w-52 flex-shrink-0 sticky top-[57px] self-start max-h-[calc(100vh-8rem)] overflow-y-auto border-r border-gray-200 bg-white px-3 py-5">
-                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3 px-2">Category</p>
+                <aside id="library-categories" hidden={!showCategories} className="library-categories flex flex-col w-full lg:w-44 flex-shrink-0 sticky top-[57px] self-start max-h-[calc(100vh-8rem)] overflow-y-auto border-r border-gray-200 bg-white px-3 py-5">
                     <button
                         onClick={() => handleCategoryTab('')}
                         className={`w-full text-left flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium mb-1 transition-colors border-l-2 ${
@@ -458,7 +462,7 @@ export default function StudentUploadedCapstones() {
             {showModal && selectedCapstone && (
                 <CapstoneModal capstone={selectedCapstone} open={true}
                     onClose={() => { setShowModal(false); setSelectedCapstone(null); }}
-                    onViewFull={() => openCapstoneViewer(selectedCapstone.id)} />
+                    onViewFull={() => openCapstoneViewer(selectedCapstone.slug || selectedCapstone.id)} />
             )}
 
             {/* ── Saved slide-over panel ── */}

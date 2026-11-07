@@ -169,7 +169,7 @@ class ChatbotResponseService
             "| **Author(s)** | {$c->author} |",
             "| **Program** | {$c->program} |",
             "| **Category** | {$c->category} |",
-            "| **Copyright** | " . ucfirst($c->copyright_status ?? 'N/A') . " |",
+            "| **Copyright** | " . ($c->copyright_status === 'unprotected' ? 'Not Yet Copyrighted' : ucfirst($c->copyright_status ?? 'N/A')) . " |",
             "| **IMRAD** | {$imradLabel} |",
             "| **Keywords** | {$keywords} |",
             "",
@@ -421,7 +421,7 @@ class ChatbotResponseService
             [
                 'triggers' => ['copyright'],
                 'answer'   => "©️ **Copyright Status** indicates the intellectual property status of a capstone.\n\n" .
-                    "Common values:\n- **Copyrighted** — the authors have claimed copyright\n- **Pending** — copyright processing or verification is underway\n- **Unprotected** — no formal copyright claim\n\n" .
+                    "Common values:\n- **Copyrighted** — the authors have claimed copyright\n- **Pending** — copyright processing or verification is underway\n- **Not Yet Copyrighted** — no formal copyright claim\n\n" .
                     "Approved capstones marked as copyrighted grant authenticated visitor accounts full document access even when unpublished.",
             ],
             [
@@ -1131,7 +1131,7 @@ class ChatbotResponseService
         $lines = [
             "Most Referenced Capstone is **{$capstone['title']}** [LINK:{$capstone['id']}]",
             "",
-            "Total Referenced: {$count}",
+            "Total references: {$count} (saved capstone references and successful citation copies)",
         ];
 
         return [

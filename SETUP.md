@@ -1,5 +1,61 @@
 # AcadeX local setup
 
+## November 6, 2026 local pull setup
+
+The current checkout is `C:\Users\Josephh\Desktop\EduArchive`, branch
+`release/ui-refinement` at `9d829d6`; a remote fetch confirmed it was current.
+This workstation uses the existing loopback `EduArchiveDB` database. The older
+`acadex_local` instructions below describe the previous workstation and must not
+be used to replace this database or its private environment.
+
+Locked frontend/backend dependencies are installed. Composer package discovery
+and PHP platform checks passed. Local autoloading uses the standard development
+loader because optimizing the full Google SDK was unusually slow; the original
+Composer configuration and dependency locks remain unchanged. Native
+Ghostscript/Tesseract OCR passed a synthetic recognition check. The configured
+SMTP transport was retained, but actual email delivery was not tested.
+
+At the November 6 verification checkpoint, API, frontend and database queue worker
+were running through the launcher. Frontend HTML/JavaScript, API health, CSRF and
+registration challenge checks passed, and anonymous user access correctly returned
+401. Run `start-local.ps1 -WithoutOcr` to start or reuse these core local services.
+
+Before updating, a private database dump, `.env` copy, original-row snapshot and
+113 storage-file copies were saved under the ignored `.local` directory. All 12
+pending forward migrations were applied; all 39 migrations now report `Ran`.
+No fresh migration, role seeder, account reset or key generation was used.
+The current verification details and remaining configuration limits are recorded
+in [the progress log](docs/ACADEX_PROGRESS.md).
+
+For subsequent pulls into this existing local environment:
+
+1. Inspect `git status` and preserve local changes before updating the branch.
+2. Stop this checkout's app servers with `stop-local.ps1`. If they were started
+   manually, stop their terminals too; running Vite can lock native npm packages.
+3. Install locked dependencies with `composer install --prefer-dist --no-interaction`
+   in the backend and `npm.cmd ci` in the frontend. On a slow connection, run
+   `php -d default_socket_timeout=1800 C:/composer/composer.phar install --prefer-dist --no-interaction`
+   to allow the large Google services archive to finish downloading.
+4. Confirm the effective backend environment is local and its database is the
+   intended loopback database. Back up that database, its `.env` and storage
+   before running `php artisan migrate --no-interaction` in the backend.
+5. Run `php artisan config:clear`, `php artisan route:clear` and
+   `php artisan view:clear`. Preserve the existing `APP_KEY` and account records.
+6. Start the core services with `powershell.exe -NoProfile -File .\start-local.ps1 -WithoutOcr`
+   when the separate PaddleOCR environment is absent. The launcher applies
+   128 MiB upload / 140 MiB POST limits and runs the database queue worker with
+   a 600-second timeout; the default queue retry interval is 660 seconds.
+7. Check the frontend at `http://localhost:5173`, API health at
+   `http://localhost:8000/up`, and registration challenge at
+   `http://localhost:8000/api/v1/register/challenge`.
+
+Google login needs matching private backend/public frontend client IDs. Turnstile
+needs both site and secret keys. Blank keys leave these integrations unavailable
+or disabled; the honeypot, signed registration challenge and rate limits remain
+available. Redis and Ollama are optional. PaddleOCR needs its separate compatible
+Python environment; the existing Ghostscript/Tesseract fallback is independent.
+These local commands do not update the production server.
+
 ## Current November 1 follow-up
 
 The deployed interface and upload feedback are documented in [the current release report](docs/handoff/UI_RELEASE_2026-11-01.md). The four user-selected local role accounts were subsequently aligned with their deployed sign-in records after a private local backup; [the account comparison](docs/ui/2026-11-01-local-account-comparison.md) explains that local-only setup. No account password belongs in this file.
@@ -115,6 +171,14 @@ php scripts/run-security-tests.php
 ```
 
 Run that backend test command only after configuring the approved schema-restricted disposable database through `.env.testing`; see the client handoff's testing section. Never use the ordinary local database or production as the regression-test target.
+
+The November 7 upload-recovery changes require the two new forward migrations
+before running the updated application (verify a private backup first), plus the
+existing queue worker. Run `php artisan schedule:work` in a managed local process,
+or schedule `php artisan schedule:run` every minute on a deployed host, so expired
+temporary chunks are pruned hourly. `php artisan acadex:prune-upload-transfers`
+also performs this cleanup manually. See
+[the implementation and verification record](docs/ui/2026-11-07-layout-upload-reference-update.md).
 
 OCR dependencies (from the repository root):
 

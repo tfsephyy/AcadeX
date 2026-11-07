@@ -41,6 +41,7 @@ class FacultyDashboardController extends Controller
 
         $mostViewed = (clone $base)
             ->withCount(['views as unique_views' => fn ($query) => $query->whereNotNull('user_id')])
+            ->having('unique_views', '>=', 1)
             ->orderByDesc('unique_views')
             ->limit(5)
             ->get(['id', 'slug', 'title', 'author', 'year', 'program'])
@@ -54,12 +55,11 @@ class FacultyDashboardController extends Controller
                 'unique_views' => (int) $capstone->unique_views,
             ]);
 
-        // Generated citations are counted from citation_events. This is not a
-        // verified external citation index; the label is intentionally explicit.
+        // Use the same saved-reference/copy total as detail and admin rankings.
         $mostCited = (clone $base)
-            ->withCount('citationEvents as citation_generations')
-            ->orderByDesc('citation_generations')
-            ->having('citation_generations', '>', 0)
+            ->select(['id', 'slug', 'title', 'author', 'year', 'program'])->withReferenceTotal()
+            ->orderByDesc('reference_count')
+            ->having('reference_count', '>=', 1)
             ->limit(5)
             ->get(['id', 'slug', 'title', 'author', 'year', 'program'])
             ->map(fn (Capstone $capstone) => [
@@ -69,7 +69,8 @@ class FacultyDashboardController extends Controller
                 'author' => $capstone->author,
                 'year' => $capstone->year,
                 'program' => $capstone->program,
-                'citation_generations' => (int) $capstone->citation_generations,
+                'reference_count' => (int) $capstone->reference_count,
+                'citation_generations' => (int) $capstone->reference_count,
             ]);
 
         $repositoryTotal = Capstone::where('is_archived', false)->count();
@@ -85,7 +86,7 @@ class FacultyDashboardController extends Controller
                 'recent' => $recent,
                 'most_viewed' => $mostViewed,
                 'most_cited' => $mostCited,
-                'most_cited_label' => 'citation generations',
+                'most_cited_label' => 'saved references and citation copies',
             ],
             'repository' => [
                 'total' => $repositoryTotal,

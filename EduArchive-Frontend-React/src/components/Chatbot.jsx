@@ -35,7 +35,7 @@ function renderMarkdown(text, linkRenderer) {
 
     // Parse a text fragment that may contain [LINK:N] into React nodes
     const parseWithLinks = (raw) => {
-        const linkRx = /\[LINK:(\d+)\]/g;
+        const linkRx = /\[LINK:([a-z0-9-]+)\]/g;
         const parts = [];
         let last = 0;
         let m;
@@ -45,7 +45,7 @@ function renderMarkdown(text, linkRenderer) {
                     <span key={`t-${key++}`} dangerouslySetInnerHTML={{ __html: inlineMarkdown(raw.slice(last, m.index)) }} />
                 );
             }
-            const capId = parseInt(m[1], 10);
+            const capId = m[1];
             if (linkRenderer) parts.push(linkRenderer(capId, key++));
             last = m.index + m[0].length;
         }
@@ -57,7 +57,7 @@ function renderMarkdown(text, linkRenderer) {
         return parts.length === 1 ? parts[0] : <>{parts}</>;
     };
 
-    const hasLink = (s) => /\[LINK:\d+\]/.test(s);
+    const hasLink = (s) => /\[LINK:[a-z0-9-]+\]/.test(s);
 
     lines.forEach((line) => {
         const ulMatch = line.match(/^[*-]\s+(.*)/);
@@ -657,7 +657,7 @@ export default function Chatbot() {
                                                         className="chatbot-suggestion-card"
                                                         onClick={() => {
                                                             setOpen(false);
-                                                            navigate(getCapstoneRoute(cap.id));
+                                                            navigate(getCapstoneRoute(cap.slug || cap.id));
                                                         }}
                                                     >
                                                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"

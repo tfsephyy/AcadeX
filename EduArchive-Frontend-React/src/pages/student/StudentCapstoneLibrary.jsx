@@ -1,3 +1,4 @@
+import { useResponsiveDisplayMode } from '../../components/useResponsiveDisplayMode';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -46,7 +47,7 @@ export default function StudentCapstoneLibrary() {
     const [loading, setLoading] = useState(true);
     const [uploadOpen, setUploadOpen] = useState(false);
     const [viewing, setViewing] = useState('active');
-    const [displayMode, setDisplayMode] = useState('card'); // 'card' | 'table'
+    const [displayMode, setDisplayMode] = useResponsiveDisplayMode(); // 'card' | 'table'
     const [search, setSearch] = useState('');
     const [debouncedSearch, setDebouncedSearch] = useState('');
     const [filters, setFilters] = useState({ year: '', program: '', category: '' });
@@ -179,7 +180,7 @@ export default function StudentCapstoneLibrary() {
     // ── Card View ─────────────────────────────────────────────────────────────────
     const CardView = () => (
         <div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4 p-4 lg:p-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 p-4 lg:p-6">
                 {capstones.map((cap) => (
                     <div key={cap.id}
                         onClick={() => navigate(`/student/capstones/${cap.slug || cap.id}`)}
@@ -283,7 +284,7 @@ export default function StudentCapstoneLibrary() {
                                 </button>
                             )}
                             <div>
-                                <h1 className="text-3xl font-bold text-gray-900">{viewing === 'archived' ? 'Archived Capstones' : 'My Capstone Library'}</h1>
+                                <h1 className="text-3xl font-bold text-gray-900">{viewing === 'archived' ? 'Archived Capstones' : 'My Uploads'}</h1>
                                 <p className="text-sm text-gray-500 mt-2">{viewing === 'archived' ? 'Your archived submissions' : 'All capstone projects you have submitted'}</p>
                             </div>
                         </div>
@@ -322,7 +323,7 @@ export default function StudentCapstoneLibrary() {
                                 </button>
                             )}
                             <div>
-                                <h1 className="text-2xl font-bold text-gray-900">{viewing === 'archived' ? 'Archived Capstones' : 'My Capstone Library'}</h1>
+                                <h1 className="text-2xl font-bold text-gray-900">{viewing === 'archived' ? 'Archived Capstones' : 'My Uploads'}</h1>
                                 <p className="text-xs text-gray-500 mt-1">{viewing === 'archived' ? 'Your archived submissions' : 'All capstone projects you have submitted'}</p>
                             </div>
                         </div>

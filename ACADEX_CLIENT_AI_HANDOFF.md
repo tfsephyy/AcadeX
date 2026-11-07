@@ -2,6 +2,10 @@
 
 Prepared: **October 19, 2026, Asia/Manila**.
 
+**November 7, 2026 local runtime repair:** [Schema repair, Faculty registration and interface controls](docs/ui/2026-11-07-runtime-registration-controls.md) supersedes the local migration-pending state below: both November 7 migrations now run in this workstation's configured `eduarchivedb`, after a fresh verified private backup. Local upload/reload/extraction and Faculty signup were exercised with synthetic data; the report records a corrected verification-helper isolation incident and final preservation checks. Category/approval icons and the Assigned Capstones grid are implemented. This is **not a production deployment**.
+
+**November 7, 2026 local implementation:** [Layouts, upload recovery and reference totals](docs/ui/2026-11-07-layout-upload-reference-update.md) documents responsive role panels, resumable encrypted chunk transfers, background-extraction recovery, copy/reference totals and IEEE removal. This work is **not deployed** and its two migrations were applied only to an isolated disposable test database. A future release must apply them and run both the queue worker and Laravel scheduler; preserve the original application key, private storage and database. Read the progress log for verification boundaries.
+
 **November 5, 2026 current source checkpoint:** the live application serves source `ed4bb6d` from `/srv/acadex-staging/releases/acadex-20261105-final`. Read the latest entry in [implementation progress](docs/ACADEX_PROGRESS.md) before operating it. Forward migrations, Google registration changes, a persistent database-queue worker, authenticated document ranges, and optional encrypted qpdf viewing previews are deployed. Google Console was observed as External / In production. Original records, document content and APP_KEY were preserved with private backups. **The large scanned PDF still requests excessive ranges before its first page opens; performance acceptance remains incomplete.** A Git pull contains the latest source, not the production environment, private storage, credentials, database, installed qpdf package, or a complete end-to-end acceptance certificate.
 
 **November 1, 2026 interface release:** [Current interface/upload-feedback release and preservation checks](docs/handoff/UI_RELEASE_2026-11-01.md) records the serving release `/srv/acadex-staging/releases/acadex-ui-20261101T115952Z`, the official landing/sidebar SVG identity, honest transfer/processing feedback, verified backup and preservation of all six production accounts and 27 existing private files. Backend behavior/key/storage remain unchanged. OCR intentionally continues to run from the metadata release directory documented below; do not restart or relocate that worker for this frontend update. This dated release supersedes the local-only UI checkpoint statuses.
@@ -320,6 +324,16 @@ Inspect the active unit locally to locate its interpreter and environment file; 
 When reloads are needed for an authorized release, use configuration validation before a graceful Apache reload, and reload only the affected service. Restart OCR only when its code/dependencies/configuration require it and allow in-flight work to drain. Do not restart MySQL merely because application code changed.
 
 ## 11. Setting up the client's own workstation
+
+**November 6 local update:** the Josephh workstation retains its existing
+`EduArchiveDB` schema and private environment. See the current
+[local pull setup instructions](SETUP.md#november-6-2026-local-pull-setup) and the
+latest [progress entry](docs/ACADEX_PROGRESS.md). The launcher now supplies
+128 MiB upload limits and a 600-second database queue worker timeout. Core local
+service/HTTP checks and synthetic native OCR recognition passed on November 6;
+SMTP delivery and external identity/human-verification integrations were not
+certified. Previous
+workstation database names and tool locations below remain historical examples.
 
 The client needs its own GitHub identity, Git, a compatible Node/npm installation for frontend builds, PHP/Composer for local Laravel work, MySQL for isolated local data, and a compatible Python environment if it develops OCR. The original workstation used Windows/PowerShell, Node 22.18.0, npm 10.9.3, PHP 8.3.16, Composer 2.8.11, and a separately managed Python 3.11.17 OCR environment. These are development-history facts, not instructions to alter server packages.
 

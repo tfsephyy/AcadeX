@@ -1,6 +1,33 @@
 /* Shared AcadeX refinements. Theme colors remain owned by index.css. */
 :root { --ui-radius: 10px; --ui-panel-radius: 14px; --ui-control-height: 42px; }
 
+/* Shared role-panel surfaces and notification contrast. */
+.user-management-header { background: var(--panel-content-bg); }
+.user-management-tabs { overflow: visible; }
+.user-management-tabs > button { min-height: 42px; }
+.repository-statistics h2, .repository-statistics strong { color: var(--color-text); }
+.repository-statistics p { color: var(--color-text-muted); }
+.repository-statistics > div { color: var(--color-text-secondary); }
+:root, [data-theme="dark"] {
+  --panel-notif-unread-bg: #233b29;
+  --panel-notif-unread-hover: #2c4833;
+}
+[data-theme="light"] {
+  --panel-notif-unread-bg: #e8f5e9;
+  --panel-notif-unread-hover: #d7edda;
+}
+.notification-items > li { border-left: 3px solid transparent; }
+.notification-items > .panel-notif-unread { border-left-color: var(--color-link); }
+.notification-trigger { color: var(--color-text-secondary); }
+.notification-title { color: var(--color-text); font-weight: 500; }
+.panel-notif-unread .notification-title { font-weight: 700; }
+.notification-message { color: var(--color-text-secondary); overflow-wrap: anywhere; }
+.notification-time { color: var(--color-text-muted); }
+.notification-dot { background: var(--color-border-strong); }
+.panel-notif-unread .notification-dot { background: var(--color-link); }
+.notification-link { color: var(--color-link); }
+.pdf-zoom-controls { color: #fff; }
+
 button, a, input, textarea, select { -webkit-tap-highlight-color: transparent; }
 button:not(:disabled), a, summary, [role="button"] { cursor: pointer; }
 button:disabled { cursor: not-allowed; }
@@ -226,6 +253,21 @@ h1, h2, h3, p, dd, td { overflow-wrap: break-word; }
 .notification-stack button { min-width: 32px; min-height: 32px; display: grid; place-items: center; }
 .chatbot-fab { width: 48px; height: 48px; box-shadow: var(--shadow-md); background: var(--color-action); color: var(--color-on-action); animation: none; }
 .chatbot-fab:hover { transform: none; box-shadow: var(--shadow-md); }
+
+/* Upload progress stays above the chat launcher without covering its button. */
+.upload-floating-control { position: fixed; right: 1.25rem; bottom: calc(6.5rem + env(safe-area-inset-bottom, 0px)); z-index: 65; display: flex; align-items: center; gap: .75rem; max-width: calc(100vw - 2.5rem); padding: .75rem 1rem .75rem .75rem; border: 1px solid var(--color-border-strong); border-radius: 1rem; background: var(--color-surface-elevated); color: var(--color-text); box-shadow: var(--shadow-lg, 0 12px 30px rgba(0,0,0,.18)); cursor: pointer; transition: transform .15s, box-shadow .15s; }
+.upload-floating-control:hover { transform: translateY(-2px); }
+.upload-floating-control:focus-visible, .upload-activity-dialog button:focus-visible { outline: 3px solid var(--color-link, #388e3c); outline-offset: 3px; }
+.upload-floating-icon { display: grid; place-items: center; width: 2.75rem; height: 2.75rem; flex-shrink: 0; border-radius: .8rem; background: var(--color-action, #1B5E20); color: var(--color-on-action, white); }
+.upload-activity-dialog { max-height: calc(100dvh - 2rem); overflow-y: auto; background: var(--color-surface-elevated); color: var(--color-text); border-color: var(--color-border-strong); }
+.upload-activity-file { border-color: var(--color-border-strong); background: var(--color-bg-tertiary); }
+.upload-activity-muted { color: var(--color-text-muted); }
+.upload-secondary-button { color: var(--color-text-secondary); background: var(--color-surface-elevated); border-color: var(--color-border-strong); }
+.upload-secondary-button:hover { background: var(--color-bg-tertiary); }
+.upload-cancel-button { color: var(--color-danger, #b91c1c); border-color: currentColor; background: transparent; }
+.upload-cancel-button:not(:disabled):hover { background: rgba(239,68,68,.08); }
+@media (max-width: 480px) { .upload-floating-control { right: 1rem; max-width: calc(100vw - 2rem); } }
+@media (prefers-reduced-motion: reduce) { .upload-floating-control { transition: none; } }
 .chatbot-fab-badge, .chatbot-status-dot { animation: none; }
 .chatbot-panel { box-shadow: var(--shadow-lg); border-radius: var(--ui-panel-radius); max-height: calc(100dvh - 100px); }
 .faq-item-icon svg, .faq-tabs svg { width: 18px; height: 18px; }
@@ -479,3 +521,14 @@ h1, h2, h3, p, dd, td { overflow-wrap: break-word; }
 
 .profile-banner { background: var(--document-banner); }
 @media(max-width:767px) { .record-title-row { flex-direction: column; align-items: flex-start; gap: 12px; } .record-title-row h1 { flex: none; width: 100%; } }
+
+/* Library cards use the actual panel state at every desktop width. */
+.library-categories[hidden] { display: none; }
+@media (max-width: 1023px) {
+  .library-categories { max-height: 12rem; position: static; }
+}
+@media (min-width: 1024px) {
+  .app-shell:has(.workspace-sidebar.is-collapsed) .library-content[data-categories-hidden="true"] .library-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}

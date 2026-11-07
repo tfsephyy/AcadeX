@@ -78,7 +78,7 @@ export const getCapstoneResourceBlob = (capstoneId, resourceId) =>
     axios.get(`/capstones/${capstoneId}/resources/${resourceId}/view`, { responseType: 'blob' });
 export const downloadCapstoneResource = (capstoneId, resourceId) =>
     axios.get(`/capstones/${capstoneId}/resources/${resourceId}/download`, { responseType: 'blob' });
-export const getFacultyList = (params = {}) => axios.get('/capstones/faculty-list', { params });
+
 
 // ── Notifications ──────────────────────────────────
 export const getNotifications = (params = {}) => axios.get('/notifications', { params });
@@ -96,8 +96,6 @@ export const getFacultyAssignedCapstones = (params = {}) => axios.get('/faculty/
 export const getUploadStatus = (uploadId) => axios.get(`/uploads/${uploadId}/status`);
 export const retryUploadProcessing = (uploadId) => axios.post(`/uploads/${uploadId}/retry`);
 export const generateCitation = (id, format, action = 'generate') => axios.post(`/capstones/${id}/citation`, { format, action });
-export const getAdvisers = (params = {}) => axios.get('/admin/advisers', { params });
-export const setAdviserAvailability = (id, adviserAvailable) => axios.put(`/admin/advisers/${id}/availability`, { adviser_available: adviserAvailable });
 export const toggleBookmark = (id) => axios.post(`/capstones/${id}/bookmark`);
 export const getStudentBookmarkedCapstones = (params = {}) => axios.get('/capstones/bookmarked', { params });
 

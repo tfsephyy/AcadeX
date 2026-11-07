@@ -10,6 +10,7 @@ import { useNotification } from './useNotification';
 import { getExtractionNotice } from './extractionNotice';
 import api from '../api/axios';
 import { getApiErrorMessage } from '../api/errors';
+import { useCapstoneUpload } from './useCapstoneUpload';
 
 const splitKeywordInput = (raw) => String(raw || '')
     .split(',')
@@ -21,6 +22,9 @@ export default function ReviewExtractedDataPage({ nextPath, backPath }) {
     const navigate = useNavigate();
     const location = useLocation();
     const notify = useNotification();
+    const { manager: uploadManager } = useCapstoneUpload();
+    const [checkingTitle, setCheckingTitle] = useState(false);
+    const [titleError, setTitleError] = useState('');
 
     const state = location.state || {};
     const { pdfInfo } = state;
@@ -104,6 +108,8 @@ export default function ReviewExtractedDataPage({ nextPath, backPath }) {
                 if (cancelled) return;
                 const data = res.data.data || {};
 
+                uploadManager.observeStatus(uploadId, data);
+
                 setProcessingStatus(data.processing_status || 'completed');
                 setProcessingError(data.processing_error || '');
                 setExtractionStatus(data.extraction_status || data.processing_status);
@@ -147,7 +153,7 @@ export default function ReviewExtractedDataPage({ nextPath, backPath }) {
             cancelled = true;
             if (pollTimer.current) clearTimeout(pollTimer.current);
         };
-    }, [uploadId, processing, mergeExtracted, notify]);
+    }, [uploadId, processing, mergeExtracted, notify, uploadManager]);
 
     if (!pdfInfo) return null;
 
@@ -157,6 +163,7 @@ export default function ReviewExtractedDataPage({ nextPath, backPath }) {
         try {
             const res = await api.post(`/uploads/${uploadId}/retry`);
             const data = res.data.data || {};
+            uploadManager.observeStatus(uploadId, data);
             setProcessingStatus(data.processing_status || 'queued');
             setProcessingError('');
             setExtractionStatus(data.extraction_status || 'queued');
@@ -204,11 +211,30 @@ export default function ReviewExtractedDataPage({ nextPath, backPath }) {
         setForm(prev => ({ ...prev, keywords: prev.keywords.filter((_, i) => i !== idx) }));
     };
 
-    const handleNext = () => {
+    const handleNext = async () => {
         if (processing) { notify.info?.('Please wait for document processing to finish, or retry if it failed.'); return; }
         if (!form.title.trim()) { notify.error('Title is required.'); return; }
         if (!form.author.trim()) { notify.error('Author is required.'); return; }
+
+        // Check for duplicate title before proceeding
+        setCheckingTitle(true);
+        setTitleError('');
+        try {
+            const res = await api.get('/capstones/check-title', { params: { title: form.title.trim() } });
+            if (res.data?.data?.exists) {
+                setTitleError('A capstone with this title already exists.');
+                notify.error('A capstone with this title already exists. Please use a different title.');
+                setCheckingTitle(false);
+                return;
+            }
+        } catch (err) {
+            // If check fails, let the user proceed — backend store() will catch duplicates
+            console.warn('Title check failed, proceeding anyway:', err);
+        }
+        setCheckingTitle(false);
+
         const reviewed = { ...form, author_details: authorDetails };
+        if (uploadManager.getSnapshot().task?.data?.upload_id === uploadId) uploadManager.dismiss();
         // Keep this history entry's draft so Back from Additional Info restores
         // the user's corrections instead of reinitializing from OCR suggestions.
         navigate(location.pathname, { replace: true, state: { ...location.state, extracted: reviewed } });
@@ -329,14 +355,18 @@ export default function ReviewExtractedDataPage({ nextPath, backPath }) {
 
                     {/* ── Row 1: Title + Author ─────────────── */}
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-                        <div className="rounded-2xl border p-5 space-y-1" style={{ background: 'var(--color-surface)', borderColor: 'var(--color-border)' }}>
-                            <label htmlFor="metadata-title" className="block text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--color-text-muted)' }}>
+                        <div className="rounded-2xl border p-5 space-y-1" style={{ background: 'var(--color-surface)', borderColor: titleError ? '#ef4444' : 'var(--color-border)' }}>
+                            <label htmlFor="metadata-title" className="block text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: titleError ? '#ef4444' : 'var(--color-text-muted)' }}>
                                 Title <span className="text-red-400">*</span>
                             </label>
                             <input id="metadata-title" type="text" value={form.title}
-                                onChange={(e) => setForm(prev => ({ ...prev, title: e.target.value }))}
+                                onChange={(e) => { setForm(prev => ({ ...prev, title: e.target.value })); setTitleError(''); }}
                                 disabled={processing}
-                                className={inputCls} placeholder="Capstone title..." />
+                                className={inputCls} placeholder="Capstone title..."
+                                style={titleError ? { borderColor: '#ef4444' } : {}} />
+                            {titleError && (
+                                <p className="text-xs mt-1.5 font-medium" style={{ color: '#ef4444' }}>{titleError}</p>
+                            )}
                         </div>
                         <div className="rounded-2xl border p-5 space-y-1" style={{ background: 'var(--color-surface)', borderColor: 'var(--color-border)' }}>
                             <label htmlFor="metadata-author" className="block text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--color-text-muted)' }}>
@@ -491,11 +521,11 @@ export default function ReviewExtractedDataPage({ nextPath, backPath }) {
                         style={{ color: 'var(--color-text-secondary)', borderColor: 'var(--color-border-strong)', background: 'var(--color-bg-secondary)' }}>
                         ← Back
                     </button>
-                    <button onClick={handleNext} disabled={processing}
+                    <button onClick={handleNext} disabled={processing || checkingTitle}
                         className="inline-flex items-center gap-2 px-6 py-2.5 text-white text-sm font-semibold rounded-lg transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
                         style={{ background: 'linear-gradient(135deg, #1B5E20, #2E7D32)' }}>
-                        {processing ? 'Waiting for processing…' : 'Next — Additional Info'}
-                        <HiArrowRight className="w-4 h-4" />
+                        {checkingTitle ? (<><span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> Checking title…</>) : processing ? 'Waiting for processing…' : 'Next — Additional Info'}
+                        {!checkingTitle && <HiArrowRight className="w-4 h-4" />}
                     </button>
                 </div>
             </div>

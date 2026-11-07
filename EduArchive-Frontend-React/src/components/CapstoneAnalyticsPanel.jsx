@@ -5,7 +5,7 @@ import {
 } from 'recharts';
 import {
     HiEye, HiDownload, HiBookmark, HiTrendingUp, HiChartBar,
-    HiUserGroup, HiLightningBolt, HiCalendar, HiChevronDown,
+    HiChevronDown,
 } from 'react-icons/hi';
 import { getCapstoneAnalytics } from '../api/admin';
 
@@ -14,12 +14,6 @@ import { getCapstoneAnalytics } from '../api/admin';
 function fmtDate(dateStr) {
     const d = new Date(dateStr + 'T00:00:00');
     return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-}
-
-function fmtDateFull(dateStr) {
-    if (!dateStr) return '—';
-    const d = new Date(dateStr + 'T00:00:00');
-    return d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
 }
 
 // ── Sub-components ────────────────────────────────────────────────────────────
@@ -196,19 +190,10 @@ export default function CapstoneAnalyticsPanel({ capstoneId, compact = false }) 
                     {data && !loading && (
                         <>
                             {/* Summary Cards */}
-                            <div className={`grid gap-2 ${compact ? 'grid-cols-2' : 'grid-cols-2 sm:grid-cols-3'}`}>
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                                 <StatCard icon={HiEye}          label="Total Views"     value={s.total_views.toLocaleString()}     accent="#16a34a" sub="All-time" />
                                 <StatCard icon={HiDownload}     label="Downloads"       value={s.total_downloads.toLocaleString()} accent="#2563eb" sub="All-time" />
                                 <StatCard icon={HiBookmark}     label="Bookmarks"       value={s.total_bookmarks.toLocaleString()} accent="#d97706" sub="All-time" />
-                                <StatCard icon={HiUserGroup}    label="Unique Viewers"  value={s.unique_viewers.toLocaleString()}  accent="#7c3aed" sub="Registered users" />
-                                <StatCard icon={HiLightningBolt} label="Engagement"     value={`${s.engagement_rate}%`}            accent="#0891b2" sub="Download / view ratio" />
-                                <StatCard
-                                    icon={HiCalendar}
-                                    label="Peak Day"
-                                    value={s.peak_day ? `${s.peak_day.views} views` : '—'}
-                                    accent="#be185d"
-                                    sub={s.peak_day ? fmtDateFull(s.peak_day.date) : 'No data yet'}
-                                />
                             </div>
 
                             {/* Trend Chart — hidden in compact (student) mode */}

@@ -2,7 +2,6 @@
 
 use App\Http\Controllers\Api\V1\ActivityLogController;
 use App\Http\Controllers\Api\V1\AdminDashboardController;
-use App\Http\Controllers\Api\V1\AdviserController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\CapstoneController;
 use App\Http\Controllers\Api\V1\ChatbotController;
@@ -69,6 +68,13 @@ Route::prefix('v1')->group(function () {
         Route::put('/notifications/{notification}/read',  [NotificationController::class, 'markAsRead']);
 
         // ── Background upload status / retry (owner-scoped) ───
+        Route::middleware('role:admin,faculty,student')->prefix('uploads/transfers')->group(function () {
+            Route::put('/{transfer}', [\App\Http\Controllers\Api\V1\UploadTransferController::class, 'start'])->whereUuid('transfer')->middleware('throttle:uploads');
+            Route::post('/{transfer}/chunks', [\App\Http\Controllers\Api\V1\UploadTransferController::class, 'chunk'])->whereUuid('transfer')->middleware(['throttle:240,1', 'uploads.limit']);
+            Route::post('/{transfer}/complete', [\App\Http\Controllers\Api\V1\UploadTransferController::class, 'complete'])->whereUuid('transfer')->middleware('uploads.concurrency');
+            Route::delete('/{transfer}', [\App\Http\Controllers\Api\V1\UploadTransferController::class, 'cancel'])->whereUuid('transfer');
+        });
+
         Route::get('/uploads/{upload}/status',  [CapstoneController::class, 'uploadStatus']);
         Route::post('/uploads/{upload}/retry',  [CapstoneController::class, 'retryUpload']);
 
@@ -88,7 +94,7 @@ Route::prefix('v1')->group(function () {
             ->middleware('throttle:30,1');
 
         // ── Shared capstone utilities (all authenticated users) ──
-        Route::get('/capstones/faculty-list',              [CapstoneController::class, 'getFacultyList']);
+        Route::get('/capstones/check-title',               [CapstoneController::class, 'checkTitle']);
         Route::get('/capstones/bookmarked',                [CapstoneController::class, 'userBookmarks']);
         Route::get('/capstones/{capstone}/analytics',      [CapstoneController::class, 'getAnalytics']);
         Route::post('/capstones/{capstone}/view',          [CapstoneController::class, 'recordView']);
@@ -157,10 +163,6 @@ Route::prefix('v1')->group(function () {
             Route::post('/users/{user}/archive',        [UserManagementController::class, 'archive']);
             Route::post('/users/{user}/unarchive',      [UserManagementController::class, 'unarchive']);
             Route::delete('/users/{user}',              [UserManagementController::class, 'remove']);
-
-            // Adviser pool (uses existing faculty accounts)
-            Route::get('/advisers',                     [AdviserController::class, 'index']);
-            Route::put('/advisers/{user}/availability', [AdviserController::class, 'updateAvailability']);
 
             // Notifications
             Route::get('/notifications',                      [NotificationController::class, 'index']);

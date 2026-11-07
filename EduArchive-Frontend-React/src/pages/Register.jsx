@@ -6,6 +6,8 @@ import { useAuth } from '../context/useAuth'
 import { useTheme } from '../context/useTheme'
 import { sendVerificationCode, verifyEmailCode, getRegistrationChallenge, registerWithGoogle, verifyGoogleRegistration } from '../api/admin'
 import GoogleButton from '../components/GoogleButton'
+import { getApiErrorMessage } from '../api/errors'
+import { personalRegistrationErrors, academicRegistrationErrors, registrationErrorStep, registrationErrorMessage, buildRegistrationPayload } from '../utils/registrationValidation'
 
 /* ─── Constants ──────────────────────────────────────────────── */
 const INITIAL = {
@@ -174,6 +176,15 @@ export default function Register() {
   const [globalError, setGlobalError] = useState('')
   const [loading, setLoading] = useState(false)
 
+  const showRegistrationError = (error) => {
+    const validationErrors = error.response?.data?.errors || {}
+    setErrors(validationErrors)
+    setGlobalError(registrationErrorMessage(validationErrors, getApiErrorMessage(error, 'Registration could not be completed. Please try again.')))
+    const targetStep = registrationErrorStep(validationErrors, step)
+    setStep(targetStep)
+    if (validationErrors.email) setEmailVerified(false)
+  }
+
   // Email verification
   const [emailVerified, setEmailVerified] = useState(false)
   const [emailCode, setEmailCode] = useState('')
@@ -264,7 +275,10 @@ export default function Register() {
       return
     }
     if (!canProceedStep1) {
-      setGlobalError('Please fill in all personal information fields.')
+      const personalErrors = personalRegistrationErrors(form)
+      setErrors(personalErrors)
+      setGlobalError(registrationErrorMessage(personalErrors, 'Check your personal information.'))
+      setStep(1)
       return
     }
     if (!canProceedStep2Google) {
@@ -277,7 +291,7 @@ export default function Register() {
     setGoogleError('')
     try {
       const res = await registerWithGoogle({
-        ...form,
+        ...buildRegistrationPayload(form),
         credential: googleCredential,
         website: form.website || '',
         registration_challenge: registrationChallenge,
@@ -288,12 +302,11 @@ export default function Register() {
       else setGlobalError('Google registration completed. Please sign in.')
     } catch (err) {
       const data = err.response?.data
-      if (data?.errors) setErrors(data.errors)
+      showRegistrationError(err)
       if (data?.account_exists) {
         setGoogleError(data.message || 'That email already has an account. Sign in with your existing credentials instead.')
       } else {
         setGoogleError(data?.message || 'Google registration could not be completed. Try the standard form.')
-        setGlobalError('')
       }
     } finally {
       setLoading(false)
@@ -371,24 +384,39 @@ export default function Register() {
 
   /* Step navigation */
   const isVisitor = form.role === VISITOR_ROLE
-  const canProceedStep1 = form.name.trim() && form.username.trim() && (isVisitor || form.id_number.trim())
-  const canProceedStep2Google = form.role &&
-    (isVisitor || (form.program && (form.role === 'faculty' || (form.year && form.section))))
-  const canProceedStep2 = form.role && emailVerified &&
-    (isVisitor || (form.program && (form.role === 'faculty' || (form.year && form.section))))
+  const canProceedStep1 = Object.keys(personalRegistrationErrors(form)).length === 0
+  const canProceedStep2Google = Object.keys(academicRegistrationErrors(form)).length === 0
+  const canProceedStep2 = emailVerified && canProceedStep2Google
 
-  const nextStep = () => {
+  const nextStep = (event) => {
+    // React can reuse this button as the next step's submit button before the
+    // click's default action runs. Keep Continue from submitting retained data.
+    event?.preventDefault()
     if (step === 2 && googleReady) {
       handleGoogleRegister()
       return
     }
     if (step === 1 && !canProceedStep1) {
-      setGlobalError('Please fill in all personal information fields.')
+      const personalErrors = personalRegistrationErrors(form)
+      setErrors(personalErrors)
+      setGlobalError(registrationErrorMessage(personalErrors, 'Please fill in all personal information fields.'))
       return
     }
     if (step === 2 && !canProceedStep2) {
       if (!emailVerified) setGlobalError('Please verify your email address first.')
-      else setGlobalError('Please complete all academic information.')
+      else {
+        const academicErrors = academicRegistrationErrors(form)
+        setErrors(academicErrors)
+        setGlobalError(registrationErrorMessage(academicErrors, 'Please complete all academic information.'))
+      }
+      return
+    }
+    // Switching back from Visitor can leave the required institutional ID empty.
+    if (step === 2 && !canProceedStep1) {
+      const personalErrors = personalRegistrationErrors(form)
+      setErrors(personalErrors)
+      setGlobalError(registrationErrorMessage(personalErrors, 'Check your personal information.'))
+      setStep(1)
       return
     }
     setGlobalError('')
@@ -428,7 +456,7 @@ export default function Register() {
 
     try {
       await register({
-        ...form,
+        ...buildRegistrationPayload(form),
         email: form.email.toLowerCase(),
         website: form.website || '',
         registration_challenge: registrationChallenge,
@@ -436,9 +464,7 @@ export default function Register() {
       })
       navigate('/login', { replace: true, state: { registered: true } })
     } catch (err) {
-      const data = err.response?.data
-      if (data?.errors) { setErrors(data.errors) }
-      else { setGlobalError(data?.message || 'Registration failed. Please try again.') }
+      showRegistrationError(err)
     } finally {
       setLoading(false)
     }
@@ -517,6 +543,7 @@ export default function Register() {
           {/* Global error */}
           {globalError && (
             <div
+              role="alert"
               className="mb-3 p-3 rounded-xl animate-fade-in-up"
               style={{
                 background: 'rgba(239,68,68,0.08)',
@@ -564,6 +591,7 @@ export default function Register() {
                       <button
                         key={r}
                         type="button"
+                        aria-pressed={form.role === r}
                         onClick={() => setForm({ ...form, role: r, program: '', year: '', section: '', id_number: r === 'visitor' ? '' : form.id_number })}
                         className="py-3 px-2 rounded-xl text-sm font-semibold transition-all duration-200 capitalize"
                         style={{
@@ -577,6 +605,7 @@ export default function Register() {
                       </button>
                     ))}
                   </div>
+                  {errors.role && <p className="mt-1 text-xs text-red-500">{errors.role[0]}</p>}
                   {isVisitor && (
                     <p className="mt-2 text-xs" style={{ color: 'var(--color-text-faint)' }}>
                       Visitors can browse published research. No ID number or program required.

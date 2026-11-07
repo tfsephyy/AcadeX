@@ -1,11 +1,19 @@
 import { useEffect, useState } from 'react'
 import { Document, pdfjs } from 'react-pdf'
+import { useAuth } from '../context/useAuth'
+import { usePdfReadingProgress } from './usePdfReadingProgress'
 
 const CHUNK_BYTES = 1024 * 1024
 
 /** Each viewer owns its transport, including a separate fullscreen instance. */
-export default function ProgressivePdfDocument({ file, onLoadError, onLoadProgress, loading, ...props }) {
+export default function ProgressivePdfDocument({ file, onLoadError, onLoadProgress, loading, documentId, progressActive = true, onLoadSuccess, ...props }) {
   const url = file?.url
+  const { user } = useAuth()
+  const [loaded, setLoaded] = useState(null)
+  const sourceId = url || file
+  const pageCount = loaded?.source === sourceId ? loaded.pages : 0
+  const documentRef = usePdfReadingProgress({ documentId, accountId: user?.id, source: sourceId, pageCount, active: progressActive })
+  const loadedDocument = pdf => { setLoaded({ source: sourceId, pages: pdf.numPages }); onLoadSuccess?.(pdf) }
   const [source, setSource] = useState(null)
   const [sourceUrl, setSourceUrl] = useState(null)
   const [failure, setFailure] = useState(false)
@@ -74,8 +82,8 @@ export default function ProgressivePdfDocument({ file, onLoadError, onLoadProgre
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [url])
 
-  if (!url) return <Document file={file} loading={loading} onLoadError={onLoadError} onLoadProgress={onLoadProgress} {...props} />
+  if (!url) return <div ref={documentRef}><Document onLoadSuccess={loadedDocument} file={file} loading={loading} onLoadError={onLoadError} onLoadProgress={onLoadProgress} {...props} /></div>
   if (failure) return props.error || null
   if (!source || sourceUrl !== url) return loading || null
-  return <Document file={source} loading={loading} onLoadError={onLoadError} onLoadProgress={onLoadProgress} {...props} />
+  return <div ref={documentRef}><Document onLoadSuccess={loadedDocument} file={source} loading={loading} onLoadError={onLoadError} onLoadProgress={onLoadProgress} {...props} /></div>
 }

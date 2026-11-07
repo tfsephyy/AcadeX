@@ -113,10 +113,10 @@ export default function FacultyDashboard() {
                 </section>
 
                 <section className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
-                    <h2 className="text-sm font-semibold text-gray-700">Most citation generations</h2>
-                    <p className="text-xs text-gray-400 mt-0.5">Generated with the AcadeX citation tool · not external citation data</p>
+                    <h2 className="text-sm font-semibold text-gray-700">Most Cited</h2>
+                    <p className="text-xs text-gray-400 mt-0.5">Saved references and successful citation copies</p>
                     {!(assigned.most_cited || []).length ? (
-                        <p className="text-sm text-gray-400 text-center py-8">No citation generations for your assigned capstones yet.</p>
+                        <p className="text-sm text-gray-400 text-center py-8">No assigned capstones have saved references or citation copies yet.</p>
                     ) : (
                         <div className="space-y-3 mt-4">
                             {assigned.most_cited.map(item => (
@@ -125,7 +125,7 @@ export default function FacultyDashboard() {
                                         <p className="text-sm font-medium text-gray-800 truncate">{item.title}</p>
                                         <p className="text-xs text-gray-400">{item.author}{item.year ? ` · ${item.year}` : ''}</p>
                                     </div>
-                                    <p className="text-sm font-bold text-purple-600 whitespace-nowrap">{item.citation_generations} generations</p>
+                                    <p className="text-sm font-bold text-purple-600 whitespace-nowrap">{item.reference_count} references</p>
                                 </Link>
                             ))}
                         </div>
@@ -171,10 +171,10 @@ export default function FacultyDashboard() {
                 )}
             </section>
 
-            <section aria-label="Repository-wide statistics" className="rounded-xl border border-dashed border-gray-200 p-5 bg-gray-50/60">
-                <h2 className="text-sm font-semibold text-gray-600">Repository-wide</h2>
-                <p className="text-xs text-gray-400 mt-0.5">Shown separately so assigned and all-repository numbers cannot be confused.</p>
-                <div className="flex flex-wrap gap-6 mt-3 text-sm text-gray-600">
+            <section aria-label="Repository-wide statistics" className="repository-statistics bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+                <h2 className="text-sm font-semibold text-gray-700">Repository-wide</h2>
+                <p className="text-sm text-gray-500 mt-1">Totals across the capstone repository.</p>
+                <div className="flex flex-wrap gap-6 mt-3 text-sm text-gray-700">
                     <span><strong className="text-gray-900">{repository.total ?? 0}</strong> total capstones</span>
                     <span><strong className="text-gray-900">{repository.approved ?? 0}</strong> approved capstones</span>
                 </div>

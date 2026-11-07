@@ -112,11 +112,13 @@ class AdminDashboardController extends Controller
             ->withCount(['views as unique_views' => function ($q) {
                 $q->whereNotNull('user_id');
             }])
+            ->having('unique_views', '>=', 1)
             ->having('unique_views', '=', $maxViews)
             ->orderByDesc('unique_views')
             ->get()
             ->map(fn($c) => [
                 'id'           => $c->id,
+                'slug'         => $c->slug,
                 'title'        => $c->title,
                 'author'       => $c->author,
                 'year'         => $c->year,
@@ -195,16 +197,14 @@ class AdminDashboardController extends Controller
     }
 
     /**
-     * Get the top capstones by generated-citation events.
-     * This is a count of citations generated through AcadeX, not a verified
-     * external citation index.
+     * Rank saved inbound reference relationships and successful citation copies.
      */
     public function mostCited(): JsonResponse
     {
         $data = Capstone::with(['uploader:id,name'])
-            ->withCount('citationEvents as citation_generations')
-            ->orderByDesc('citation_generations')
-            ->having('citation_generations', '>', 0)
+            ->withReferenceTotal()
+            ->orderByDesc('reference_count')
+            ->having('reference_count', '>=', 1)
             ->limit(5)
             ->get()
             ->map(fn($c) => [
@@ -214,13 +214,14 @@ class AdminDashboardController extends Controller
                 'author'               => $c->author,
                 'year'                 => $c->year,
                 'program'              => $c->program,
-                'citation_generations' => (int) $c->citation_generations,
+                'reference_count' => (int) $c->reference_count,
+                'citation_generations' => (int) $c->reference_count,
                 // Compatibility alias for existing consumers.
-                'citation_count'       => (int) $c->citation_generations,
+                'citation_count'       => (int) $c->reference_count,
                 'uploader'             => $c->uploader?->name,
             ]);
 
-        return $this->successResponse($data, 'Most citation generations.')
-            ->header('X-Metric-Label', 'citation generations');
+        return $this->successResponse($data, 'Most cited capstones.')
+            ->header('X-Metric-Label', 'saved references and citation copies');
     }
 }

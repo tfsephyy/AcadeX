@@ -111,6 +111,7 @@ class ChatbotAnalyticsService
     public function mostViewed(int $limit = 10): \Illuminate\Database\Eloquent\Collection
     {
         return Capstone::where('publication_status', 'published')
+            ->where('view_count', '>=', 1)
             ->orderByDesc('view_count')
             ->limit($limit)
             ->get(['id', 'title', 'author', 'year', 'category', 'view_count']);
@@ -207,6 +208,7 @@ class ChatbotAnalyticsService
             // 1. Most viewed capstone among advised
             if (preg_match('/most\s+viewed/i', $msg)) {
                 $cap = \App\Models\Capstone::where('adviser_id', $adviserId)
+                    ->where('view_count', '>=', 1)
                     ->orderByDesc('view_count')
                     ->first(['id', 'title', 'view_count']);
                 $data['advisory_most_viewed'] = $cap ? $cap->toArray() : null;
@@ -490,27 +492,15 @@ class ChatbotAnalyticsService
      */
     public function getMostReferencedCapstone(): ?array
     {
-        $result = DB::table('capstone_references')
-            ->whereIn('capstone_id', Capstone::query()->select('capstones.id'))
-            ->whereIn('referenced_capstone_id', Capstone::query()->select('capstones.id'))
-            ->select('referenced_capstone_id', DB::raw('COUNT(*) as reference_count'))
-            ->groupBy('referenced_capstone_id')
+        $capstone = Capstone::select(['id', 'title', 'author', 'year', 'program'])
+            ->withReferenceTotal()
+            ->having('reference_count', '>=', 1)
             ->orderByDesc('reference_count')
             ->first();
 
-        if (!$result) {
-            return null;
-        }
-
-        $capstone = Capstone::find($result->referenced_capstone_id, ['id', 'title', 'author', 'year', 'program']);
-
-        if (!$capstone) {
-            return null;
-        }
-
-        return [
+        return $capstone ? [
             'capstone' => $capstone->toArray(),
-            'count' => $result->reference_count,
-        ];
+            'count' => (int) $capstone->reference_count,
+        ] : null;
     }
 }

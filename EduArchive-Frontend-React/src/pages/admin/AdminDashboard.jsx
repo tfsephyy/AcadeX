@@ -99,7 +99,7 @@ export default function AdminDashboard() {
     if (loading) return <Loading text="Loading dashboard..." />;
 
     const maxViews = mostViewed[0]?.unique_views || 1;
-    const maxCitations = mostCited[0]?.citation_generations ?? mostCited[0]?.citation_count ?? 1;
+    const maxCitations = mostCited[0]?.reference_count ?? mostCited[0]?.citation_count ?? 1;
 
     const statCards = [
         { label: 'Students',             value: stats?.students  ?? 0, icon: HiOutlineAcademicCap,  color: 'text-blue-600',   bg: 'bg-blue-50'   },
@@ -260,13 +260,13 @@ export default function AdminDashboard() {
                             <HiOutlineBookOpen className="w-4 h-4 text-purple-500" />
                         </div>
                         <div>
-                            <h3 className="text-sm font-semibold text-gray-700">Most Citation Generations</h3>
-                            <p className="text-xs text-gray-400">Citations generated with the AcadeX citation tool</p>
+                            <h3 className="text-sm font-semibold text-gray-700">Most Cited</h3>
+                            <p className="text-xs text-gray-400">Saved references and successful citation copies</p>
                         </div>
                     </div>
 
                     {mostCited.length === 0 ? (
-                        <p className="text-sm text-gray-400 text-center py-8">No citation data yet.</p>
+                        <p className="text-sm text-gray-400 text-center py-8">No capstones have saved references or citation copies yet.</p>
                     ) : (
                         <div className="space-y-3">
                             {mostCited.map((cap, idx) => (
@@ -277,10 +277,10 @@ export default function AdminDashboard() {
                                     <div className="flex-1 min-w-0">
                                         <p className="text-sm font-medium text-gray-800 truncate group-hover:text-purple-700 transition-colors">{cap.title}</p>
                                         <p className="text-xs text-gray-400 truncate">{cap.author}{cap.year ? ` · ${cap.year}` : ''}{cap.program ? ` · ${cap.program}` : ''}</p>
-                                        <MetricBar value={cap.citation_generations ?? cap.citation_count} max={maxCitations} color="#8b5cf6" />
+                                        <MetricBar value={cap.reference_count ?? cap.citation_count} max={maxCitations} color="#8b5cf6" />
                                     </div>
                                     <div className="text-right flex-shrink-0">
-                                        <span className="text-sm font-bold text-purple-600">{cap.citation_generations ?? cap.citation_count}</span>
+                                        <span className="text-sm font-bold text-purple-600">{cap.reference_count ?? cap.citation_count}</span>
                                         <p className="text-xs text-gray-400">generations</p>
                                     </div>
                                 </div>

@@ -14,6 +14,10 @@ The client-facing deployment history remains in [../ACADEX_CLIENT_AI_HANDOFF.md]
 - Production writes require an approved backup. Authorized access and backup verification were established on November 5; read the latest progress entry for the actual deployed state.
 - Local verification and deployed verification are recorded separately and are never conflated.
 - Background processing must degrade safely when Redis/Ollama are unavailable.
+- Existing-local setup after a pull must install locked dependencies, back up and
+  migrate the verified local schema, and retain its APP_KEY, accounts and storage.
+  See the November 6 local setup entry in the progress log; it is separate from
+  production deployment and does not certify outstanding feature acceptance.
 
 ## R1 — Capstone loading and document viewer (priority: high)
 
@@ -239,5 +243,84 @@ is therefore opt-in and disabled by default.
 - Review/correct metadata before final submission still works.
 - Transfer, queued, processing, completed, and failed states are clear.
 - Errors are actionable and retryable.
+- Cancel remains available during transfer and aborts the browser request.
+- Close/Escape minimizes an active upload without aborting it. A floating
+  upload icon shows measured transfer progress or the server processing state,
+  remains visible across internal page navigation, and reopens the details.
+- Background completion does not redirect the user. Review details explicitly
+  opens the existing upload reference; no second upload is needed.
+- Track one upload per signed-in browser session, clear it on logout/account
+  change, and keep full-tab-close/refresh limitations explicit. Cancellation
+  after all bytes are sent cannot promise that server processing is stopped.
 
 **Dependencies:** R5.
+
+## November 7, 2026 interface follow-up (current task)
+
+- Complete slug-based detail links across cards, approvals, saved lists and chatbot;
+  preserve numeric URL compatibility and existing role authorization.
+- Match Faculty repository statistics to the dashboard surfaces and text tokens.
+  Share Admin/Faculty notification controls with a bell beside the profile and
+  legible, distinct read/unread states in both themes.
+- Persist PDF page locally per canonical capstone ID, PDF type and account
+  (browser-local visitor fallback). Restore on reopening, including fullscreen;
+  support fullscreen zoom below the initial scale.
+- Display own-upload navigation/page titles as **My Uploads**, repository browse
+  navigation/page titles as **Capstone Library** across the four existing panels.
+  Preserve routes, page functionality and role permissions.
+- Remove the lighter User Management navigation background and nested navigation
+  scrolling; align icons, spacing and controls with the shared design system.
+- Remove Unique Viewers, Engagement and Peak Day cards from individual analytics;
+  reflow the three remaining cards.
+- Display **Not Yet Copyrighted** for the existing `unprotected` status. Keep its
+  stored value and visibility rules.
+- This task requests implementation. No production deployment is included.
+
+
+## November 7, 2026 layouts, resumable uploads and reference totals
+
+Current implementation request; supersedes R8's IEEE requirement, D-006's
+generation counting, and R16/D-012's full-refresh limitation.
+
+- My Uploads and Pending Approvals default to tables at desktop widths and cards
+  on mobile. Keep layout selection; desktop cards use four columns.
+- Capstone Library across all four roles offers a category hide/show control,
+  three desktop columns, four when navigation and categories are both collapsed,
+  and readable mobile cards. Existing route names and permissions stay intact.
+- Recover interrupted transfers from confirmed chunks and reconnect to queued or
+  running extraction after refresh. Stable owner-scoped transfer/upload references
+  prevent duplicated files, jobs, and final capstone submissions.
+- Total references equal saved inbound reference relationships plus successful
+  citation copies. Viewing, opening a citation section, formatting and downloading
+  do not count. Replayed copy events and repeated relationship saves count once.
+- Remove IEEE formatting and controls; retain APA and MLA.
+- Most Viewed and Most Cited exclude zero counts and show empty states.
+- Implementation and verification are local; deployment is a separate task.
+
+
+Local status: implemented and locally verified; deployment pending. See the final
+November 7 progress entry and [implementation evidence](ui/2026-11-07-layout-upload-reference-update.md).
+Both new migrations have been verified only in the disposable test database.
+
+
+## November 7, 2026 runtime repair and interface controls
+
+- Repair the configured local MySQL upload schema after a fresh verified private
+  backup; retain accounts, existing rows, APP_KEY and documents. Verify actual
+  upload/extraction/reload recovery with synthetic data in an isolated test DB.
+- Faculty registration must accept its role/program without student year/section,
+  preserve verification/approval requirements, and reveal actionable field errors
+  even when they concern an earlier registration step.
+- Each role's library places an icon visibility toggle directly beside CATEGORY,
+  with state-dependent icon, tooltip, accessible label and expanded state.
+- Pending Approval View/Approve/Reject controls are consistent icon buttons in
+  both table and card layouts, retaining confirmation and action behavior.
+- Assigned Capstones uses four desktop columns, with tablet/mobile adaptation.
+- Local implementation/repair only; no production deployment requested.
+
+
+Local status for the runtime-repair/interface-control follow-up: **done locally**.
+The configured application migrations are applied, Faculty and real resumable
+upload/extraction checks passed, icon controls and responsive Assigned cards passed.
+See the final progress entry and [repair evidence](ui/2026-11-07-runtime-registration-controls.md).
+Production deployment was not requested or performed.

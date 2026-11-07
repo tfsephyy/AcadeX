@@ -13,6 +13,7 @@ class CitationEvent extends Model
         'format',
         'action',
         'ip_hash',
+        'event_key',
     ];
 
     public function capstone(): BelongsTo

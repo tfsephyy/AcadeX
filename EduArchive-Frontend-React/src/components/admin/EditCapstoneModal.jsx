@@ -2,14 +2,14 @@ import { createPortal } from 'react-dom';
 import { useDialogFocus } from '../useDialogFocus';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import {
-    HiOutlineX, HiOutlineCheck, HiOutlineSearch, HiOutlineUser,
+    HiOutlineX, HiOutlineCheck, HiOutlineSearch,
     HiOutlineDocumentText, HiOutlineTrash, HiOutlinePlus,
     HiOutlineUpload, HiOutlineShieldCheck, HiOutlineMail, HiOutlinePhone, HiOutlineUserGroup,
 } from 'react-icons/hi';
 import { HiOutlineGlobeAlt, HiOutlineEyeSlash, HiOutlineClock, HiOutlineDocumentDuplicate } from 'react-icons/hi2';
 import {
     updateCapstone, uploadAdminResource, uploadAdminImrad,
-    getPublishedCapstones, getFacultyList,
+    getPublishedCapstones,
 } from '../../api/admin';
 import { useNotification } from '../../components/useNotification';
 import { LoadingOverlay } from '../../components/Loading';
@@ -25,7 +25,7 @@ const STATUS_OPTIONS = [
 const COPYRIGHT_OPTIONS = [
     { value: 'copyrighted', label: 'Copyrighted', desc: 'Protected by copyright.',  accent: '#7c3aed', bg: 'rgba(124,58,237,0.12)', border: 'rgba(124,58,237,0.4)' },
     { value: 'pending',     label: 'Pending',     desc: 'Status being verified.',    accent: '#d97706', bg: 'rgba(217,119,6,0.12)',  border: 'rgba(217,119,6,0.35)' },
-    { value: 'unprotected', label: 'Unprotected', desc: 'No copyright recorded.',   accent: '#6b7280', bg: 'rgba(107,114,128,0.1)', border: 'rgba(107,114,128,0.35)' },
+    { value: 'unprotected', label: 'Not Yet Copyrighted', desc: 'No copyright recorded.',   accent: '#6b7280', bg: 'rgba(107,114,128,0.1)', border: 'rgba(107,114,128,0.35)' },
 ];
 
 /* ─── Shared input class — theme-aware, always opaque ───────── */
@@ -104,12 +104,6 @@ export default function EditCapstoneModal({ capstone, onClose, onSuccess, update
     const [refDropdownOpen, setRefDropdownOpen] = useState(false);
     const refTimer = useRef(null);
 
-    // Adviser
-    const [adviser, setAdviser] = useState(null);
-    const [adviserSearch, setAdviserSearch] = useState('');
-    const [adviserResults, setAdviserResults] = useState([]);
-    const [adviserLoading, setAdviserLoading] = useState(false);
-    const [adviserDropdownOpen, setAdviserDropdownOpen] = useState(false);
 
     /* ── Seed from capstone ── */
     useEffect(() => {
@@ -128,7 +122,6 @@ export default function EditCapstoneModal({ capstone, onClose, onSuccess, update
         setImradInfo(capstone.imrad_available ? { file_path: capstone.imrad_reference, file_original_name: capstone.imrad_original_name } : null);
         setResources(capstone.resources?.map(r => ({ ...r, id: r.id || Date.now() + Math.random() })) || []);
         setReferences(capstone.references?.map(r => ({ id: r.id, title: r.title, author: r.author, year: r.year })) || []);
-        setAdviser(capstone.adviser ? { id: capstone.adviser.id, name: capstone.adviser.name } : null);
 
         // Seed author details: prefer structured array, fallback to splitting comma-separated author string
         if (capstone.author_details && Array.isArray(capstone.author_details) && capstone.author_details.length > 0) {
@@ -159,21 +152,6 @@ export default function EditCapstoneModal({ capstone, onClose, onSuccess, update
         refTimer.current = setTimeout(() => searchReferences(refSearch), 350);
         return () => clearTimeout(refTimer.current);
     }, [refSearch, searchReferences]);
-
-    /* ── Adviser search ── */
-    const searchAdviser = useCallback(async (q) => {
-        setAdviserLoading(true);
-        try {
-            const res = await getFacultyList({ search: q });
-            setAdviserResults(res.data.data || []);
-        } catch { setAdviserResults([]); } finally { setAdviserLoading(false); }
-    }, []);
-
-    useEffect(() => {
-        if (!adviserDropdownOpen) return;
-        const t = setTimeout(() => searchAdviser(adviserSearch), 300);
-        return () => clearTimeout(t);
-    }, [adviserSearch, adviserDropdownOpen, searchAdviser]);
 
     /* ── IMRAD upload ── */
     const handleImradSelect = async (file) => {
@@ -232,7 +210,6 @@ export default function EditCapstoneModal({ capstone, onClose, onSuccess, update
                 copyright_status:    copyrightStatus || null,
                 imrad_path:          imradInfo?.file_path || null,
                 imrad_original_name: imradInfo?.file_original_name || null,
-                adviser_id:          adviser?.id || null,
                 references:          references.map(r => r.id),
                 resources:           resources.map(r => ({ name: r.name, file_path: r.file_reference || r.file_path, file_original_name: r.file_original_name })),
             });
@@ -582,75 +559,6 @@ export default function EditCapstoneModal({ capstone, onClose, onSuccess, update
                                 )}
                                 <input ref={imradRef} type="file" accept=".pdf"
                                     onChange={e => handleImradSelect(e.target.files[0])} className="hidden" />
-                            </div>
-
-                            {/* Adviser */}
-                            <div>
-                                <SectionLabel>Adviser</SectionLabel>
-                                {adviser ? (
-                                    <div className="flex items-center gap-3 p-3 rounded-lg border"
-                                        style={{ background: 'rgba(217,119,6,0.08)', borderColor: 'rgba(217,119,6,0.3)' }}>
-                                        <div className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0"
-                                            style={{ background: 'rgba(217,119,6,0.15)' }}>
-                                            <HiOutlineUser className="w-4 h-4" style={{ color: '#d97706' }} />
-                                        </div>
-                                        <span className="text-sm font-medium flex-1" style={{ color: 'var(--color-text)' }}>{adviser.name}</span>
-                                        <button aria-label="Close" onClick={() => setAdviser(null)}
-                                            style={{ color: 'var(--color-text-muted)' }}
-                                            onMouseEnter={e => e.currentTarget.style.color = '#ef4444'}
-                                            onMouseLeave={e => e.currentTarget.style.color = 'var(--color-text-muted)'}>
-                                            <HiOutlineX className="w-4 h-4" />
-                                        </button>
-                                    </div>
-                                ) : (
-                                    <div className="relative">
-                                        <div className="relative">
-                                            <HiOutlineSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none"
-                                                style={{ color: 'var(--color-text-muted)' }} />
-                                            <input type="text" value={adviserSearch}
-                                                onChange={e => setAdviserSearch(e.target.value)}
-                                                onFocus={() => { setAdviserDropdownOpen(true); searchAdviser(''); }}
-                                                placeholder="Search faculty by name…"
-                                                className={inputCls + ' pl-9'} />
-                                            {adviserLoading && (
-                                                <span className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 border-2 rounded-full animate-spin"
-                                                    style={{ borderColor: 'var(--color-primary)', borderTopColor: 'transparent' }} />
-                                            )}
-                                        </div>
-                                        {adviserDropdownOpen && (
-                                            <div className="absolute top-full left-0 right-0 z-30 mt-1 rounded-xl border shadow-lg overflow-hidden"
-                                                style={{ background: 'var(--color-bg-secondary)', borderColor: 'var(--color-border-strong)' }}>
-                                                {adviserResults.length === 0 ? (
-                                                    <div className="px-4 py-3 text-xs text-center"
-                                                        style={{ color: 'var(--color-text-muted)' }}>
-                                                        {adviserLoading ? 'Loading…' : 'No faculty found'}
-                                                    </div>
-                                                ) : (
-                                                    <div className="max-h-48 overflow-y-auto admin-scroll divide-y"
-                                                        style={{ borderColor: 'var(--color-border)' }}>
-                                                        {adviserResults
-                                                            .filter(f => !adviserSearch || f.name.toLowerCase().includes(adviserSearch.toLowerCase()))
-                                                            .map(fac => (
-                                                                <button key={fac.id}
-                                                                    onClick={() => { setAdviser(fac); setAdviserDropdownOpen(false); setAdviserSearch(''); }}
-                                                                    className="w-full text-left px-4 py-2.5 flex items-center gap-2.5 transition-colors"
-                                                                    style={{ color: 'var(--color-text)' }}
-                                                                    onMouseEnter={e => e.currentTarget.style.background = 'var(--color-bg-tertiary)'}
-                                                                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-                                                                    <div className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0"
-                                                                        style={{ background: 'var(--color-bg-tertiary)' }}>
-                                                                        <HiOutlineUser className="w-3.5 h-3.5" style={{ color: 'var(--color-text-muted)' }} />
-                                                                    </div>
-                                                                    <span className="text-sm">{fac.name}</span>
-                                                                </button>
-                                                            ))}
-                                                    </div>
-                                                )}
-                                            </div>
-                                        )}
-                                        {adviserDropdownOpen && <div className="fixed inset-0 z-20" onClick={() => setAdviserDropdownOpen(false)} />}
-                                    </div>
-                                )}
                             </div>
 
                             {/* Resources */}

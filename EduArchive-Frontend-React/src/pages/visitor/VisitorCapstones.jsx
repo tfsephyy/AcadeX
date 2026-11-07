@@ -1,3 +1,4 @@
+import CategoryVisibilityToggle from '../../components/CategoryVisibilityToggle';
 import { unpackList } from '../../api/listResponse';
 import Pagination from '../../components/Pagination';
 import { useDialogFocus } from '../../components/useDialogFocus';
@@ -28,6 +29,7 @@ export default function VisitorCapstones() {
     const [loading, setLoading] = useState(true);
     const [displayMode, setDisplayMode] = useState('card');
     const [showFilters, setShowFilters] = useState(false);
+    const [showCategories, setShowCategories] = useState(true);
     const [savedOpen, setSavedOpen] = useState(location.pathname === '/visitor/saved');
 
     const [search, setSearch] = useState('');
@@ -218,10 +220,10 @@ export default function VisitorCapstones() {
     // ── Card View ──────────────────────────────────────────
     const CardView = () => (
         <>
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4">
+            <div className="library-grid grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {capstones.map((cap) => (
                     <div key={cap.id}
-                        {...cardInteraction(() => navigate(`/visitor/capstones/${cap.id}`))}
+                        {...cardInteraction(() => navigate(`/visitor/capstones/${cap.slug || cap.id}`))}
                         className="group bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 flex flex-col overflow-hidden cursor-pointer">
                         {/* Green gradient top bar */}
                         <div className="record-accent" aria-hidden="true" />
@@ -289,7 +291,7 @@ export default function VisitorCapstones() {
                                     <td className="py-3 px-4 text-sm" style={{ color: 'var(--color-text-muted)' }}>{cap.year || '—'}</td>
                                     <td className="py-3 px-4"><AccessBadge cap={cap} /></td>
                                     <td className="py-3 px-4 flex items-center gap-2">
-                                        <button aria-label="View details" onClick={(e) => { e.stopPropagation(); navigate(`/visitor/capstones/${cap.id}`); }} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg">
+                                        <button aria-label="View details" onClick={(e) => { e.stopPropagation(); navigate(`/visitor/capstones/${cap.slug || cap.id}`); }} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg">
                                             <HiOutlineEye className="w-4 h-4" />
                                         </button>
                                         <button onClick={(e) => handleToggleBookmark(e, cap.id)} className="p-1.5 hover:bg-amber-50 rounded-lg">
@@ -367,7 +369,7 @@ export default function VisitorCapstones() {
             <div className="px-4 lg:px-8 pt-6 lg:pt-8 pb-4">
                 <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                        <h1 className="text-2xl sm:text-3xl font-bold" style={{ color: 'var(--color-text)' }}>Uploaded Capstones</h1>
+                        <h1 className="text-2xl sm:text-3xl font-bold" style={{ color: 'var(--color-text)' }}>Capstone Library</h1>
                         <p className="text-sm mt-1" style={{ color: 'var(--color-text-muted)' }}>Browse published and available capstone projects</p>
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0">
@@ -455,11 +457,13 @@ export default function VisitorCapstones() {
             </div>
 
             {/* Content area with category sidebar */}
-            <div className="flex gap-0">
+            <div className="px-4 lg:px-8 py-3">
+                <CategoryVisibilityToggle expanded={showCategories} onToggle={() => setShowCategories(value => !value)} />
+            </div>
+            <div className="library-content flex flex-col lg:flex-row gap-0" data-categories-hidden={!showCategories}>
                 {/* Category sidebar */}
-                <aside className="hidden lg:flex flex-col w-52 flex-shrink-0 sticky top-[57px] self-start max-h-[calc(100vh-8rem)] overflow-y-auto border-r px-3 py-5"
+                <aside id="library-categories" hidden={!showCategories} className="library-categories flex flex-col w-full lg:w-44 flex-shrink-0 sticky top-[57px] self-start max-h-[calc(100vh-8rem)] overflow-y-auto border-r px-3 py-5"
                     style={{ background: 'var(--color-bg-secondary)', borderColor: 'var(--color-border)' }}>
-                    <p className="text-xs font-semibold uppercase tracking-wider mb-3 px-2" style={{ color: 'var(--color-text-muted)' }}>Category</p>
                     <button onClick={() => handleCategoryTab('')}
                         className={`w-full text-left flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium mb-1 transition-colors border-l-2 ${selectedCategory === '' ? 'border-[#1B5E20] bg-green-50 text-[#1B5E20]' : 'border-transparent hover:bg-gray-50'}`}
                         style={selectedCategory !== '' ? { color: 'var(--color-text-muted)' } : {}}>

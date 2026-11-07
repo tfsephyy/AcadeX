@@ -3,12 +3,12 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import {
     HiArrowLeft, HiOutlineDocumentText, HiOutlineUpload, HiOutlineX,
     HiOutlinePlus, HiOutlineSearch, HiOutlineTrash, HiOutlineCheck,
-    HiOutlineLink, HiOutlineUser, HiOutlineBookOpen, HiOutlineShieldCheck,
+    HiOutlineLink, HiOutlineBookOpen, HiOutlineShieldCheck,
 } from 'react-icons/hi';
 import { HiOutlineGlobeAlt, HiOutlineEyeSlash, HiOutlineClock, HiOutlineDocumentDuplicate } from 'react-icons/hi2';
 import {
     storeFacultyCapstone, uploadFacultyResource, uploadFacultyImrad,
-    getPublishedCapstones, getFacultyList,
+    getPublishedCapstones,
 } from '../../api/admin';
 import { useNotification } from '../../components/useNotification';
 import { LoadingOverlay } from '../../components/Loading';
@@ -39,7 +39,7 @@ const COPYRIGHT_OPTIONS = [
     },
     {
         value: 'unprotected',
-        label: 'Unprotected',
+        label: 'Not Yet Copyrighted',
         desc: 'The project has no copyright protection recorded.',
         accent: '#6b7280',
         bg: 'rgba(107,114,128,0.08)',
@@ -104,13 +104,6 @@ export default function CapstoneAdditionalInfoPage() {
     const [refDropdownOpen, setRefDropdownOpen] = useState(false);
     const refSearchTimer = useRef(null);
 
-    // Adviser
-    const [adviser, setAdviser] = useState(null);
-    const [adviserSearch, setAdviserSearch] = useState('');
-    const [adviserResults, setAdviserResults] = useState([]);
-    const [adviserLoading, setAdviserLoading] = useState(false);
-    const [adviserDropdownOpen, setAdviserDropdownOpen] = useState(false);
-
     /* ── Reference search ─────────────────────────────────── */
     const searchReferences = useCallback(async (q) => {
         if (!q.trim()) { setRefResults([]); return; }
@@ -133,21 +126,6 @@ export default function CapstoneAdditionalInfoPage() {
             setReferences(prev => [...prev, { id: cap.id, title: cap.title, author: cap.author, year: cap.year, program: cap.program }]);
         setRefSearch(''); setRefResults([]); setRefDropdownOpen(false);
     };
-
-    /* ── Adviser search ────────────────────────────────────── */
-    const searchAdviser = useCallback(async (q) => {
-        setAdviserLoading(true);
-        try {
-            const res = await getFacultyList({ search: q });
-            setAdviserResults(res.data.data || []);
-        } catch { setAdviserResults([]); } finally { setAdviserLoading(false); }
-    }, []);
-
-    useEffect(() => {
-        if (!adviserDropdownOpen) return;
-        const t = setTimeout(() => searchAdviser(adviserSearch), 300);
-        return () => clearTimeout(t);
-    }, [adviserSearch, adviserDropdownOpen, searchAdviser]);
 
     /* ── IMRAD upload ──────────────────────────────────────── */
     const handleImradSelect = async (file) => {
@@ -201,7 +179,6 @@ export default function CapstoneAdditionalInfoPage() {
                 copyright_status: copyrightStatus || null,
                 imrad_path: imradInfo?.file_path || null,
                 imrad_original_name: imradInfo?.file_original_name || null,
-                adviser_id: adviser?.id || null,
                 references: references.map(r => r.id),
                 resources: resources.map(r => ({ name: r.name, file_path: r.file_path, file_original_name: r.file_original_name })),
                 author_details: initialForm.author_details || [],
@@ -466,102 +443,36 @@ export default function CapstoneAdditionalInfoPage() {
                         </SectionCard>
                     </div>
 
-                    {/* ── Adviser + Summary ──────── */}
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-                        <SectionCard icon={HiOutlineUser} title="Adviser" subtitle="Faculty member who advised this capstone" accent="#d97706">
-                            {adviser ? (
-                                <div className="flex items-center gap-3 p-3 rounded-lg border"
-                                    style={{ background: 'rgba(217,119,6,0.08)', borderColor: 'rgba(217,119,6,0.3)' }}>
-                                    <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(217,119,6,0.15)' }}>
-                                        <HiOutlineUser className="w-4 h-4" style={{ color: '#d97706' }} />
-                                    </div>
-                                    <div className="flex-1">
-                                        <p className="text-sm font-semibold" style={{ color: 'var(--color-text)' }}>{adviser.name}</p>
-                                        <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>Faculty Adviser</p>
-                                    </div>
-                                    <button aria-label="Close" onClick={() => setAdviser(null)} style={{ color: 'var(--color-text-muted)' }}
-                                        onMouseEnter={e => e.currentTarget.style.color = '#ef4444'}
-                                        onMouseLeave={e => e.currentTarget.style.color = 'var(--color-text-muted)'}>
-                                        <HiOutlineX className="w-4 h-4" />
-                                    </button>
-                                </div>
-                            ) : (
-                                <div className="relative">
-                                    <div className="relative">
-                                        <HiOutlineSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none" style={{ color: 'var(--color-text-muted)' }} />
-                                        <input type="text" value={adviserSearch}
-                                            onChange={(e) => setAdviserSearch(e.target.value)}
-                                            onFocus={() => { setAdviserDropdownOpen(true); searchAdviser(''); }}
-                                            placeholder="Search faculty by name…"
-                                            className={inputCls + ' pl-9'} />
-                                        {adviserLoading && <span className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 border-2 rounded-full animate-spin" style={{ borderColor: 'var(--color-primary)', borderTopColor: 'transparent' }} />}
-                                    </div>
-                                    {adviserDropdownOpen && (
-                                        <div className="absolute top-full left-0 right-0 z-30 mt-1 rounded-xl border shadow-xl"
-                                            style={{ background: 'var(--color-surface-elevated)', borderColor: 'var(--color-border-strong)' }}>
-                                            {adviserResults.length === 0 ? (
-                                                <div className="px-4 py-3 text-xs text-center" style={{ color: 'var(--color-text-muted)' }}>{adviserLoading ? 'Loading…' : 'No faculty found'}</div>
-                                            ) : (
-                                                <div className="max-h-56 overflow-y-auto admin-scroll divide-y" style={{ borderColor: 'var(--color-border)' }}>
-                                                    {adviserResults.filter(f => !adviserSearch || f.name.toLowerCase().includes(adviserSearch.toLowerCase())).map((fac) => (
-                                                        <button key={fac.id}
-                                                            onClick={() => { setAdviser(fac); setAdviserDropdownOpen(false); setAdviserSearch(''); }}
-                                                            className="w-full text-left px-4 py-2.5 flex items-center gap-2.5 transition-colors"
-                                                            style={{ color: 'var(--color-text)' }}
-                                                            onMouseEnter={e => e.currentTarget.style.background = 'var(--color-bg-tertiary)'}
-                                                            onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-                                                            <div className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: 'var(--color-bg-tertiary)' }}>
-                                                                <HiOutlineUser className="w-3.5 h-3.5" style={{ color: 'var(--color-text-muted)' }} />
-                                                            </div>
-                                                            <span className="text-sm">{fac.name}</span>
-                                                        </button>
-                                                    ))}
-                                                </div>
-                                            )}
-                                        </div>
-                                    )}
-                                    {adviserDropdownOpen && <div className="fixed inset-0 z-20" onClick={() => setAdviserDropdownOpen(false)} />}
-                                </div>
-                            )}
-                        </SectionCard>
-
-                        {/* Right half — summary info card */}
-                        <div className="rounded-2xl border p-5 flex flex-col justify-between" style={{ background: 'var(--color-surface)', borderColor: 'var(--color-border)' }}>
-                            <div>
-                                <p className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: 'var(--color-text-muted)' }}>Submission Summary</p>
-                                <div className="space-y-2.5">
-                                    <div className="flex items-center justify-between">
-                                        <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>Status</span>
-                                        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold border"
-                                            style={{ background: currentStatus.bg, color: currentStatus.accent, borderColor: currentStatus.border }}>
-                                            <span className="w-1.5 h-1.5 rounded-full" style={{ background: currentStatus.accent }} />
-                                            {currentStatus.label}
-                                        </span>
-                                    </div>
-                                    <div className="flex items-center justify-between">
-                                        <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>Copyright</span>
-                                        {currentCopyright
-                                            ? <span className="text-xs font-semibold" style={{ color: currentCopyright.accent }}>{currentCopyright.label}</span>
-                                            : <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>Not set</span>
-                                        }
-                                    </div>
-                                    <div className="flex items-center justify-between">
-                                        <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>IMRAD</span>
-                                        <span className="text-xs font-semibold" style={{ color: 'var(--color-text)' }}>{imradInfo ? '✓ Uploaded' : 'Not uploaded'}</span>
-                                    </div>
-                                    <div className="flex items-center justify-between">
-                                        <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>Resources</span>
-                                        <span className="text-xs font-semibold" style={{ color: 'var(--color-text)' }}>{resources.length} file{resources.length !== 1 ? 's' : ''}</span>
-                                    </div>
-                                    <div className="flex items-center justify-between">
-                                        <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>References</span>
-                                        <span className="text-xs font-semibold" style={{ color: 'var(--color-text)' }}>{references.length} capstone{references.length !== 1 ? 's' : ''}</span>
-                                    </div>
-                                    <div className="flex items-center justify-between">
-                                        <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>Adviser</span>
-                                        <span className="text-xs font-semibold" style={{ color: 'var(--color-text)' }}>{adviser ? adviser.name : '—'}</span>
-                                    </div>
-                                </div>
+                    {/* ── Submission Summary ──────── */}
+                    <div className="rounded-2xl border p-5" style={{ background: 'var(--color-surface)', borderColor: 'var(--color-border)' }}>
+                        <p className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: 'var(--color-text-muted)' }}>Submission Summary</p>
+                        <div className="space-y-2.5">
+                            <div className="flex items-center justify-between">
+                                <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>Status</span>
+                                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold border"
+                                    style={{ background: currentStatus.bg, color: currentStatus.accent, borderColor: currentStatus.border }}>
+                                    <span className="w-1.5 h-1.5 rounded-full" style={{ background: currentStatus.accent }} />
+                                    {currentStatus.label}
+                                </span>
+                            </div>
+                            <div className="flex items-center justify-between">
+                                <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>Copyright</span>
+                                {currentCopyright
+                                    ? <span className="text-xs font-semibold" style={{ color: currentCopyright.accent }}>{currentCopyright.label}</span>
+                                    : <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>Not set</span>
+                                }
+                            </div>
+                            <div className="flex items-center justify-between">
+                                <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>IMRAD</span>
+                                <span className="text-xs font-semibold" style={{ color: 'var(--color-text)' }}>{imradInfo ? '✓ Uploaded' : 'Not uploaded'}</span>
+                            </div>
+                            <div className="flex items-center justify-between">
+                                <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>Resources</span>
+                                <span className="text-xs font-semibold" style={{ color: 'var(--color-text)' }}>{resources.length} file{resources.length !== 1 ? 's' : ''}</span>
+                            </div>
+                            <div className="flex items-center justify-between">
+                                <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>References</span>
+                                <span className="text-xs font-semibold" style={{ color: 'var(--color-text)' }}>{references.length} capstone{references.length !== 1 ? 's' : ''}</span>
                             </div>
                         </div>
                     </div>

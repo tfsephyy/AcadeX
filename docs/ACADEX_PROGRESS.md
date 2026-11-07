@@ -1,6 +1,44 @@
 # AcadeX implementation progress
 
-Last updated: 2026-11-05. Feature and registration follow-ups are deployed. Large-document first-page latency remains under investigation; do not treat the performance acceptance criterion as complete. See the latest dated entries for current evidence.
+## 2026-11-07 — Interface/PDF follow-up, done (local), not deployed
+
+Preserved the pre-existing dirty worktree, upload activity implementation and
+adviser removal. Implemented remaining slug-based launches and chatbot links,
+the navigation/title changes, copyright display wording, the three-card analytics
+layout, User Management navigation refinements and Faculty repository contrast.
+Admin and Faculty now use a shared workspace shell and notification list, with
+the bell beside the account control and readable theme-specific unread surfaces.
+The existing Faculty notifications URL and pagination remain available.
+
+PDF page persistence is shared by original/IMRAD viewers and fullscreen, keyed by
+capstone ID, document type and signed-in account, with browser-local visitor
+fallback and storage-error tolerance. Fullscreen zoom controls support 25–300%.
+
+Local verification: 26 frontend unit tests passed, including storage
+isolation, invalid/stale progress and viewport-page selection. Two database-free
+PHP slug tests passed (3 assertions); PHP syntax checks passed for the two changed
+chatbot files. The production build with `VITE_API_BASE_URL=/api/v1` passed (838
+modules); Vite required execution outside the filesystem sandbox. Git whitespace
+checks passed.
+
+Headless Chrome verified all four roles with intercepted synthetic APIs and an
+eight-page synthetic PDF: scroll-save/reload, numeric URLs, account/document
+isolation, independent original/IMRAD progress, fullscreen handoff and zoom to
+25%. An initial fullscreen cleanup saved a detached DOM's final page, and a
+document switch reused stale reader state; both were corrected and the complete
+four-role extended browser run passed afterward without script errors. A later
+repeat caught a queued observer reading a detached document; a connection guard
+and one-time restoration observer were added. The final four-role browser run
+passed, followed by six repeated reload/original/IMRAD/fullscreen cycles each in
+the Admin and Visitor viewers. The repeated probe was corrected to wait for PDF
+readiness rather than asserting during an expected loading transition. Read and
+unread notifications, related slug links, read controls, Escape, analytics removal,
+copyright wording, desktop/light and mobile/dark browse layouts also passed.
+User Management was checked at 1440/768/390px without document overflow or nested
+navigation scrolling. No database tests or production operations were performed.
+See [the detailed local report](ui/2026-11-07-panel-pdf-followup.md) for boundaries.
+
+Last updated: 2026-11-07. Local checkout setup and upload cancellation/floating progress are recorded below separately from the November 5 deployment. Large-document first-page latency remains under investigation; do not treat the performance acceptance criterion as complete. See the latest dated entries for current evidence.
 Read first: [ACADEX_REQUIREMENTS.md](ACADEX_REQUIREMENTS.md) and
 [ACADEX_DECISIONS.md](ACADEX_DECISIONS.md).
 
@@ -308,3 +346,298 @@ The viewer now starts with explicit authenticated 1 MiB requests and mounts near
 Fresh local checks before publication: 15 frontend tests passed; quiet lint and production build passed (829 modules). Guarded disposable-MySQL checks passed: `AuthenticationSecurityTest` 17 tests / 93 assertions; `DocumentAuthorizationTest` plus `PdfPreviewFallbackTest` 5 tests / 287 assertions. No test suite ran against production.
 
 Publication cleanup: live checks still report six users and one capstone, no pending/failed jobs, and no owned verification tokens. Apache, PHP-FPM, MySQL, the database queue worker and OCR service were active. Removed the temporary range diagnostic CustomLog and temporary credential files. The explicitly approved temporary workstation-only SSH rule was removed in AWS; the four pre-existing inbound rules remain. These checks establish operational cleanup, not completion of the outstanding PDF performance criterion.
+
+## 2026-11-06 — Existing local checkout setup after pull
+
+User requested setup of the pulled updates, including the database and other
+runtime requirements. Initial worktree was clean on `release/ui-refinement`,
+HEAD `9d829d6`; `git fetch origin` and upstream comparison reported 0 ahead / 0
+behind. No merge, reset, production connection or deployment was performed.
+
+This workstation is `C:\Users\Josephh\Desktop\EduArchive`. Its private `.env`
+identifies `APP_ENV=local`, loopback MySQL and `EduArchiveDB`, rather than the
+previous workstation's `acadex_local`. Verified the active database before
+changes. A complete SQL dump, private environment copy, original table-row
+snapshot, and 113 storage-file copies (689,586,104 bytes) were saved under ignored
+`.local/local-update-backup-20261106-142135`. Dump completion/hash and all copied
+file hashes were checked; a restore rehearsal was not performed.
+
+Applied the 12 pending forward migrations after the backup, bringing the local
+schema from 27 to 39 recorded migrations. `migrate:status` reports all `Ran`.
+Original row values were compared after migration (allowing only the documented
+legacy approval backfill); all five users, ten capstones, existing passwords,
+private `.env`/APP_KEY and original stored-file hashes were preserved. No seeder,
+fresh migration, document conversion or key generation was run. Cleared only
+compiled config, route and view caches.
+
+Frontend `npm.cmd ci` completed after stopping this checkout's Vite process,
+which had locked a native package. Fifteen frontend tests, quiet lint and the
+production build passed (829 modules). The build used process-local
+`VITE_API_BASE_URL=/api/v1`; no production environment file was copied.
+
+Local launcher now applies 128 MiB upload / 140 MiB POST / 512 MiB memory limits
+and a 600-second queue worker timeout with three retries, matching the current
+database queue retry interval of 660 seconds. Updated `.env.example` with the
+registration, optional Turnstile/Ollama and background extraction settings.
+PowerShell parser and `git diff --check` passed at the launcher checkpoint.
+
+Composer dependency installation is complete. The large Google services download
+needed a process-local 1,800-second socket timeout. Its 38,363-entry archive and
+subsequent optimized class scan were unusually slow on this workstation. After
+all packages were installed, stopped the optimization pass and completed a normal
+development autoloader/package-discovery pass using a temporary ignored Composer
+manifest with optimization disabled and an identical copy of the lockfile. Both
+temporary files were removed; the original `composer.json` and lockfile hashes
+are unchanged. Composer reports nothing left to install/update/remove, Laravel
+package discovery succeeds, and all PHP platform requirements pass.
+
+Local runtime checks pass for the migrated columns, citation table, existing
+capstone slug backfill, Google SDK loading, and database queue configuration
+(660-second retry interval). Native Ghostscript/Tesseract OCR recognized a
+synthetic document without using any database or existing archive document.
+SMTP configuration was preserved; delivery was not exercised. Google client ID
+and Turnstile keys are unset, so those integrations are not enabled locally.
+The separate PaddleOCR environment and qpdf are absent; Redis/Ollama remain
+optional and disabled. No database-backed test suite was run against the local
+application database. Production status and all November 5 limitations remain
+unchanged.
+
+**Local setup complete.** Started the API, database queue worker and frontend
+with `start-local.ps1 -WithoutOcr`; all three process identities match their
+launcher receipts and remain running. Queue/frontend stderr logs are empty.
+Repeating the launcher reused all three existing processes. The launcher now
+prints the native OCR fallback instead of a PaddleOCR URL in this mode.
+
+HTTP smoke checks: frontend browser navigation and its transformed JavaScript
+entry returned 200; Laravel `/up` returned 200; Sanctum CSRF-cookie returned 204;
+anonymous `/api/v1/user` returned 401; registration challenge returned a signed
+token with a four-second minimum and Turnstile disabled. An initial frontend
+probe used `Accept: application/json`, causing Vite's expected 404; the corrected
+browser-navigation probe (`Accept: text/html`) passed. No login, signup, real
+document upload, notification email or end-to-end role acceptance was performed.
+After dependencies finished, original row/environment/file preservation checks
+passed again (five users, ten capstones, 113 original stored files). PowerShell
+syntax and Git whitespace checks passed; temporary Composer manifests/locks
+were removed and the dependency lockfiles remain unchanged.
+
+## 2026-11-06 — Cancel/minimize uploads and floating progress (local)
+
+Implemented the requested Upload Capstone PDF controls for admin, faculty and
+student. The shared picker starts an app-owned transfer; the activity modal
+provides Cancel upload and Close/X. Close/Escape/backdrop minimizes it to a
+floating upload icon with measured byte percentage, filename and current state.
+The request survives library unmounts and internal page navigation. Reopening
+restores the same progress and elapsed time. After upload, the floating activity
+polls queued/processing/completed/failed status and exposes Review details using
+the existing upload reference, without redirecting the user on completion.
+
+Cancel aborts the browser request; late responses/progress cannot overwrite a
+retry. The UI states that a request cancelled after bytes were sent may still
+finish server processing. Logout/account change clears the in-memory activity
+and cancels owned requests/polling. One upload is tracked at a time; reopening
+the picker while an activity exists reopens it instead of sending a duplicate.
+The review page shares status updates and resumes background polling on exit.
+No file/metadata is persisted in browser storage; full refresh/tab close is not
+a resumable upload operation. Backend, database and production are unchanged.
+
+Local verification at this checkpoint: 23 frontend tests passed (eight new
+upload-lifecycle tests covering minimize/unsubscribe, cancellation races, retry,
+duplicate prevention, polling, review ownership, expiry and account cleanup).
+Quiet ESLint and production build passed (833 modules). Headless Chrome with
+intercepted synthetic authentication/upload/status responses verified actual
+browser request cancellation, minimize/reopen, navigation to a different page,
+background completion without redirect and review handoff for all three roles.
+Light desktop and dark 390px mobile views were inspected. A mock category
+response initially used the wrong shape and caused a review-page crash; corrected
+the test mock to match the existing array API, with no category source change.
+Final verification completed November 7 (Asia/Manila): all three roles passed
+Tab focus containment, Escape minimization and the full browser flow. The dark
+390px mobile floating control and reopened activity dialog were checked. Browser
+probes never sent synthetic users/files to Laravel or used the application DB.
+Not deployed; real large-transfer and deployed end-to-end acceptance remain
+separate from these local checks.
+
+### Duplicate title guard (2026-11-07)
+
+Added a duplicate-title check that blocks Step 2 → Step 3 progression in the
+capstone upload wizard. Backend: new `GET /capstones/check-title?title=…`
+endpoint performs a case-insensitive lookup against the capstones table.
+Frontend: `ReviewExtractedDataPage.jsx` calls this endpoint when the user
+clicks "Next". If the title already exists the button shows a spinner, the
+title card turns red with an error message, and navigation is blocked. Editing
+the title clears the error. The backend `store()` unique rule remains as a
+second safety net. Route is registered once in the shared authenticated group
+so all roles (admin, faculty, student) use the same endpoint. Not deployed.
+
+### Adviser Pool removal (2026-11-07)
+
+Removed the admin Adviser Pool management page and all adviser-related features
+per user request. Changes (local only, not deployed):
+
+**Deleted files:**
+- `src/pages/admin/AdminAdvisers.jsx` — admin adviser pool page component
+- `app/Http/Controllers/Api/V1/AdviserController.php` — backend adviser controller
+
+**Backend:**
+- `routes/api.php` — removed adviser routes (`GET /advisers`, `PUT /advisers/{user}/availability`),
+  removed `GET /capstones/faculty-list` route, removed `AdviserController` import
+- `CapstoneController.php` — `getFacultyList()` method removed (done in prior session)
+
+**Frontend — routes & nav:**
+- `App.jsx` — removed `AdminAdvisers` lazy import and `/admin/advisers` route
+- `AdminLayout.jsx` — removed "Adviser Pool" nav item
+
+**Frontend — API layer:**
+- `api/admin.js` — removed `getFacultyList`, `getAdvisers`, `setAdviserAvailability` exports
+
+**Frontend — upload Step 3 (Additional Info pages):**
+- `AdminCapstoneAdditionalInfoPage.jsx` — removed adviser state, search, payload field, and JSX
+- `CapstoneAdditionalInfoPage.jsx` (faculty) — removed adviser SectionCard, search callback,
+  state variables, useEffect, and summary row; restructured Adviser+Summary grid to Summary-only
+- `StudentCapstoneAdditionalInfoPage.jsx` — same removals as faculty page
+
+**Frontend — edit modal:**
+- `EditCapstoneModal.jsx` — removed adviser state, search callback, useEffect, `getFacultyList`
+  import, `HiOutlineUser` import, `adviser_id` from update payload, and adviser JSX section
+
+**Preserved (read-only):**
+- Adviser name display on capstone detail/listing pages (CapstoneMainPage, visitor pages,
+  FacultyAssignedCapstones, etc.) — these show existing `adviser_id` data from the DB
+- Adviser filter on published/visitor capstone browse pages (PublishedCapstoneController,
+  VisitorCapstoneController) — read-only filter for existing data
+- DB columns (`adviser_id` on capstones, `adviser_available` on users) — left dormant
+- Backend `store()` validation for `adviser_id` (nullable) — harmless, accepts null
+
+**Verification:** `npx vite build` succeeds with no errors (`✓ built in 20.06s`).
+Backend route list no longer contains adviser management or faculty-list endpoints.
+
+
+## 2026-11-07 — Layouts, upload recovery and reference counting (in progress, local)
+
+Preserved the existing dirty worktree, including adviser removal and previous
+UI/upload work. Added responsive My Uploads defaults, Pending Approvals tables
+and switchers, four-column desktop own-upload/approval cards, and category
+visibility/grid controls in each role's repository page. New resumable transfer
+API saves encrypted 2 MiB chunks with owner checks, quota reservations, locked
+offset acknowledgement, idempotent finalization and a stable staged upload.
+Browser IndexedDB saves the selected file and activity for same-browser reload
+recovery; extraction reconnects to the existing queued job. Stable PDF upload
+references serialize final submission and return the original capstone on replay.
+
+Citation totals now query distinct saved inbound reference relationships plus
+copy events only. Copy events carry a unique per-user UUID for retry protection.
+APA/MLA remain; IEEE generation and controls are removed. Ranking queries exclude
+zero views and zero reference totals. Existing generation events remain stored
+but are excluded from the new total.
+
+Verification checkpoint: new guarded disposable local MySQL schema, separate
+schema-restricted test identity and random test APP_KEY; no tests target the
+application database. Both forward migrations applied there. Focused new tests
+passed (5 tests / 81 assertions); regression run including ownership, upload lock,
+approval, document access and visitor access passed (26 tests / 511 assertions).
+Frontend tests passed (30); production build passed with process-local
+VITE_API_BASE_URL=/api/v1. Browser cross-role checks are still running. An existing
+conditional-hook error in the review page was corrected by moving its title-check
+state hooks before the early return; final lint is pending. No application DB
+migration, production connection or deployment has occurred in this task.
+
+
+### Final local verification — November 7, 2026
+
+Implementation and local verification completed for the six layout/upload/count
+requests above. [Detailed behavior, runtime preparation and evidence](ui/2026-11-07-layout-upload-reference-update.md).
+
+- Frontend production build passed (843 modules), 32 frontend tests passed and
+  quiet ESLint passed after the review-page hook ordering correction.
+- Guarded disposable MySQL regression: **28 tests / 549 assertions passed**.
+  Includes a committed real database-queue delivery, independent worker
+  completion with deterministic extraction, repeated finalization/submission,
+  copy-event retries, relationship deduplication/self-link exclusion, ranking
+  thresholds, and existing document/visitor/approval/upload-lock protections.
+- Forced failure after staging rolls back the DB record and deletes the unclaimed
+  encrypted PDF; retry uses confirmed chunks and leaves one final document.
+- Chrome synthetic-API browser checks passed across admin/faculty/student/visitor:
+  desktop/mobile defaults, all category/navigation grid combinations, no mobile
+  page overflow, upload/extraction reload recovery for uploading roles, clipboard
+  success/failure, citation opening/format/download without counts, and no IEEE.
+  Browser probes did not send data to the application DB. Screenshots inspected.
+- Chatbot Most Referenced now uses the same copy-plus-relationship total; zero-view
+  analytics/advisory results are excluded. Dashboard wording is now Most Cited.
+- PHP syntax passed for 18 changed/new PHP files; Git whitespace checks passed.
+
+The new migrations were applied only in the disposable schema. The existing local
+application schema and production were not migrated or deployed. Before serving
+the update, a maintainer must verify a target backup, apply both forward migrations,
+keep the queue worker running and enable the Laravel scheduler for hourly expired
+chunk cleanup. Recovery is within the same browser/origin/account and requires
+site storage; interrupted transfers expire after 24 hours. Real 128 MiB transfers,
+OCR quality/performance and deployed end-to-end behavior remain unverified by this
+local synthetic suite. Production APP_KEY, accounts and original private documents
+were not accessed or changed. Existing dirty worktree changes are retained.
+
+
+## 2026-11-07 — Runtime schema repair and interface controls (in progress)
+
+Confirmed local configured MySQL resolves to `eduarchivedb`; upload_transfers was
+missing and both November 7 migrations were pending. Faculty role, faculty_program,
+approval and verified-email columns were present. Fresh private backup verified
+under ignored `.local/local-update-backup-20261107-082948`: SQL completion/hash,
+environment and 117 stored-file copies. Applied the two pending forward migrations
+through the guarded local maintenance runner. Original row values/passwords,
+APP_KEY/environment and all original file hashes matched afterward; five users
+and ten capstones retained. No production connection or deployment occurred.
+
+Faculty frontend previously stored backend field errors without exposing errors
+from a hidden earlier step. Added field-to-step routing and an always-visible
+validation message, matching role-specific payloads and ID/program checks. Backend
+faculty/manual/Google tests pass in the guarded disposable schema (27 tests / 250
+assertions including auth and upload recovery at this checkpoint). Faculty retains
+verification and approval gates. A generic database API failure response and
+frontend SQL/HTML filtering protect readable upload failures.
+
+Shared category heading/icon control, shared approval icon actions and four-column
+Assigned Capstones grid are implemented. Frontend tests pass (36); initial quiet
+lint passes. Browser interface/registration and real isolated HTTP upload/extraction
+verification are still pending at this checkpoint.
+
+
+### Final local verification — runtime repair and interface controls
+
+All five requested changes are implemented and locally verified. See
+[the detailed repair/evidence record](ui/2026-11-07-runtime-registration-controls.md).
+
+The configured local `eduarchivedb` now contains both November 7 migrations and
+all required transfer columns. Immediate post-migration preservation passed;
+final hashes match the original environment/APP_KEY and all 117 original files.
+Five existing accounts and ten capstones remain. Existing rows match except an
+account's activity/update timestamps, which were retained.
+
+Faculty validation errors now open their associated step and show a global alert.
+A real browser exposed and verified a second fix: Continue prevents its default
+click action so switching into a submit-button step cannot submit retained
+credentials automatically. Faculty program-only registration, code verification,
+duplicate-username recovery, explicit submission and approval success message
+passed through a separate HTTP API. Approval and verification rules remain intact.
+
+Category icon/heading controls passed in all four panels; approval icon buttons
+passed preview/confirmation/cancel checks in Admin/Faculty table and card layouts.
+Assigned Capstones passed four/two/one-column desktop/tablet/mobile checks.
+
+An actual roughly 5 MiB known synthetic PDF passed server encryption, lost first
+chunk acknowledgement, refresh resume at the confirmed 2 MiB offset, real queue
+extraction, queued/processing refresh and expected-title restoration. One transfer/
+upload, no duplicate capstone and no pending/failed job remained. The isolated
+helper, its accounts/upload records/files and cached test configuration were
+cleaned up. Full 128 MiB transfers and production behavior remain separate.
+
+Final checks: 36 frontend tests, quiet lint and production build (846 modules)
+passed; guarded disposable-MySQL regression passed **49 tests / 686 assertions**.
+Changed PHP syntax and Git whitespace checks passed. Nothing staged or deployed.
+
+Verification correction: an initial HTTP helper resolved a Windows absolute cache
+path incorrectly and created one owned synthetic email-verification row in the
+local application DB. Stopped it, removed only that row, verified no marker remains,
+and added an actual HTTP database/storage/mail-environment assertion before further
+mutations. Subsequent browser mutations and all database-backed test suites used
+the schema-restricted disposable target. Do not describe the initial attempt as
+isolated or claim that account activity timestamps stayed byte-identical.

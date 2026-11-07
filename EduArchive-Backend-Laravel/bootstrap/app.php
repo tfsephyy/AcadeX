@@ -36,6 +36,18 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
+        $exceptions->render(function (\Illuminate\Database\QueryException $exception, Request $request) {
+            if (!$request->is('api/*') && !$request->expectsJson()) return null;
+            // Keep SQL, bindings and connection details in private server logs,
+            // including when APP_DEBUG is enabled on a development workstation.
+            $upload = $request->is('api/v1/uploads/*', 'api/v1/*/capstones/upload*');
+            return response()->json([
+                'success' => false,
+                'message' => $upload
+                    ? 'Uploads are temporarily unavailable. Please try again shortly or contact the administrator.'
+                    : 'The service could not complete your request. Please try again shortly or contact the administrator.',
+            ], 503);
+        });
         // ValidatePostSize runs before route middleware and throws this when the
         // multipart body is larger than post_max_size. Return the same useful
         // JSON/413 shape as RejectOversizedUploads instead of Laravel's generic

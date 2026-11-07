@@ -16,7 +16,7 @@ import Chatbot from '../Chatbot';
 import WorkspaceSidebar from '../WorkspaceSidebar';
 
 const navItems = [
-    { to: '/visitor/capstones', label: 'Uploaded Capstones', icon: HiOutlineBookOpen },
+    { to: '/visitor/capstones', label: 'Capstone Library', icon: HiOutlineBookOpen },
 ];
 
 export default function VisitorLayout({ children }) {

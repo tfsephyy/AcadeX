@@ -149,3 +149,123 @@ or preparation errors fall back to the original. Private plaintext temporaries
 are removed after processing. Deployment must install qpdf separately; this is
 not a Composer dependency. Preview validity and page counts were checked on the
 live document, but PDF.js first-page latency remains unresolved at publication.
+
+## D-011 — Existing local checkout setup after pull (2026-11-06)
+
+The Josephh workstation's private environment identifies a local loopback MySQL
+database named `EduArchiveDB`, containing existing users and capstones. Preserve
+that environment and database rather than substituting the previous workstation's
+`acadex_local` schema. Install dependencies from the current locks and apply only
+pending forward migrations after a verified private database/environment/storage
+backup. The local launcher uses the database queue with a 600-second worker
+timeout and the configured 660-second retry interval, and explicit 128 MiB upload
+limits. External integrations still require their own configuration; local setup
+does not authorize or establish a production deployment.
+
+The local dependency installation uses the standard development autoloader after
+the large Google SDK's optimized scan proved excessively slow. A temporary
+ignored Composer manifest disabled optimization for that installation only;
+the original project manifest and lockfile were retained byte-for-byte and the
+temporary files were removed. This local workaround does not change the release
+configuration or installed dependency versions.
+
+## D-012 — App-owned upload activity and explicit cancellation (2026-11-06)
+
+Upload request ownership moves from the route-mounted modal hook to one
+app-level provider under AuthProvider and outside the routed Suspense boundary.
+The admin/faculty/student pickers share one modal. Closing or changing pages
+removes only its presentation; explicit Cancel aborts the transfer. A generation
+guard prevents late progress/responses from a cancelled request overwriting a
+retry or a different account's activity. In-memory state is cleared on logout,
+account change or app teardown, and no filenames/files are persisted in browser
+storage.
+
+One floating control shows transfer percentage only when measured totals exist,
+and queued/processing/completed/failed status after the server returns a stable
+upload ID. Polling uses the existing owner-protected status endpoint, pauses
+while that upload's review page owns polling, and backs off on transient errors.
+Completion preserves the current route; Review details opens the retained
+reference and extracted data. Cancellation after the file was sent is labelled
+as cancelling the request, since server-side storage/processing may already be
+running. This change adds no server cancellation endpoint or schema migration.
+
+## D-013 — Browser-local PDF progress and shared notifications (2026-11-07)
+
+Store only an integer PDF page in localStorage under a versioned key containing
+the canonical capstone ID, original/IMRAD type and account ID (or visitor scope).
+Use canonical IDs so numeric and slug bookmarks share progress. Restore only
+after page placeholders exist; observe the active viewer's scroll container,
+debounce writes and flush on hiding/navigation. Capture page selection during
+scroll rather than measuring DOM after it has been removed or replaced. Mount a
+separate reader for each canonical document/type when switching PDFs. The hidden inline viewer stops
+writing while fullscreen owns progress. Storage denial must not prevent viewing.
+Progress is local to a browser, not server-synchronized; no documents, titles,
+tokens or account credentials are stored in these entries.
+
+Reuse the Admin workspace shell for Faculty so profile, notification bell,
+popup and read/unread controls stay consistent. Keep existing API recipient
+scoping, role-specific navigation and the direct Faculty notification page.
+Navigation and copyright wording are display-only; routes, permissions and
+stored copyright values remain unchanged. No new schema migration is required.
+
+
+## D-014 — Resumable transfers and copy/reference totals (2026-11-07)
+
+Supersedes D-012's in-memory-only/full-refresh boundary and D-006's generation
+metric. New upload pickers use owner-scoped UUID transfers with encrypted 2 MiB
+chunks. Server row locks govern offsets and finalize each transfer once into the
+existing DocumentUpload/queued extraction workflow. Browser IndexedDB retains
+the selected PDF until the stable upload reference is saved, then removes file
+bytes. Account changes/logout/dismissal clear the browser checkpoint. Reloads
+reuse the same transfer; browser Web Locks coordinate tabs where available.
+No plaintext chunk is persisted server-side; finalization uses a bounded private
+temporary file, removed in finally. Expired chunks have an explicit hourly prune
+command; deployments must run Laravel's scheduler as well as the queue worker.
+
+Count saved inbound pivot relationships plus citation_events with action=copy.
+The pivot already has a unique source/target pair; copies gain a unique per-user
+UUID to make acknowledgement retries safe. Opening, formatting, viewing and
+downloading citations have no counting side effects. Historical generation events
+remain intact but are excluded. Both rankings and detail totals use the same SQL
+expression, independent of the viewer's visibility of the citing source. The
+legacy citation_generations API key remains a compatibility alias for the new
+total; visible labels describe saved references and successful copies. IEEE is
+removed, with APA/MLA retained. The browser observes clipboard success before
+sending a copy event; the server cannot verify external use of the copied text.
+
+
+D-014 verification follow-up: delete finalized transfer rows with their parent
+DocumentUpload (cascade) rather than setting upload_id null, avoiding conflicting
+user/document cascade paths. If a finalization transaction rolls back after a PDF
+was staged, delete that unclaimed encrypted PDF and preserve confirmed chunks for
+retry. A forced-failure test and a real committed database-queue test passed in
+the isolated schema. The detailed November 7 evidence lists the release prerequisites.
+
+
+## D-015 — Repair the configured local schema and reveal registration errors (2026-11-07)
+
+The prior source-only update left two forward migrations unapplied in the active
+local application schema. This explicit repair request authorizes applying them
+after a fresh verified private backup, without resetting/seeding the DB or changing
+the application key. Database tests and synthetic browser workflows must still
+use the separate schema-restricted disposable database, never application data.
+
+Keep Faculty's existing lowercase role, MBC-format institutional ID, BSIT/BSCpE
+program, verified email and administrator approval rules. Faculty does not require
+student year/section. Return rejected fields to the appropriate visible step and
+show the first actionable message so backend validation cannot appear silent.
+Do not suppress real validation or auto-approve Faculty to make signup pass.
+
+
+D-015 follow-up: Continue explicitly cancels its click default action before
+advancing steps. React can reuse the same DOM button with type=submit during the
+transition; retained credentials must never cause implicit final submission.
+Real-browser error correction and explicit Faculty submission passed.
+
+Verification-helper lesson: Laravel's Windows cache-path resolution may treat a
+drive-qualified path as relative unless configured otherwise. Use a verified
+relative cache path (or a helper-only absolute prefix), and assert the HTTP app's
+actual test database/storage/mail configuration before any mutation. One initial
+synthetic verification row reached the local application DB and was removed;
+the detailed report records cleanup and the preservation boundary. No production
+access or account-approval relaxation was used.

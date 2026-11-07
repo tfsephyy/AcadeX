@@ -10,7 +10,7 @@ use App\Models\Capstone;
  */
 class CitationService
 {
-    public const FORMATS = ['apa', 'mla', 'ieee'];
+    public const FORMATS = ['apa', 'mla'];
 
     public function format(Capstone $capstone, string $format): string
     {
@@ -21,7 +21,6 @@ class CitationService
 
         return match ($format) {
             'mla' => $this->mla($authors, $title, $school, $year),
-            'ieee' => $this->ieee($authors, $title, $school, $year),
             default => $this->apa($authors, $title, $school, $year),
         };
     }
@@ -30,7 +29,6 @@ class CitationService
     {
         return match ($format) {
             'mla' => 'MLA 9th Edition',
-            'ieee' => 'IEEE',
             default => 'APA 7th Edition',
         };
     }
@@ -97,21 +95,4 @@ class CitationService
         return "{$authorText}. {$title}. {$school}, {$year}. Unpublished capstone project.";
     }
 
-    private function ieee(array $authors, string $title, string $school, $year): string
-    {
-        $names = array_map(function (array $author) {
-            $initials = $this->initials($author['first']);
-            return $initials === '' ? $author['last'] : $initials.' '.$author['last'];
-        }, $authors);
-
-        if (count($names) === 1) {
-            $authorText = $names[0];
-        } elseif (count($names) === 2) {
-            $authorText = $names[0].' and '.$names[1];
-        } else {
-            $authorText = implode(', ', array_slice($names, 0, -1)).', and '.end($names);
-        }
-
-        return "[1] {$authorText}, \"{$title},\" unpublished capstone project, {$school}, {$year}.";
-    }
 }

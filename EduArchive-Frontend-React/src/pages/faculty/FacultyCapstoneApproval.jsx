@@ -1,11 +1,12 @@
+import PendingApprovalActions from '../../components/PendingApprovalActions';
+import { useResponsiveDisplayMode } from '../../components/useResponsiveDisplayMode';
+import LayoutSwitcher from '../../components/LayoutSwitcher';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
     HiOutlineSearch,
     HiOutlineFilter,
-    HiOutlineCheck,
     HiOutlineX,
-    HiOutlineEye,
     HiOutlineDocument,
     HiOutlineUser,
     HiOutlineCalendar,
@@ -26,6 +27,7 @@ export default function FacultyCapstoneApproval() {
     // State
     const [capstones, setCapstones] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [displayMode, setDisplayMode] = useResponsiveDisplayMode();
     const [selectedCapstone, setSelectedCapstone] = useState(null);
     const [showViewModal, setShowViewModal] = useState(false);
 
@@ -152,6 +154,8 @@ export default function FacultyCapstoneApproval() {
                 <p className="text-sm text-gray-500 mt-1">Review and approve capstones where you are the adviser</p>
             </div>
 
+            <LayoutSwitcher value={displayMode} onChange={setDisplayMode} />
+
             {/* Search & Filters */}
             <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 space-y-3">
                 <div className="flex items-center gap-3">
@@ -238,7 +242,19 @@ export default function FacultyCapstoneApproval() {
                 />
             ) : (
                 <div className="bg-white rounded-xl shadow-sm border border-gray-100">
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-5">
+                    {displayMode === 'table' ? <div className="overflow-x-auto">
+                        <table className="w-full text-sm text-left">
+                            <thead className="bg-gray-50 text-gray-600"><tr>{['Title', 'Uploaded by', 'Program', 'Year', 'Status', 'Actions'].map(label => <th key={label} className="px-4 py-3 font-semibold">{label}</th>)}</tr></thead>
+                            <tbody>{capstones.map(cap => <tr key={cap.id} className="border-t border-gray-100">
+                                <td className="px-4 py-3 font-medium text-gray-900">{cap.title}</td>
+                                <td className="px-4 py-3">{cap.student?.name || 'Unknown'}</td>
+                                <td className="px-4 py-3">{cap.student?.program || cap.program || 'N/A'}</td>
+                                <td className="px-4 py-3">{cap.year || 'N/A'}</td>
+                                <td className="px-4 py-3 text-yellow-700">Pending</td>
+                                <td className="px-4 py-3"><PendingApprovalActions capstone={cap} onView={handleView} onApprove={handleApprove} onReject={handleReject} /></td>
+                            </tr>)}</tbody>
+                        </table>
+                    </div> : <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 p-5">
                         {capstones.map((cap) => (
                             <div
                                 key={cap.id}
@@ -270,34 +286,10 @@ export default function FacultyCapstoneApproval() {
                                     </div>
                                 </div>
 
-                                <div className="flex items-center gap-2">
-                                    <button aria-label="View"
-                                        onClick={() => handleView(cap)}
-                                        className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                                        title="View"
-                                    >
-                                        <HiOutlineEye className="w-4 h-4" />
-                                    </button>
-                                    <button
-                                        onClick={() => handleApprove(cap)}
-                                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors"
-                                        title="Approve"
-                                    >
-                                        <HiOutlineCheck className="w-3.5 h-3.5" />
-                                        Approve
-                                    </button>
-                                    <button
-                                        onClick={() => handleReject(cap)}
-                                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors"
-                                        title="Reject"
-                                    >
-                                        <HiOutlineX className="w-3.5 h-3.5" />
-                                        Reject
-                                    </button>
-                                </div>
+                                <PendingApprovalActions capstone={cap} onView={handleView} onApprove={handleApprove} onReject={handleReject} />
                             </div>
                         ))}
-                    </div>
+                    </div>}
 
                     <Pagination 
                         paginationData={pagination}
@@ -319,7 +311,7 @@ export default function FacultyCapstoneApproval() {
                 onViewFull={() => {
                     setShowViewModal(false);
                     if (selectedCapstone?.id) {
-                        navigate(`/faculty/capstones/${selectedCapstone.id}`);
+                        navigate(`/faculty/capstones/${selectedCapstone.slug || selectedCapstone.id}`);
                     }
                 }}
             />

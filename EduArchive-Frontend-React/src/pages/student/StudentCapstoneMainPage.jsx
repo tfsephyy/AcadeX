@@ -14,6 +14,7 @@ import Loading from '../../components/Loading';
 import PdfLoadState from '../../components/PdfLoadState';
 import { pdfjs } from 'react-pdf';
 import Document from '../../components/ProgressivePdfDocument';
+import PdfZoomControls from '../../components/PdfZoomControls';
 import ViewportPdfPage from '../../components/ViewportPdfPage';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
@@ -52,6 +53,7 @@ export default function StudentCapstoneMainPage() {
     const [fullscreen, setFullscreen] = useState(false);
     const [fsNumPages, setFsNumPages] = useState(null);
     const [fsWidth, setFsWidth] = useState(900);
+    const [fsZoom, setFsZoom] = useState(1);
     const pdfContainerRef = useRef(null);
     const fsContainerRef = useRef(null);
     const navigateToPdfPage = ({ pageNumber, pageIndex }) => {
@@ -442,7 +444,7 @@ export default function StudentCapstoneMainPage() {
                     <div className="flex-1 min-h-0 rounded-xl bg-gray-100 overflow-y-auto custom-scrollbar">
                         {activePdf === 'capstone' ? (
                             pdfUrl && pdfStatus !== 'error' ? (
-                                <Document
+                                <Document key={String(capstone?.id) + ":" + activePdf} documentId={capstone?.id ? `${capstone.id}:${activePdf}` : null} progressActive={!fullscreen}
                                     onItemClick={navigateToPdfPage}
                                     file={pdfFile}
                                     onLoadProgress={onPdfLoadProgress}
@@ -472,7 +474,7 @@ export default function StudentCapstoneMainPage() {
                                 />
                             )
                         ) : imradUrl ? (
-                            <Document
+                            <Document key={String(capstone?.id) + ":" + activePdf} documentId={capstone?.id ? `${capstone.id}:${activePdf}` : null} progressActive={!fullscreen}
                                     onItemClick={navigateToPdfPage}
                                 file={imradUrl}
                                 onLoadSuccess={({ numPages }) => setNumPages(numPages)}
@@ -501,14 +503,15 @@ export default function StudentCapstoneMainPage() {
             {fullscreen && (
                 <div className="fixed inset-0 z-[999] flex flex-col bg-gray-950/95 backdrop-blur-sm">
                     {/* FS header */}
-                    <div className="shrink-0 flex items-center justify-between gap-4 px-6 py-3 bg-gray-900 border-b border-gray-700 shadow-lg">
+                    <div className="pdf-fullscreen-header shrink-0 flex flex-wrap items-center justify-between gap-3 px-4 py-3 bg-gray-900 border-b border-gray-700 shadow-lg">
                         <div className="flex items-center gap-3 min-w-0">
                             <span className="text-white font-semibold text-sm truncate max-w-sm lg:max-w-lg">{capstone.title}</span>
                             {fsNumPages && (
                                 <span className="shrink-0 text-gray-400 text-xs">{fsNumPages} page{fsNumPages !== 1 ? 's' : ''}</span>
                             )}
                         </div>
-                        <div className="flex items-center gap-2 shrink-0">
+                        <div className="flex flex-wrap items-center gap-2 shrink-0">
+                            <PdfZoomControls zoom={fsZoom} onChange={setFsZoom} />
                             <button
                                 onClick={() => setFullscreen(false)}
                                 className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-300 bg-gray-800 border border-gray-600 rounded-lg hover:bg-gray-700 transition-colors"
@@ -521,9 +524,9 @@ export default function StudentCapstoneMainPage() {
 
                     {/* FS scrollable PDF area */}
                     <div ref={fsContainerRef} className="flex-1 min-h-0 overflow-y-auto" style={{ scrollbarColor: '#4b5563 #111827' }}>
-                        <div className="flex justify-center py-6 px-4">
+                        <div className="flex justify-center min-w-max py-6 px-4">
                             {(activePdf === 'capstone' ? (pdfUrl && pdfStatus !== 'error') : imradUrl) ? (
-                                <Document
+                                <Document key={String(capstone?.id) + ":" + activePdf} documentId={capstone?.id ? `${capstone.id}:${activePdf}` : null}
                                     onItemClick={navigateToPdfPage}
                                     file={activePdf === 'capstone' ? pdfFile : imradUrl}
                                     onLoadProgress={activePdf === 'capstone' ? onPdfLoadProgress : undefined}
@@ -536,7 +539,7 @@ export default function StudentCapstoneMainPage() {
                                         <ViewportPdfPage
                                             key={`fs_page_${i + 1}`}
                                             loadText={loadAllText} pageNumber={i + 1}
-                                            width={fsWidth}
+                                            width={Math.max(1, Math.round(fsWidth * fsZoom))}
                                             className="mb-3 shadow-2xl"
                                             renderTextLayer={true}
                                             renderAnnotationLayer={true}
@@ -616,7 +619,7 @@ function StatInline({ icon, value, label }) {
 const COPYRIGHT_BADGE_STYLES = {
     copyrighted:  { bg: 'bg-purple-100', text: 'text-purple-700', border: 'border-purple-300', dot: 'bg-purple-500', label: 'Copyrighted' },
     pending:      { bg: 'bg-amber-100',  text: 'text-amber-700',  border: 'border-amber-300',  dot: 'bg-amber-500',  label: 'Pending' },
-    unprotected:  { bg: 'bg-gray-100',   text: 'text-gray-500',   border: 'border-gray-300',   dot: 'bg-gray-400',   label: 'Unprotected' },
+    unprotected:  { bg: 'bg-gray-100',   text: 'text-gray-500',   border: 'border-gray-300',   dot: 'bg-gray-400',   label: 'Not Yet Copyrighted' },
 };
 
 function CopyrightBadge({ status }) {

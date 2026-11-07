@@ -204,6 +204,25 @@ class Capstone extends Model
         return $this->hasMany(CitationEvent::class);
     }
 
+    public static function referenceTotalExpression(): string
+    {
+        // Counts are independent of the current viewer's visibility scope.
+        // The pivot's unique pair counts a saved relationship only once.
+        return "(SELECT COUNT(*) FROM capstone_references WHERE referenced_capstone_id = capstones.id AND capstone_id <> capstones.id)"
+            ." + (SELECT COUNT(*) FROM citation_events WHERE citation_events.capstone_id = capstones.id AND action = 'copy')";
+    }
+
+    public function scopeWithReferenceTotal($query)
+    {
+        if ($query->getQuery()->columns === null) $query->select('capstones.*');
+        return $query->selectRaw('('.self::referenceTotalExpression().') AS reference_count');
+    }
+
+    public function referenceTotal(): int
+    {
+        return (int) static::withoutGlobalScopes()->whereKey($this->id)->withReferenceTotal()->first()->reference_count;
+    }
+
     // --- Scopes ---
 
     /**

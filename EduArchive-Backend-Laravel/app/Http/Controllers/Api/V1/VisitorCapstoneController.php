@@ -193,6 +193,7 @@ class VisitorCapstoneController extends Controller
         $imradOnly    = !$canSeePdf && !empty($capstone->imrad_path);
 
         $data = $capstone->toArray();
+        $data['reference_count'] = $capstone->referenceTotal();
         $data['visitor_can_see_pdf'] = $canSeePdf;
         $data['visitor_imrad_only']  = $imradOnly;
         $data['is_bookmarked']       = $request->user()

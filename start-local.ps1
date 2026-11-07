@@ -32,8 +32,8 @@ function Start-OwnedService($Name, $Executable, $Arguments, $Directory, $Port = 
 $php = (Get-Command php.exe).Source
 $node = (Get-Command node.exe).Source
 $router = Join-Path $backend 'vendor\laravel\framework\src\Illuminate\Foundation\resources\server.php'
-Start-OwnedService 'api' $php @('-S', '127.0.0.1:8000', ('"' + $router + '"')) (Join-Path $backend 'public') 8000
-Start-OwnedService 'queue' $php @(('"' + (Join-Path $backend 'artisan') + '"'), 'queue:work', '--tries=1', '--timeout=120') $backend
+Start-OwnedService 'api' $php @('-d', 'upload_max_filesize=128M', '-d', 'post_max_size=140M', '-d', 'memory_limit=512M', '-S', '127.0.0.1:8000', ('"' + $router + '"')) (Join-Path $backend 'public') 8000
+Start-OwnedService 'queue' $php @('-d', 'memory_limit=512M', ('"' + (Join-Path $backend 'artisan') + '"'), 'queue:work', '--sleep=3', '--tries=3', '--timeout=600') $backend
 Start-OwnedService 'frontend' $node @(('"' + (Join-Path $frontend 'node_modules\vite\bin\vite.js') + '"'), '--host', 'localhost', '--port', '5173', '--strictPort') $frontend 5173
 if (-not $WithoutOcr) {
     $ocr = Join-Path $backend 'ocr-service'
@@ -41,5 +41,10 @@ if (-not $WithoutOcr) {
     if (-not (Test-Path $python)) { throw 'OCR virtual environment is missing. See SETUP.md.' }
     Start-OwnedService 'ocr' $python @('-m', 'uvicorn', 'main:app', '--host', '127.0.0.1', '--port', '8001') $ocr 8001
 }
-Write-Host 'Frontend: http://localhost:5173 | API: http://localhost:8000 | OCR: http://localhost:8001/docs'
+Write-Host 'Frontend: http://localhost:5173 | API: http://localhost:8000'
+if ($WithoutOcr) {
+    Write-Host 'OCR: native Ghostscript/Tesseract fallback'
+} else {
+    Write-Host 'OCR: http://localhost:8001/docs'
+}
 Write-Host 'Service logs and process receipts are in .local. MySQL must be running in Laragon.'

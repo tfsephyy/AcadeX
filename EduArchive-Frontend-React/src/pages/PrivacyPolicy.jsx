@@ -15,7 +15,7 @@ export default function PrivacyPolicy() {
           <li><strong>Google sign-in information:</strong> when you choose Google, Acadex receives and verifies the Google ID token, then uses your verified email, name, and Google account identifier to create or access your Acadex account. Acadex does not request access to Gmail, Drive, contacts, or other Google services.</li>
           <li><strong>Repository information:</strong> capstone titles, author and adviser details, abstracts, keywords, uploaded PDF files, review and approval information, and related notifications.</li>
           <li><strong>Security and service information:</strong> sign-in and verification events, account changes, audit records, and limited request or device information used to protect accounts, prevent abuse, and troubleshoot the service.</li>
-          <li><strong>Essential browser storage:</strong> session and security cookies needed for sign-in, plus preferences such as your selected theme.</li>
+          <li><strong>Browser storage:</strong> sign-in and security cookies, theme and reading preferences, and temporary upload recovery data. To resume after a reload, your selected PDF stays in this browser until transfer completes or you dismiss it or sign out. Pending citation-copy receipts may be retained until the service confirms them.</li>
         </ul>
       </section>
 

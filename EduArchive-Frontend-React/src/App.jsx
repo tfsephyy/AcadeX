@@ -8,6 +8,7 @@ import { ChatbotProvider } from './context/ChatbotContext'
 import ProtectedRoute from './components/ProtectedRoute'
 import GuestRoute from './components/GuestRoute'
 import Landing from './pages/Landing'
+import CapstoneUploadProvider from './components/CapstoneUploadProvider'
 const Login = lazy(() => import('./pages/Login'))
 const Register = lazy(() => import('./pages/Register'))
 const PrivacyPolicy = lazy(() => import('./pages/PrivacyPolicy'))
@@ -26,7 +27,6 @@ const PublishedCapstones = lazy(() => import('./pages/admin/PublishedCapstones')
 const AdminProfile = lazy(() => import('./pages/admin/AdminProfile'))
 const ActivityLogs = lazy(() => import('./pages/admin/ActivityLogs'))
 const CapstoneApproval = lazy(() => import('./pages/admin/CapstoneApproval'))
-const AdminAdvisers = lazy(() => import('./pages/admin/AdminAdvisers'))
 
 // Faculty pages
 const FacultyLayout = lazy(() => import('./components/faculty/FacultyLayout'))
@@ -128,6 +128,7 @@ function App() {
         <NotificationProvider>
           <AuthProvider>
             <ChatbotProvider>
+              <CapstoneUploadProvider>
               <Suspense fallback={<Loading text="Loading page…" />}><Routes>
                 {/* Public landing page */}
                 <Route path="/" element={<Landing />} />
@@ -143,7 +144,6 @@ function App() {
 
                 {/* Admin routes */}
                 <Route path="/admin/dashboard" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
-                <Route path="/admin/advisers" element={<AdminRoute><AdminAdvisers /></AdminRoute>} />
                 <Route path="/admin/capstones/:id" element={<AdminRoute><CapstoneMainPage /></AdminRoute>} />
                 <Route path="/admin/capstone-library" element={<AdminRoute><CapstoneLibrary /></AdminRoute>} />
                 <Route path="/admin/capstone-library/review-data" element={<AdminBareRoute><ReviewExtractedDataPage nextPath="/admin/capstone-library/upload-details" backPath="/admin/capstone-library" /></AdminBareRoute>} />
@@ -185,6 +185,7 @@ function App() {
                 <Route path="/visitor" element={<Navigate to="/visitor/capstones" replace />} />
                 <Route path="*" element={<NotFound />} />
               </Routes></Suspense>
+              </CapstoneUploadProvider>
             </ChatbotProvider>
           </AuthProvider>
         </NotificationProvider>

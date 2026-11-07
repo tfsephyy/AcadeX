@@ -15,8 +15,8 @@ import Chatbot from '../Chatbot';
 import WorkspaceSidebar from '../WorkspaceSidebar';
 
 const navItems = [
-    { to: '/student/uploads', label: 'Uploaded Capstones', icon: HiOutlineBookOpen },
-    { to: '/student/capstone-library', label: 'My Capstone Library', icon: HiOutlineLibrary },
+    { to: '/student/uploads', label: 'Capstone Library', icon: HiOutlineBookOpen },
+    { to: '/student/capstone-library', label: 'My Uploads', icon: HiOutlineLibrary },
 ];
 
 export default function StudentLayout({ children }) {

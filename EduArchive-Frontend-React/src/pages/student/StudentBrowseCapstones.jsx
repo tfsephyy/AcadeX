@@ -155,7 +155,7 @@ export default function StudentBrowseCapstones() {
                     {capstones.map(capstone => (
                         <div key={capstone.id}
                             className="bg-white rounded-xl border border-gray-200 p-5 hover:shadow-md transition-shadow cursor-pointer"
-                            onClick={() => navigate(`/student/capstones/${capstone.id}`)}
+                            onClick={() => navigate(`/student/capstones/${capstone.slug || capstone.id}`)}
                         >
                             <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
                                 <div className="flex-1 min-w-0">

@@ -5,10 +5,12 @@
  */
 export function getApiErrorMessage(error, fallback = 'Something went wrong. Please try again.') {
   const data = error?.response?.data
+  const readable = value => typeof value === 'string' && value.trim()
+    && !/SQLSTATE\[|(?:Illuminate\\|PDOException|QueryException)|<!doctype|<html[\s>]/i.test(value)
 
-  if (typeof data === 'string' && data.trim()) return data.trim()
+  if (readable(data)) return data.trim()
 
-  if (data && typeof data.message === 'string' && data.message.trim()) {
+  if (data && readable(data.message)) {
     return data.message.trim()
   }
 
@@ -16,7 +18,7 @@ export function getApiErrorMessage(error, fallback = 'Something went wrong. Plea
   if (errors && typeof errors === 'object') {
     for (const value of Object.values(errors)) {
       const first = Array.isArray(value) ? value.find(item => typeof item === 'string' && item.trim()) : value
-      if (typeof first === 'string' && first.trim()) return first.trim()
+      if (readable(first)) return first.trim()
     }
   }
 

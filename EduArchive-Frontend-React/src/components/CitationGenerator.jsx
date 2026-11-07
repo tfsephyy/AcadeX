@@ -1,52 +1,22 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { HiOutlineClipboardCopy, HiOutlineDownload, HiOutlineDocumentText } from 'react-icons/hi';
 import api from '../api/axios';
+import { useAuth } from '../context/useAuth';
+import { recordCitationCopy, flushCitationCopies } from './citationCopyEvents';
 
-/**
- * CitationGenerator — APA 7th, MLA 9th and IEEE citations for capstones.
- *
- * The backend formatter is the source of truth when reachable; a local
- * fallback keeps the tool usable offline. Successful generations are recorded
- * server-side and labelled "citation generations", never as external citations.
- */
 export default function CitationGenerator({ capstone }) {
-    const [tab, setTab] = useState('apa'); // 'apa' | 'mla' | 'ieee'
+    const [tab, setTab] = useState('apa'); // APA or MLA
     const [copied, setCopied] = useState(false);
-    const [open, setOpen] = useState(false);
-    const [serverCitations, setServerCitations] = useState({});
     const [generationCount, setGenerationCount] = useState(
-        Number.isFinite(Number(capstone?.citation_generations)) ? Number(capstone.citation_generations) : null
+        Number.isFinite(Number(capstone?.reference_count)) ? Number(capstone.reference_count) : null
     );
-    const tracked = useRef(new Set());
-
-    const capstoneKey = capstone?.slug || capstone?.id;
-    const otherKey = capstone?.id || capstone?.slug;
-
+    const { user } = useAuth();
     useEffect(() => {
-        if (!open || !capstoneKey) return;
-        const format = tab;
-        if (tracked.current.has(format)) return;
-        tracked.current.add(format);
-
-        let cancelled = false;
-        api.post(`/capstones/${encodeURIComponent(capstoneKey)}/citation`, { format, action: 'generate' })
-            .then(res => {
-                if (cancelled) return;
-                const data = res.data?.data || {};
-                if (data.citation) {
-                    setServerCitations(prev => ({ ...prev, [format]: data.citation }));
-                }
-                if (Number.isFinite(Number(data.citation_generations))) {
-                    setGenerationCount(Number(data.citation_generations));
-                }
-            })
-            .catch(() => {
-                // Local formatting remains available; tracking is best-effort.
-                tracked.current.delete(format);
-            });
-
-        return () => { cancelled = true; };
-    }, [open, tab, capstoneKey, otherKey]);
+        const flush = () => { void flushCitationCopies(api, user?.id); };
+        flush();
+        window.addEventListener('online', flush);
+        return () => window.removeEventListener('online', flush);
+    }, [user?.id]);
 
     if (!capstone) return null;
 
@@ -135,35 +105,19 @@ export default function CitationGenerator({ capstone }) {
 
     const mlaCitation = `${getMlaAuthors()}. ${toTitleCase(title)}. ${school}, ${year}. Unpublished capstone project.`;
 
-    // ── IEEE ────────────────────────────────────────────
-    const formatIeeeAuthor = (author) => {
-        const initials = author.first
-            .split(/\s+/)
-            .filter(Boolean)
-            .map(n => n.charAt(0).toUpperCase() + '.')
-            .join(' ');
-        return initials ? `${initials} ${author.last}` : author.last;
-    };
-
-    const getIeeeAuthors = () => {
-        const names = authors.map(formatIeeeAuthor);
-        if (names.length === 1) return names[0];
-        if (names.length === 2) return `${names[0]} and ${names[1]}`;
-        return `${names.slice(0, -1).join(', ')}, and ${names[names.length - 1]}`;
-    };
-
-    const ieeeCitation = `[1] ${getIeeeAuthors()}, "${title}," unpublished capstone project, ${school}, ${year}.`;
-
-    const localCitations = { apa: apaCitation, mla: mlaCitation, ieee: ieeeCitation };
-    const currentCitation = serverCitations[tab] || localCitations[tab];
-    const currentLabel = tab === 'apa' ? 'APA 7th Edition' : tab === 'mla' ? 'MLA 9th Edition' : 'IEEE';
+    const localCitations = { apa: apaCitation, mla: mlaCitation };
+    const currentCitation = localCitations[tab];
+    const currentLabel = tab === 'apa' ? 'APA 7th Edition' : 'MLA 9th Edition';
 
     // ── Actions ─────────────────────────────────────────
-    const handleCopy = () => {
-        navigator.clipboard.writeText(currentCitation).then(() => {
-            setCopied(true);
-            setTimeout(() => setCopied(false), 2000);
-        }).catch(() => {});
+    const handleCopy = async () => {
+        try {
+            await navigator.clipboard.writeText(currentCitation);
+        } catch { return; }
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+        const result = await recordCitationCopy(api, user?.id, capstone.id, tab);
+        if (result) setGenerationCount(result.reference_count);
     };
 
     const handleDownload = () => {
@@ -199,11 +153,10 @@ export default function CitationGenerator({ capstone }) {
     const tabs = [
         { id: 'apa', label: 'APA 7th' },
         { id: 'mla', label: 'MLA 9th' },
-        { id: 'ieee', label: 'IEEE' },
     ];
 
     return (
-        <details className="group" onToggle={(event) => setOpen(event.currentTarget.open)}>
+        <details className="group">
             <summary className="text-xs font-semibold text-gray-500 uppercase cursor-pointer select-none flex items-center gap-1">
                 <HiOutlineDocumentText className="w-3.5 h-3.5" />
                 Citation
@@ -238,7 +191,7 @@ export default function CitationGenerator({ capstone }) {
 
                     {generationCount !== null && (
                         <p className="text-[11px] text-gray-400 mt-2">
-                            {generationCount} citation generation{generationCount === 1 ? '' : 's'} recorded. This counts uses of the citation tool, not verified external citations.
+                            {generationCount} total reference{generationCount === 1 ? '' : 's'} from saved capstone references and successful citation copies.
                         </p>
                     )}
 

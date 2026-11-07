@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
 import {
     getNotifications,
     markAllNotificationsRead,
     markNotificationRead,
 } from '../../api/admin';
 import Loading from '../../components/Loading';
+import NotificationItems from '../../components/NotificationItems';
 import Pagination from '../../components/Pagination';
 import EmptyState from '../../components/EmptyState';
 import { useNotification } from '../../components/useNotification';
@@ -36,11 +36,11 @@ export default function FacultyNotifications() {
 
     useEffect(() => { load(page); }, [page]);
 
-    const markRead = async (notification) => {
-        if (notification.is_read) return;
+    const markRead = async (id) => {
         try {
-            await markNotificationRead(notification.id);
-            setItems(prev => prev.map(item => item.id === notification.id ? { ...item, is_read: true } : item));
+            await markNotificationRead(id);
+            setItems(prev => prev.map(item => item.id === id ? { ...item, is_read: true } : item));
+            window.dispatchEvent(new Event('acadex:notifications-changed'));
         } catch (error) {
             notify.error(getApiErrorMessage(error, 'The notification could not be marked as read.'));
         }
@@ -50,6 +50,7 @@ export default function FacultyNotifications() {
         try {
             await markAllNotificationsRead();
             setItems(prev => prev.map(item => ({ ...item, is_read: true })));
+            window.dispatchEvent(new Event('acadex:notifications-changed'));
             notify.success('All notifications marked as read.');
         } catch (error) {
             notify.error(getApiErrorMessage(error, 'Notifications could not be updated.'));
@@ -79,39 +80,7 @@ export default function FacultyNotifications() {
             ) : (
                 <>
                     <section className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden" aria-label="Notifications">
-                        <ul className="divide-y divide-gray-100">
-                            {items.map(notification => (
-                                <li key={notification.id} className={notification.is_read ? 'bg-white' : 'bg-green-50/50'}>
-                                    <button
-                                        type="button"
-                                        onClick={() => markRead(notification)}
-                                        disabled={notification.is_read}
-                                        className="w-full text-left px-5 py-4 flex gap-4 hover:bg-gray-50 transition-colors disabled:cursor-default"
-                                        aria-label={notification.is_read ? notification.title : `${notification.title}, unread`}
-                                    >
-                                        <span className={`mt-1.5 w-2.5 h-2.5 rounded-full flex-shrink-0 ${notification.is_read ? 'bg-gray-200' : 'bg-green-600'}`} aria-hidden="true" />
-                                        <span className="min-w-0">
-                                            <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                                                <strong className="text-sm text-gray-900">{notification.title || 'Notification'}</strong>
-                                                <time className="text-xs text-gray-400" dateTime={notification.created_at}>
-                                                    {notification.created_at ? new Date(notification.created_at).toLocaleString() : ''}
-                                                </time>
-                                            </span>
-                                            <span className="block text-sm text-gray-600 mt-1">{notification.message}</span>
-                                            {notification.related_capstone && (
-                                                <Link
-                                                    to={`/faculty/capstones/${notification.related_capstone.slug || notification.related_capstone.id}`}
-                                                    onClick={event => event.stopPropagation()}
-                                                    className="inline-block mt-2 text-xs font-semibold text-green-700 hover:underline"
-                                                >
-                                                    View capstone →
-                                                </Link>
-                                            )}
-                                        </span>
-                                    </button>
-                                </li>
-                            ))}
-                        </ul>
+                        <NotificationItems items={items} role="faculty" onRead={markRead} />
                     </section>
                     <Pagination paginationData={pagination} page={page} onPageChange={setPage} perPage={PAGE_SIZE} />
                 </>

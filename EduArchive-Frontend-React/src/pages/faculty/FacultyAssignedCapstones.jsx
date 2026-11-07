@@ -51,7 +51,7 @@ export default function FacultyAssignedCapstones() {
                 />
             ) : (
                 <>
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                         {items.map(item => (
                             <article key={item.id} className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 hover:shadow-md transition-shadow">
                                 <div className="flex items-start justify-between gap-3">

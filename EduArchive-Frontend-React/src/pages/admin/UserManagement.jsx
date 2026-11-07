@@ -299,17 +299,18 @@ export default function UserManagement() {
     return (
         <div className="flex flex-col h-full">
             {/* ── Sticky Header ── */}
-            <div className="sticky top-0 z-40 bg-gray-50 pb-4 space-y-4 pt-2 border-b border-gray-200 shadow-sm">
+            <div className="user-management-header sticky top-0 z-40 pb-4 space-y-4 pt-2 border-b border-gray-200">
                 <div>
                     <h1 className="text-2xl font-bold text-gray-900">User Management</h1>
                     <p className="text-sm text-gray-500 mt-1">Manage system users and registrations</p>
                 </div>
 
                 {/* Tabs */}
-                <div className="flex gap-2 border-b border-gray-200 overflow-x-auto">
+                <div className="user-management-tabs flex flex-wrap items-center gap-1 border-b border-gray-200" role="group" aria-label="User categories">
                     {tabs.map((tab) => (
                         <button
                             key={tab.id}
+                            aria-pressed={activeTab === tab.id}
                             onClick={() => { 
                                 setActiveTab(tab.id); 
                                 setSearch(''); 
@@ -323,13 +324,13 @@ export default function UserManagement() {
                                 else if (tab.id === 'archived') setArchivedPage(1);
                                 else if (tab.id === 'online') setOnlinePage(1);
                             }}
-                            className={`inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px whitespace-nowrap flex-shrink-0
+                            className={`inline-flex items-center justify-center gap-1.5 px-3 py-2 text-sm leading-5 font-medium border-b-2 transition-colors whitespace-nowrap shrink-0
                                 ${activeTab === tab.id
                                     ? 'border-green-600 text-green-700'
                                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                                 }`}
                         >
-                            <tab.icon className="w-4 h-4" />
+                            <tab.icon className="w-4 h-4 shrink-0" aria-hidden="true" />
                             {tab.label}
                             {tab.dot && tab.count > 0 ? (
                                 <span className="flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full bg-emerald-100 text-emerald-700">
@@ -347,7 +348,7 @@ export default function UserManagement() {
                 </div>
 
                 {/* Search & Filter */}
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
                     <div className="relative flex-1 min-w-0">
                         <HiOutlineSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                         <input
@@ -393,7 +394,7 @@ export default function UserManagement() {
             </div>
 
             {/* ── Content ── */}
-            <div className="flex-1 min-h-0 pt-10">
+            <div className="flex-1 min-h-0 pt-5">
             {loading ? (
                 <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
                     <TableSkeleton rows={5} cols={4} />
