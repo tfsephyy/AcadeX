@@ -128,9 +128,13 @@ export function createCapstoneUploadManager({ api, errorMessage, schedule = setT
     } catch (error) {
       if (!current(version) || controller.signal.aborted) return
       request = null
-      patchTask({ phase: 'error', error: errorMessage(error, error.response
-        ? 'The upload could not be completed. Please resume it or try again shortly.'
-        : error.message || 'Upload failed. Please try again.') })
+      if (error.response?.status === 410) {
+        patchTask({ phase: 'unavailable', error: errorMessage(error, 'This upload expired. Select the PDF again.') })
+      } else {
+        patchTask({ phase: 'error', error: errorMessage(error, error.response
+          ? 'The upload could not be completed. Please resume it or try again shortly.'
+          : error.message || 'Upload failed. Please try again.') })
+      }
     }
   }
   const start = (selected, role) => {
@@ -171,8 +175,12 @@ export function createCapstoneUploadManager({ api, errorMessage, schedule = setT
       void transfer(file, snapshot.task.role, version, controller)
     },
     dismiss: () => {
-      if (snapshot.task?.phase === 'uploading' || processing(snapshot.task)) return
-      if (snapshot.task?.transferId && !snapshot.task.data?.upload_id) {
+      if (snapshot.task?.phase === 'uploading' || snapshot.task?.phase === 'processing') return
+      const uploadId = snapshot.task?.data?.upload_id
+      const submitted = Boolean(snapshot.task?.data?.capstone_id)
+      if (uploadId && !submitted) {
+        void api.delete(`/uploads/${uploadId}`).catch(() => {})
+      } else if (snapshot.task?.transferId && !uploadId) {
         void api.delete(`/uploads/transfers/${snapshot.task.transferId}`).catch(() => {})
       }
       reset()

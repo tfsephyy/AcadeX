@@ -14,6 +14,7 @@ use App\Models\CitationEvent;
 use App\Models\DocumentUpload;
 use App\Models\Keyword;
 use App\Models\Notification;
+use App\Models\UploadTransfer;
 use App\Models\User;
 use App\Services\CitationService;
 use App\Services\NlpSearchService;
@@ -383,6 +384,66 @@ class CapstoneController extends Controller
             $this->uploadPayload($record->refresh(), $record->reference()),
             'Document processing was queued again.'
         );
+    }
+
+    /**
+     * Discard an unsubmitted staged upload, freeing its quota reservation.
+     */
+    public function discardUpload(Request $request, string $upload): JsonResponse
+    {
+        $record = DocumentUpload::whereKey($upload)
+            ->where('user_id', $request->user()->id)
+            ->first();
+
+        if (!$record) return $this->errorResponse('Upload reference not found.', 404);
+        if ($record->capstone_id !== null) return $this->errorResponse('This upload has already been submitted.', 409);
+        if ($record->processing_status === DocumentUpload::STATUS_PROCESSING
+            && $record->processing_started_at
+            && $record->processing_started_at->isAfter(now()->subMinutes(15))) {
+            return $this->errorResponse('This upload is currently being processed.', 409);
+        }
+
+        $deletedPath = null;
+        $deletedChunkFiles = [];
+
+        DB::transaction(function () use ($request, $upload, &$deletedPath, &$deletedChunkFiles) {
+            // Lock order: User first, then DocumentUpload / UploadTransfer.
+            User::whereKey($request->user()->id)->lockForUpdate()->firstOrFail();
+            $target = DocumentUpload::whereKey($upload)
+                ->where('user_id', $request->user()->id)
+                ->lockForUpdate()
+                ->first();
+
+            if (!$target) abort(404, 'Upload reference not found.');
+            if ($target->capstone_id !== null) abort(409, 'This upload has already been submitted.');
+            if ($target->processing_status === DocumentUpload::STATUS_PROCESSING
+                && $target->processing_started_at
+                && $target->processing_started_at->isAfter(now()->subMinutes(15))) {
+                abort(409, 'This upload is currently being processed.');
+            }
+
+            // Find and collect chunk files from any related transfers before cascading delete.
+            $transfers = UploadTransfer::where('upload_id', $target->id)->lockForUpdate()->get();
+            foreach ($transfers as $transfer) {
+                if (!empty($transfer->chunks)) {
+                    $deletedChunkFiles = array_merge($deletedChunkFiles, array_column($transfer->chunks, 'path'));
+                }
+            }
+
+            $deletedPath = $target->path;
+            $target->delete();
+        });
+
+        // Delete files after the transaction commits
+        $disk = Storage::disk('local');
+        if (!empty($deletedChunkFiles)) {
+            $disk->delete($deletedChunkFiles);
+        }
+        if ($deletedPath) {
+            $disk->delete($deletedPath);
+        }
+
+        return $this->successResponse(null, 'Upload discarded successfully.');
     }
 
     /** Stable shape used by the upload response and the polling endpoint. */

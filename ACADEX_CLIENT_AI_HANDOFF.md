@@ -2,9 +2,33 @@
 
 Prepared: **October 19, 2026, Asia/Manila**.
 
+**November 7, 2026 staged upload quota fix and leak prevention:** [Staged upload quota leak fix and lifecycle management](docs/handoff/STAGED_UPLOAD_QUOTA_FIX_2026-11-07.md) resolves upload failures from unreleased staged upload allocations. Expired uploads are ignored in quota calculation; new `acadex:prune-staged-uploads` scheduler command removes dead uploads and chunk files hourly; owner discard endpoint `DELETE /api/v1/uploads/{id}` frees quota on demand; transfer reservations expire on finalization failure; default quota is increased to 1 GiB. Ready for review; not yet deployed to production.
+
+**November 7, 2026 production redeployment:** the live release is source commit
+`a6025cf5a782b37dad9260352794df8b39f36473` at
+`/srv/acadex-staging/releases/acadex-20261107-a6025cf`, with the frontend build at
+`/srv/acadex-staging/frontend-releases/acadex-20261107-a6025cf/dist`. Two reviewed
+forward migrations were applied after a verified recovery backup. The database,
+all 285 existing storage-file hashes, and the original private environment file
+checksum match the pre-release baseline. Apache/PHP-FPM, database queue worker,
+and the new Laravel scheduler are active; OCR was left on its existing release.
+Public app-shell and anonymous API checks passed. Feature workflows were not
+replayed against production accounts or documents. See the
+[production release record](docs/handoff/PRODUCTION_RELEASE_2026-11-07.md).
+
+The November 7 deployment added and retained SSH source `143.44.156.189/32` at
+the user's request. It is useful for another deployment only while the operator's
+public address remains the same; it does not broaden SSH to a network range.
+
+**November 7, 2026 ASUS local setup complete:** [Local backup, migrations and verification](docs/handoff/LOCAL_SETUP_2026-11-07_ASUS.md) supersedes this workstation's migration-pending state in the source synchronization entry below. All nine pending migrations are applied to the verified local `acadex_local` database after an integrity-checked private backup. Five accounts, all original row values, environment/APP_KEY and storage files are preserved. Queue, scheduler, frontend, API and OCR are running locally. This is not a production deployment.
+
+**November 7, 2026 source synchronization on the ASUS workstation:** pulled client commit `a6025cf5a782b37dad9260352794df8b39f36473` on `release/ui-refinement` and retained the local November 5 PDF hotfix and tests. The client-workstation runtime repair described below does not apply automatically to this laptop: a read-only migration check here found nine pending migrations (seven from November 5 and two from November 7). At synchronization time, only source changed; the later production deployment is recorded above. Read the synchronization entry in [implementation progress](docs/ACADEX_PROGRESS.md) for current verification.
+
 **November 7, 2026 local runtime repair:** [Schema repair, Faculty registration and interface controls](docs/ui/2026-11-07-runtime-registration-controls.md) supersedes the local migration-pending state below: both November 7 migrations now run in this workstation's configured `eduarchivedb`, after a fresh verified private backup. Local upload/reload/extraction and Faculty signup were exercised with synthetic data; the report records a corrected verification-helper isolation incident and final preservation checks. Category/approval icons and the Assigned Capstones grid are implemented. This is **not a production deployment**.
 
-**November 7, 2026 local implementation:** [Layouts, upload recovery and reference totals](docs/ui/2026-11-07-layout-upload-reference-update.md) documents responsive role panels, resumable encrypted chunk transfers, background-extraction recovery, copy/reference totals and IEEE removal. This work is **not deployed** and its two migrations were applied only to an isolated disposable test database. A future release must apply them and run both the queue worker and Laravel scheduler; preserve the original application key, private storage and database. Read the progress log for verification boundaries.
+**November 7, 2026 local implementation:** [Layouts, upload recovery and reference totals](docs/ui/2026-11-07-layout-upload-reference-update.md) documents responsive role panels, resumable encrypted chunk transfers, background-extraction recovery, copy/reference totals and IEEE removal. This source was deployed on November 7 after backup; the two required migrations were applied to production and the database queue worker and Laravel scheduler are active. The earlier disposable-database runs remain local feature verification, not production feature-flow acceptance. Preserve the original application key, private storage and database. Read the progress log for verification boundaries.
+
+**November 7 frontend release:** the frontend serves `/srv/acadex-staging/frontend-releases/acadex-20261107-a6025cf/dist` and includes the locally retained PDF timeout/range fix with the client's latest UI source. Previous hashed assets were copied into the new asset directory for open tabs. See the [November 5 PDF hotfix report](docs/handoff/PDF_VIEWER_HOTFIX_2026-11-05.md) for historical rationale and local verification; the November 7 production checks are in the release record.
 
 **November 5, 2026 current source checkpoint:** the live application serves source `ed4bb6d` from `/srv/acadex-staging/releases/acadex-20261105-final`. Read the latest entry in [implementation progress](docs/ACADEX_PROGRESS.md) before operating it. Forward migrations, Google registration changes, a persistent database-queue worker, authenticated document ranges, and optional encrypted qpdf viewing previews are deployed. Google Console was observed as External / In production. Original records, document content and APP_KEY were preserved with private backups. **The large scanned PDF still requests excessive ranges before its first page opens; performance acceptance remains incomplete.** A Git pull contains the latest source, not the production environment, private storage, credentials, database, installed qpdf package, or a complete end-to-end acceptance certificate.
 
@@ -157,7 +181,7 @@ These are October 14 facts unless a newer observation is explicitly stated. Conf
 | Instance metadata | IMDSv2 required when inspected |
 | IAM role on instance | None when inspected |
 
-Network baseline: public TCP 80/443; SSH TCP 22 restricted to one owner's `/32`; outbound allowed; no public MySQL, backend, or OCR ingress rule. The October 19 connecting network may not match the allowed SSH source. A timeout alone does not prove which rule or host state is responsible.
+Network baseline: public TCP 80/443; SSH TCP 22 is restricted to three `/32` sources: `143.44.156.34/32`, `143.44.156.141/32`, and `143.44.156.189/32`. The last was added for the November 7 deployment and retained at the user's request for future redeployments; it works only while the operator's public address remains the same. Outbound is allowed; MySQL, backend, and OCR have no public ingress rule.
 
 Private listeners observed: Apache `127.0.0.1:8080`, `127.0.0.1:8081`, `127.0.0.1:8443`; OCR `127.0.0.1:8001`; MySQL `127.0.0.1:3306` and `33060`.
 
@@ -173,17 +197,20 @@ The prior deployment continuation did not add or resize AWS hosting resources, u
 
 | Purpose | Last verified path |
 | --- | --- |
-| Release root | `/srv/acadex-staging/releases/acadex-remediation-d61a0aa271f7a1e4` |
+| Release root | `/srv/acadex-staging/releases/acadex-20261107-a6025cf` |
 | Backend | `<release-root>/EduArchive-Backend-Laravel` |
-| Frontend served build | `<release-root>/EduArchive-Frontend-React/dist` |
-| OCR source | `<release-root>/EduArchive-Backend-Laravel/ocr-service` |
+| Frontend served build | `/srv/acadex-staging/frontend-releases/acadex-20261107-a6025cf/dist` |
+| OCR source | `/srv/acadex-staging/releases/acadex-metadata-20261101/EduArchive-Backend-Laravel/ocr-service` (unchanged) |
+| Queue worker working directory | `<release-root>/EduArchive-Backend-Laravel` |
+| Laravel scheduler | `/etc/systemd/system/acadex-scheduler.service` (enabled; same backend working directory) |
 | Private Laravel environment | `/srv/acadex-staging/shared/config/laravel.env` |
 | Persistent application storage | `/srv/acadex-staging/shared/storage` |
 | PHP private temporary directory | `/srv/acadex-staging/shared/private-tmp` |
 | Shared OCR virtualenv directory seen at discovery | `/srv/acadex-staging/shared/ocr-venv`; confirm the running unit's executable before use |
 | Private server backup root | `/var/backups/acadex` |
 | Original working Paddle model cache | `/home/ubuntu/.paddleocr/whl` |
-| Server overlay record | `<release-root>/ACADEX_FINALIZATION_MANIFEST.json` |
+| Server overlay record | `<release-root>/DEPLOYMENT_MANIFEST.json` |
+| November 7 recovery backup | `/var/backups/acadex/redeploy-20261107T133643Z` (root-only; checksum verified) |
 
 The backend `.env` and `storage` were symlinks to shared persistent locations. They are not release-local disposable content. PHP's private temporary directory was owned by `www-data`, mode `0700`; private temporary files were verified `0600`. The shared Laravel environment was `0640`, owned by `ubuntu:www-data`.
 
@@ -681,6 +708,8 @@ Newer verified source/runtime evidence supersedes older observations. Amend this
 
 ## 21. Handoff change record
 
+November 7, 2026: redeployed source commit `a6025cf5a782b37dad9260352794df8b39f36473` plus the retained frontend PDF viewer fixes. Applied the two November 7 forward migrations from the new backend release after a verified private backup. Switched the enabled Apache frontend/backend paths, restarted the queue against the new backend, added an enabled `acadex-scheduler.service` for hourly expired-transfer cleanup, and left OCR unchanged. Verified the database baseline counts, all 285 pre-existing storage-file hashes, the private environment checksum, HTTPS app-shell paths, main JavaScript/CSS assets, and unauthenticated API behavior. Retained the restricted SSH `/32` added for the deployment at the user's request. See [the production release record](docs/handoff/PRODUCTION_RELEASE_2026-11-07.md).
+
 October 19, 2026: created this consolidated client/AI handoff and `AGENTS.md`; inspected the existing source and Git state; recorded current DNS resolution and failed HTTPS/SSH connectivity observations; preserved the October 14 verified history. No source application behavior, production configuration, user records, account permissions, AWS resources, or billing plan was changed while preparing these documents. No Git commit, push, pull, staging, or reset was performed.
 
 ## 22. Configuration reference: what the next operator must set or preserve
@@ -735,7 +764,7 @@ Never copy the laptop `.env` over production. It can point to a different schema
 | `PRIVATE_TEMP_PATH` | PHP-owned private writable directory, historically `/srv/acadex-staging/shared/private-tmp` |
 | `ALLOW_LEGACY_PLAINTEXT_DOCUMENTS` | False; only opt in for a separately approved transition |
 | `MAX_PENDING_UPLOADS` | Source default 20 per owner |
-| `MAX_PENDING_UPLOAD_BYTES` | Source default 268435456 bytes / 256 MiB |
+| `MAX_PENDING_UPLOAD_BYTES` | Source default 1073741824 bytes / 1 GiB (sized for 128 MiB per-file limit) |
 | `MIN_FREE_STORAGE_BYTES` | Source default 2147483648 bytes / 2 GiB |
 | `ACADEX_MAX_UPLOAD_BYTES` | Optional application ceiling; `0` means automatic memory-safe ceiling (at most 64 MiB); a positive value can only lower it |
 | `UPLOAD_LOCK_STORE` | Inter-process cache store for upload concurrency locking across PHP-FPM workers; defaults to `CACHE_STORE`. In production, must be an inter-process store (`database`, `file`, `redis`); process-local stores (`array`, `null`) are rejected |

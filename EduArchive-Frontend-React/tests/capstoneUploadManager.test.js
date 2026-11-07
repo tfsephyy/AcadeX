@@ -12,22 +12,29 @@ const pdf = () => new File(['synthetic upload'], 'synthetic.pdf', { type: 'appli
 const stored = (id = 'upload-one', status = 'queued') => ({ data: { data: {
   upload_id: id, pdf_path: `private/${id}.enc`, pdf_original_name: 'synthetic.pdf', processing_status: status,
 } } })
-function fixture(t, get = () => new Promise(() => {})) {
-  const posts = [], timers = new Map()
+function fixture(t, get = () => new Promise(() => {}), deleteFn = null) {
+  const posts = [], deletes = [], timers = new Map()
   let timerId = 0
   const manager = createCapstoneUploadManager({
-    api: { post: (path, form, config) => {
-      const response = deferred()
-      posts.push({ path, form, config, ...response })
-      return response.promise
-    }, get },
+    api: {
+      post: (path, form, config) => {
+        const response = deferred()
+        posts.push({ path, form, config, ...response })
+        return response.promise
+      },
+      get,
+      delete: (path, config) => {
+        deletes.push({ path, config })
+        return deleteFn ? deleteFn(path, config) : Promise.resolve({ data: {} })
+      },
+    },
     errorMessage: (error, fallback) => error.response?.data?.message || fallback,
     schedule: (fn, delay) => { const id = timerId++; timers.set(id, { fn, delay }); return id },
     unschedule: id => timers.delete(id), now: () => 123000,
   })
   manager.setOwner(42)
   t.after(() => manager.dispose())
-  return { manager, posts, timers }
+  return { manager, posts, deletes, timers }
 }
 
 test('minimizing and removing route subscribers preserves the transfer and its progress', async t => {
@@ -151,4 +158,79 @@ test('logout or account changes abort requests and clear filenames and timers', 
   assert.equal(timers.size, 0)
   assert.equal(manager.start(pdf(), 'student'), true)
   assert.equal(manager.getSnapshot().task.owner, 99)
+})
+
+test('dismiss with upload_id calls DELETE /uploads/{id}', async t => {
+  const { manager, posts, deletes } = fixture(t)
+  manager.start(pdf(), 'student')
+  posts[0].resolve(stored('upload-123', 'completed'))
+  await settle()
+  assert.equal(manager.getSnapshot().task.phase, 'completed')
+  manager.dismiss()
+  assert.equal(deletes.length, 1)
+  assert.equal(deletes[0].path, '/uploads/upload-123')
+  assert.equal(manager.getSnapshot().task, null)
+})
+
+test('dismiss without upload_id calls DELETE /uploads/transfers/{transferId}', async t => {
+  const deletes = []
+  const manager = createCapstoneUploadManager({
+    api: {
+      post: () => new Promise(() => {}),
+      delete: (path, config) => { deletes.push({ path, config }); return Promise.resolve({ data: {} }) }
+    },
+    errorMessage: (e, f) => f,
+    sendFile: () => new Promise(() => {}),
+    uuid: () => 'transfer-custom-uuid',
+  })
+  manager.setOwner(42)
+  t.after(() => manager.dispose())
+  manager.start(pdf(), 'student')
+  assert.equal(manager.getSnapshot().task.transferId, 'transfer-custom-uuid')
+  manager.cancel()
+  assert.equal(manager.getSnapshot().task.phase, 'cancelled')
+  manager.dismiss()
+  assert.equal(deletes.length, 1)
+  assert.equal(deletes[0].path, '/uploads/transfers/transfer-custom-uuid')
+  assert.equal(manager.getSnapshot().task, null)
+})
+
+test('dismiss ignores 404 error from DELETE /uploads/{id}', async t => {
+  const { manager, posts, deletes } = fixture(t, () => new Promise(() => {}), () => Promise.reject({ response: { status: 404 } }))
+  manager.start(pdf(), 'student')
+  posts[0].resolve(stored('upload-404', 'completed'))
+  await settle()
+  manager.dismiss()
+  assert.equal(deletes.length, 1)
+  assert.equal(deletes[0].path, '/uploads/upload-404')
+  assert.equal(manager.getSnapshot().task, null)
+})
+
+test('dismiss while uploading or processing does nothing', async t => {
+  const { manager, posts, deletes } = fixture(t)
+  manager.start(pdf(), 'student')
+  // phase is uploading
+  manager.dismiss()
+  assert.notEqual(manager.getSnapshot().task, null)
+  assert.equal(deletes.length, 0)
+
+  // now in processing
+  posts[0].resolve(stored('upload-proc', 'processing'))
+  await settle()
+  assert.equal(manager.getSnapshot().task.phase, 'processing')
+  manager.dismiss()
+  assert.notEqual(manager.getSnapshot().task, null)
+  assert.equal(deletes.length, 0)
+})
+
+test('dismiss allowed in phase queued', async t => {
+  const { manager, posts, deletes } = fixture(t)
+  manager.start(pdf(), 'student')
+  posts[0].resolve(stored('upload-queued', 'queued'))
+  await settle()
+  assert.equal(manager.getSnapshot().task.phase, 'queued')
+  manager.dismiss()
+  assert.equal(deletes.length, 1)
+  assert.equal(deletes[0].path, '/uploads/upload-queued')
+  assert.equal(manager.getSnapshot().task, null)
 })

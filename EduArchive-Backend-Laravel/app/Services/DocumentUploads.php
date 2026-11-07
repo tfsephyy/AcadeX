@@ -12,6 +12,38 @@ use Illuminate\Validation\ValidationException;
 
 class DocumentUploads
 {
+    /**
+     * Calculate pending unexpired and unclaimed upload count and total bytes.
+     *
+     * @return array{count: int, bytes: int}
+     */
+    public function pendingUsage(User $user): array
+    {
+        $pending = DocumentUpload::where('user_id', $user->id)
+            ->whereNull('capstone_id')
+            ->where('expires_at', '>', now())
+            ->get(['path']);
+        $disk = Storage::disk('local');
+        $bytes = 0;
+        $count = 0;
+        foreach ($pending as $upload) {
+            if ($disk->exists($upload->path)) {
+                $bytes += $disk->size($upload->path);
+                $count++;
+            }
+        }
+        return ['count' => $count, 'bytes' => $bytes];
+    }
+
+    public static function quotaMessage(int $count, int $bytes, int $maxBytes): string
+    {
+        $countStr = $count === 1 ? '1 unsubmitted upload' : "{$count} unsubmitted uploads";
+        $limits = app(UploadLimits::class);
+        $usedStr = $limits->humanBytes($bytes);
+        $limitStr = $limits->humanBytes($maxBytes);
+        return "You have {$countStr} using {$usedStr} of your {$limitStr} limit. Submit or discard them (they expire automatically after 24 hours).";
+    }
+
     public function stage(User $user, string $purpose, string $path, string $processingStatus = DocumentUpload::STATUS_COMPLETED, ?string $originalName = null): string
     {
         $id = (string) Str::uuid();
@@ -19,16 +51,15 @@ class DocumentUploads
             DB::transaction(function () use ($id, $user, $purpose, $path, $processingStatus, $originalName) {
                 // Serialize this owner's allocations, including concurrent uploads.
                 User::whereKey($user->id)->lockForUpdate()->firstOrFail();
-                $pending = DocumentUpload::where('user_id', $user->id)->whereNull('capstone_id')->get(['path']);
+                $usage = $this->pendingUsage($user);
                 $disk = Storage::disk('local');
-                $bytes = $disk->size($path);
-                foreach ($pending as $upload) {
-                    if ($disk->exists($upload->path)) $bytes += $disk->size($upload->path);
-                }
-                if ($pending->count() >= max(1, (int) config('acadex.max_pending_uploads', 20)) ||
-                    $bytes > max(1, (int) config('acadex.max_pending_upload_bytes', 268435456))) {
+                $newBytes = $disk->exists($path) ? $disk->size($path) : 0;
+                $totalBytes = $usage['bytes'] + $newBytes;
+                $maxUploads = max(1, (int) config('acadex.max_pending_uploads', 20));
+                $maxBytes = max(1, (int) config('acadex.max_pending_upload_bytes', 1073741824));
+                if ($usage['count'] >= $maxUploads || $totalBytes > $maxBytes) {
                     throw ValidationException::withMessages(['documents' =>
-                        'Your pending uploads have reached the storage limit. Submit an existing upload or contact the administrator.']);
+                        self::quotaMessage($usage['count'], $usage['bytes'], $maxBytes)]);
                 }
                 DocumentUpload::create(['id' => $id, 'user_id' => $user->id, 'purpose' => $purpose,
                     'path' => $path, 'expires_at' => now()->addHours(24),

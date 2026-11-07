@@ -17,6 +17,7 @@ export default function UploadActivity() {
 
   const transferring = task.phase === 'uploading'
   const working = ['queued', 'processing'].includes(task.phase)
+  const dismissable = !transferring && task.phase !== 'processing'
   const cancelled = task.phase === 'cancelled'
   const complete = task.phase === 'completed'
   const failed = ['error', 'failed', 'unavailable'].includes(task.phase)
@@ -79,7 +80,7 @@ export default function UploadActivity() {
           className="upload-cancel-button mr-auto inline-flex items-center gap-1.5 rounded-lg border px-4 py-2 text-sm font-medium">
           <HiOutlineXCircle className="h-4 w-4" aria-hidden="true" /> Cancel upload
         </button>}
-        {!transferring && !working && <button type="button" onClick={manager.dismiss} className="upload-secondary-button mr-auto rounded-lg border px-4 py-2 text-sm font-medium">Dismiss</button>}
+        {dismissable && <button type="button" onClick={manager.dismiss} className="upload-secondary-button mr-auto rounded-lg border px-4 py-2 text-sm font-medium">Dismiss</button>}
         {['error', 'cancelled'].includes(task.phase) && <button type="button" onClick={manager.retry} className="upload-secondary-button rounded-lg border px-4 py-2 text-sm font-medium">Resume upload</button>}
         <button type="button" onClick={manager.minimize} className="upload-secondary-button rounded-lg border px-4 py-2 text-sm font-medium">Close</button>
         {reviewable && <button type="button" onClick={review} className="rounded-lg bg-[#1B5E20] px-4 py-2 text-sm font-semibold text-white hover:bg-green-800">Review details</button>}

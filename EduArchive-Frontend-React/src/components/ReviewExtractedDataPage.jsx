@@ -211,6 +211,20 @@ export default function ReviewExtractedDataPage({ nextPath, backPath }) {
         setForm(prev => ({ ...prev, keywords: prev.keywords.filter((_, i) => i !== idx) }));
     };
 
+    const handleBack = async () => {
+        if (window.confirm('Discard this uploaded PDF and return to the upload step?')) {
+            if (uploadId) {
+                try {
+                    await api.delete(`/uploads/${uploadId}`);
+                } catch (error) {
+                    void error;
+                }
+            }
+            uploadManager.dismiss();
+            navigate(backPath);
+        }
+    };
+
     const handleNext = async () => {
         if (processing) { notify.info?.('Please wait for document processing to finish, or retry if it failed.'); return; }
         if (!form.title.trim()) { notify.error('Title is required.'); return; }
@@ -234,8 +248,7 @@ export default function ReviewExtractedDataPage({ nextPath, backPath }) {
         setCheckingTitle(false);
 
         const reviewed = { ...form, author_details: authorDetails };
-        if (uploadManager.getSnapshot().task?.data?.upload_id === uploadId) uploadManager.dismiss();
-        // Keep this history entry's draft so Back from Additional Info restores
+                // Keep this history entry's draft so Back from Additional Info restores
         // the user's corrections instead of reinitializing from OCR suggestions.
         navigate(location.pathname, { replace: true, state: { ...location.state, extracted: reviewed } });
         navigate(nextPath, { state: { form: reviewed, pdfInfo } });
@@ -252,7 +265,7 @@ export default function ReviewExtractedDataPage({ nextPath, backPath }) {
             {/* ── Top Bar ─────────────────────────────────── */}
             <div className="sticky top-0 z-20 border-b" style={{ background: 'var(--color-surface-elevated)', borderColor: 'var(--color-border-strong)', backdropFilter: 'blur(16px)' }}>
                 <div className="max-w-6xl mx-auto px-4 lg:px-8 py-3.5 flex items-center justify-between gap-4">
-                    <button onClick={() => navigate(backPath)} className="inline-flex items-center gap-2 text-sm transition-colors" style={{ color: 'var(--color-text-secondary)' }}
+                    <button onClick={handleBack} className="inline-flex items-center gap-2 text-sm transition-colors" style={{ color: 'var(--color-text-secondary)' }}
                         onMouseEnter={e => e.currentTarget.style.color = 'var(--color-text)'}
                         onMouseLeave={e => e.currentTarget.style.color = 'var(--color-text-secondary)'}>
                         <HiArrowLeft className="w-4 h-4" /> Back
@@ -516,7 +529,7 @@ export default function ReviewExtractedDataPage({ nextPath, backPath }) {
             <div className="flow-footer fixed bottom-0 left-0 right-0 z-30 border-t"
                 style={{ background: 'var(--color-surface-elevated)', borderColor: 'var(--color-border-strong)', backdropFilter: 'blur(16px)' }}>
                 <div className="max-w-6xl mx-auto px-4 lg:px-8 py-4 flex items-center justify-between gap-4">
-                    <button onClick={() => navigate(backPath)}
+                    <button onClick={handleBack}
                         className="px-4 py-2.5 text-sm font-medium rounded-lg border transition-colors"
                         style={{ color: 'var(--color-text-secondary)', borderColor: 'var(--color-border-strong)', background: 'var(--color-bg-secondary)' }}>
                         ← Back

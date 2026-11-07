@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\DocumentUpload;
 use App\Models\UploadTransfer;
 use App\Models\User;
+use App\Services\DocumentUploads;
 use App\Services\PdfEncryptorService;
 use App\Services\PrivateTemp;
 use App\Services\UploadLimits;
@@ -49,15 +50,19 @@ class UploadTransferController extends Controller
                 return $existing;
             }
             // Reserve space for incomplete transfers as well as already-staged files.
+            $usage = app(DocumentUploads::class)->pendingUsage($request->user());
             $transfers = UploadTransfer::where('user_id', $request->user()->id)->whereNull('upload_id')->where('expires_at', '>', now());
-            $pending = DocumentUpload::where('user_id', $request->user()->id)->whereNull('capstone_id')->get(['path']);
-            $bytes = (clone $transfers)->sum('size') + (int) $values['size'];
-            foreach ($pending as $upload) {
-                if (Storage::disk('local')->exists($upload->path)) $bytes += Storage::disk('local')->size($upload->path);
-            }
-            if ((clone $transfers)->count() + $pending->count() >= max(1, (int) config('acadex.max_pending_uploads', 20)) ||
-                $bytes > max(1, (int) config('acadex.max_pending_upload_bytes', 268435456))) {
-                throw ValidationException::withMessages(['pdf' => 'Pending uploads have reached your storage limit. Submit or dismiss an existing upload first.']);
+            $transferBytes = (int) (clone $transfers)->sum('size');
+            $transferCount = (int) (clone $transfers)->count();
+
+            $totalCount = $usage['count'] + $transferCount;
+            $totalBytes = $usage['bytes'] + $transferBytes + (int) $values['size'];
+            $maxUploads = max(1, (int) config('acadex.max_pending_uploads', 20));
+            $maxBytes = max(1, (int) config('acadex.max_pending_upload_bytes', 1073741824));
+
+            if ($totalCount >= $maxUploads || $totalBytes > $maxBytes) {
+                throw ValidationException::withMessages(['pdf' =>
+                    DocumentUploads::quotaMessage($totalCount, $usage['bytes'] + $transferBytes, $maxBytes)]);
             }
             return UploadTransfer::create(['id' => $transfer, 'user_id' => $request->user()->id,
                 'original_name' => $values['name'], 'size' => $values['size'], 'chunks' => [], 'expires_at' => now()->addDay()]);
@@ -103,8 +108,9 @@ class UploadTransferController extends Controller
         $temp = null;
         $stagedPath = null;
         $response = null;
+        $quotaFailed = false;
         try {
-            DB::transaction(function () use ($request, $transfer, &$temp, &$response, &$stagedPath) {
+            DB::transaction(function () use ($request, $transfer, &$temp, &$response, &$stagedPath, &$quotaFailed) {
                 // Same lock order as allocation/staging; serialized across tabs and retries.
                 User::whereKey($request->user()->id)->lockForUpdate()->firstOrFail();
                 $record = $this->owned($request, $transfer);
@@ -126,8 +132,16 @@ class UploadTransferController extends Controller
                 if (filesize($temp) !== $record->size) throw new \RuntimeException('Assembled upload size mismatch.');
                 // Reuse PDF validation, encryption, ownership quotas and queued extraction.
                 $request->files->set('pdf', new UploadedFile($temp, $record->original_name, 'application/pdf', null, true));
-                $response = app(CapstoneController::class)->upload($request);
-                if ($response->getStatusCode() >= 400) return;
+                try {
+                    $response = app(CapstoneController::class)->upload($request);
+                } catch (ValidationException $e) {
+                    $quotaFailed = true;
+                    throw $e;
+                }
+                if ($response->getStatusCode() >= 400) {
+                    $quotaFailed = true;
+                    return;
+                }
                 $id = $response->getData(true)['data']['upload_id'];
                 $stagedPath = DocumentUpload::findOrFail($id)->path;
                 $record->update(['upload_id' => $id]);
@@ -138,9 +152,16 @@ class UploadTransferController extends Controller
             if ($stagedPath && !DocumentUpload::where('path', $stagedPath)->exists()) {
                 Storage::disk('local')->delete($stagedPath);
             }
+            if ($quotaFailed || $error instanceof ValidationException) {
+                UploadTransfer::whereKey($transfer)->where('user_id', $request->user()->id)->update(['expires_at' => now()]);
+            }
             throw $error;
         } finally {
             if ($temp && is_file($temp)) @unlink($temp);
+        }
+        if ($response && $response->getStatusCode() >= 400) {
+            UploadTransfer::whereKey($transfer)->where('user_id', $request->user()->id)->update(['expires_at' => now()]);
+            return $response;
         }
         if ($response && $response->getStatusCode() < 400) {
             // Finalization is already committed. Retried finalization only reads

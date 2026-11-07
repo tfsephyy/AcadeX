@@ -29,15 +29,19 @@ class DeploymentHardeningTest extends SecurityTestCase
         self::assertEqualsCanonicalizing(['id', 'name'], array_keys($adviser));
     }
 
-    public function test_pending_count_includes_expired_allocations_and_rejection_removes_only_new_file(): void
+    public function test_pending_count_ignores_expired_allocations_and_rejection_removes_only_new_file(): void
     {
         $this->asUser($this->user('student'));
         config(['acadex.max_pending_uploads' => 1, 'acadex.min_free_storage_bytes' => 0]);
         $this->resource()->assertOk();
-        $existing = Storage::disk('local')->allFiles();
         DocumentUpload::query()->update(['expires_at' => now()->subDay()]);
+        // Expired allocations are ignored in quota calculation
+        $this->resource()->assertOk();
+        self::assertSame(2, DocumentUpload::count());
+        $existing = Storage::disk('local')->allFiles();
+        // Now that there is an unexpired allocation, a third upload is rejected and leaves no extra file
         $this->resource()->assertUnprocessable();
-        self::assertSame(1, DocumentUpload::count());
+        self::assertSame(2, DocumentUpload::count());
         self::assertSame($existing, Storage::disk('local')->allFiles());
     }
 

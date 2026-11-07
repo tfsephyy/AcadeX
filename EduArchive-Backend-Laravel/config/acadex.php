@@ -5,7 +5,7 @@ return [
     'trusted_proxies' => array_values(array_filter(array_map('trim', explode(',', (string) env('TRUSTED_PROXIES', ''))))),
     'private_temp_path' => env('PRIVATE_TEMP_PATH', storage_path('framework/private-tmp')),
     'max_pending_uploads' => (int) env('MAX_PENDING_UPLOADS', 20),
-    'max_pending_upload_bytes' => (int) env('MAX_PENDING_UPLOAD_BYTES', 268435456),
+    'max_pending_upload_bytes' => (int) env('MAX_PENDING_UPLOAD_BYTES', 1073741824),
     // 0 means automatic 128 MiB ceiling with bounded stream encryption.
     // A positive value can only lower the automatic ceiling, never exceed it.
     'max_upload_bytes' => (int) env('ACADEX_MAX_UPLOAD_BYTES', 0),
