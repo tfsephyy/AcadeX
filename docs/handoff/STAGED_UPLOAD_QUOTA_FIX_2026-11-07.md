@@ -8,7 +8,7 @@ This maintenance release fixes a production bug where uploading PDFs fails with 
 
 While initially observed with large files (~94 MiB+), the quota leak accumulated leftover unsubmitted staged uploads and unfinished transfers until the user's quota (256 MiB or 20 uploads) was completely exhausted. Once exhausted, uploads of **any** size (even small 1 MB files) failed permanently.
 
-**This fix is implemented and locally verified. Deployment was requested on November 7, 2026; see the deployment status at the end of this report.**
+**This fix was deployed on November 8, 2026 from source commit `6fa3fac`; see the production checks below.**
 
 ---
 
@@ -120,6 +120,7 @@ $env:VITE_API_BASE_URL='/api/v1'; npm run build
 - **Expired-finalization recovery:** a quota 422 followed by same-transfer 410 shows the reselection instruction; dismissal clears the expired activity and a new selection starts a fresh transfer.
 - **Lint:** `0 errors, 32 warnings` (React hook dependency warnings)
 - **Build:** `✓ built in 19.40s` (846 modules transformed cleanly)
+- **Release artifact:** clean worktree at commit `6fa3fac`, `npm ci --no-audit --no-fund`, then `VITE_API_BASE_URL=/api/v1 npm run build`; `✓ built in 12.88s` (846 modules transformed). This artifact excludes unrelated uncommitted local PDF-viewer edits.
 
 The backend process-scoped variables match the schema configured in `.env.testing`; `SecurityTestCase` checks the active database identity before starting any test transaction. No tests targeted the local application database or production.
 
@@ -136,4 +137,13 @@ The backend process-scoped variables match the schema configured in `.env.testin
 
 ## Deployment status
 
-The user requested deployment after local verification. Record the deployed source/release, configuration cache, existing scheduler, backup and post-release checks here when the operation completes. No migration is required. The 128 MiB per-file ceiling, original `APP_KEY`, encrypted document format, and 2 GiB free-space reserve remain unchanged.
+Deployed November 8, 2026 from commit `6fa3fac` on branch `fix/staged-upload-quota-leak`.
+
+- Backend: `/srv/acadex-staging/releases/acadex-20261108-6fa3fac/EduArchive-Backend-Laravel`
+- Frontend: `/srv/acadex-staging/frontend-releases/acadex-20261108-6fa3fac/dist`
+- Recovery set: `/var/backups/acadex/staged-upload-fix-20261107T160717Z-retry1` (database, active code/build, environment, encrypted storage, Apache and service configuration; checksums verified)
+- `php artisan config:cache` confirms `max_pending_upload_bytes=1073741824` and `max_pending_uploads=20`; no migration was added.
+- Apache/PHP-FPM, `acadex-queue.service` and `acadex-scheduler.service` are active on the new release. The scheduler lists both upload-prune commands hourly with `withoutOverlapping()` configured for staged uploads.
+- One-time `php artisan acadex:prune-staged-uploads` removed **20** expired unclaimed uploads. Claimed, active processing and referenced paths remain protected by the command checks.
+- Production smoke checks: `https://veload.site/` returned **200**; an anonymous request to the protected upload-status endpoint returned **401**; the public page rendered in the user's Chrome session.
+- No production login, upload or submission was performed. The 128 MiB per-file limit, original `APP_KEY`, encrypted document format, and 2 GiB disk reserve remain unchanged.

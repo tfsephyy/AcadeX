@@ -2,9 +2,9 @@
 
 Prepared: **October 19, 2026, Asia/Manila**.
 
-**November 7, 2026 staged upload quota fix and leak prevention:** [Staged upload quota leak fix and lifecycle management](docs/handoff/STAGED_UPLOAD_QUOTA_FIX_2026-11-07.md) resolves upload failures from unreleased staged upload allocations. Expired uploads are ignored in quota calculation; new `acadex:prune-staged-uploads` scheduler command removes dead uploads and chunk files hourly; owner discard endpoint `DELETE /api/v1/uploads/{id}` frees quota on demand; transfer reservations expire on finalization failure; default quota is increased to 1 GiB. Local verification passed (112 backend tests / 1,021 assertions and 50 frontend tests; lint has 0 errors and 32 warnings; production build passed). This source change is not deployed to production.
+**November 8, 2026 staged upload quota fix — deployed:** [Staged upload quota fix and lifecycle management](docs/handoff/STAGED_UPLOAD_QUOTA_FIX_2026-11-07.md) shipped from code commit `6fa3fac` on `fix/staged-upload-quota-leak` to backend release `/srv/acadex-staging/releases/acadex-20261108-6fa3fac` and frontend `/srv/acadex-staging/frontend-releases/acadex-20261108-6fa3fac/dist`. Expired uploads no longer consume quota; the hourly prune command, owner discard endpoint, failed-finalization reservation release, and 1 GiB pending quota are active. No migration was added. The existing scheduler and queue run from the new backend release; a one-time prune removed 20 expired staged uploads. Production root returned 200 and an anonymous upload-status request returned 401; the live page rendered in Chrome. Local verification passed (112 backend tests / 1,021 assertions, 50 frontend tests, lint 0 errors / 32 warnings, production build 846 modules). Recovery set: `/var/backups/acadex/staged-upload-fix-20261107T160717Z-retry1`.
 
-**November 7, 2026 production redeployment:** the live release is source commit
+**Previous November 7, 2026 production release (superseded November 8):** the prior release was source commit
 `a6025cf5a782b37dad9260352794df8b39f36473` at
 `/srv/acadex-staging/releases/acadex-20261107-a6025cf`, with the frontend build at
 `/srv/acadex-staging/frontend-releases/acadex-20261107-a6025cf/dist`. Two reviewed
@@ -28,9 +28,9 @@ public address remains the same; it does not broaden SSH to a network range.
 
 **November 7, 2026 local implementation:** [Layouts, upload recovery and reference totals](docs/ui/2026-11-07-layout-upload-reference-update.md) documents responsive role panels, resumable encrypted chunk transfers, background-extraction recovery, copy/reference totals and IEEE removal. This source was deployed on November 7 after backup; the two required migrations were applied to production and the database queue worker and Laravel scheduler are active. The earlier disposable-database runs remain local feature verification, not production feature-flow acceptance. Preserve the original application key, private storage and database. Read the progress log for verification boundaries.
 
-**November 7 frontend release:** the frontend serves `/srv/acadex-staging/frontend-releases/acadex-20261107-a6025cf/dist` and includes the locally retained PDF timeout/range fix with the client's latest UI source. Previous hashed assets were copied into the new asset directory for open tabs. See the [November 5 PDF hotfix report](docs/handoff/PDF_VIEWER_HOTFIX_2026-11-05.md) for historical rationale and local verification; the November 7 production checks are in the release record.
+**Previous November 7 frontend release (superseded November 8):** the prior build served `/srv/acadex-staging/frontend-releases/acadex-20261107-a6025cf/dist` and included the PDF timeout/range fix. The current build is recorded above. See the [November 5 PDF hotfix report](docs/handoff/PDF_VIEWER_HOTFIX_2026-11-05.md) for historical rationale and local verification.
 
-**November 5, 2026 current source checkpoint:** the live application serves source `ed4bb6d` from `/srv/acadex-staging/releases/acadex-20261105-final`. Read the latest entry in [implementation progress](docs/ACADEX_PROGRESS.md) before operating it. Forward migrations, Google registration changes, a persistent database-queue worker, authenticated document ranges, and optional encrypted qpdf viewing previews are deployed. Google Console was observed as External / In production. Original records, document content and APP_KEY were preserved with private backups. **The large scanned PDF still requests excessive ranges before its first page opens; performance acceptance remains incomplete.** A Git pull contains the latest source, not the production environment, private storage, credentials, database, installed qpdf package, or a complete end-to-end acceptance certificate.
+**Previous November 5, 2026 source checkpoint (superseded November 7):** the live application then served source `ed4bb6d` from `/srv/acadex-staging/releases/acadex-20261105-final`. Forward migrations, Google registration changes, a persistent database-queue worker, authenticated document ranges, and optional encrypted qpdf viewing previews were deployed. Google Console was observed as External / In production. Original records, document content and APP_KEY were preserved with private backups. **The large scanned PDF still requested excessive ranges before its first page opened; performance acceptance was incomplete at that checkpoint.** A Git pull contains source, not the production environment, private storage, credentials, database or installed qpdf package.
 
 **November 1, 2026 interface release:** [Current interface/upload-feedback release and preservation checks](docs/handoff/UI_RELEASE_2026-11-01.md) records the serving release `/srv/acadex-staging/releases/acadex-ui-20261101T115952Z`, the official landing/sidebar SVG identity, honest transfer/processing feedback, verified backup and preservation of all six production accounts and 27 existing private files. Backend behavior/key/storage remain unchanged. OCR intentionally continues to run from the metadata release directory documented below; do not restart or relocate that worker for this frontend update. This dated release supersedes the local-only UI checkpoint statuses.
 
@@ -197,9 +197,9 @@ The prior deployment continuation did not add or resize AWS hosting resources, u
 
 | Purpose | Last verified path |
 | --- | --- |
-| Release root | `/srv/acadex-staging/releases/acadex-20261107-a6025cf` |
+| Release root | `/srv/acadex-staging/releases/acadex-20261108-6fa3fac` |
 | Backend | `<release-root>/EduArchive-Backend-Laravel` |
-| Frontend served build | `/srv/acadex-staging/frontend-releases/acadex-20261107-a6025cf/dist` |
+| Frontend served build | `/srv/acadex-staging/frontend-releases/acadex-20261108-6fa3fac/dist` |
 | OCR source | `/srv/acadex-staging/releases/acadex-metadata-20261101/EduArchive-Backend-Laravel/ocr-service` (unchanged) |
 | Queue worker working directory | `<release-root>/EduArchive-Backend-Laravel` |
 | Laravel scheduler | `/etc/systemd/system/acadex-scheduler.service` (enabled; same backend working directory) |
@@ -210,6 +210,7 @@ The prior deployment continuation did not add or resize AWS hosting resources, u
 | Private server backup root | `/var/backups/acadex` |
 | Original working Paddle model cache | `/home/ubuntu/.paddleocr/whl` |
 | Server overlay record | `<release-root>/DEPLOYMENT_MANIFEST.json` |
+| November 8 staged-upload recovery backup | `/var/backups/acadex/staged-upload-fix-20261107T160717Z-retry1` (root-only; checksums verified) |
 | November 7 recovery backup | `/var/backups/acadex/redeploy-20261107T133643Z` (root-only; checksum verified) |
 
 The backend `.env` and `storage` were symlinks to shared persistent locations. They are not release-local disposable content. PHP's private temporary directory was owned by `www-data`, mode `0700`; private temporary files were verified `0600`. The shared Laravel environment was `0640`, owned by `ubuntu:www-data`.
@@ -707,6 +708,8 @@ Official technical references, consulted for this handoff:
 Newer verified source/runtime evidence supersedes older observations. Amend this document with a dated change note after the client accepts a new release or changes architecture, credentials ownership, service identity, storage layout, or deployment method.
 
 ## 21. Handoff change record
+
+November 8, 2026: deployed staged-upload quota and cleanup fix from commit `6fa3fac` to `/srv/acadex-staging/releases/acadex-20261108-6fa3fac` and `/srv/acadex-staging/frontend-releases/acadex-20261108-6fa3fac/dist`. No migration was added. Cached the 1 GiB pending quota; switched Apache and queue/scheduler working directories; restarted Apache, PHP-FPM, queue, and scheduler. The new hourly prune command removed 20 expired staged uploads. Verified root HTTP 200, anonymous protected upload-status HTTP 401, active services, and live Chrome rendering. Created and checksum-verified recovery set `/var/backups/acadex/staged-upload-fix-20261107T160717Z-retry1`. Existing production APP_KEY, shared encrypted storage, OCR release and 128 MiB file limit were preserved. The production feature flow was not replayed with a real account or document. See [the staged upload fix release record](docs/handoff/STAGED_UPLOAD_QUOTA_FIX_2026-11-07.md).
 
 November 7, 2026: redeployed source commit `a6025cf5a782b37dad9260352794df8b39f36473` plus the retained frontend PDF viewer fixes. Applied the two November 7 forward migrations from the new backend release after a verified private backup. Switched the enabled Apache frontend/backend paths, restarted the queue against the new backend, added an enabled `acadex-scheduler.service` for hourly expired-transfer cleanup, and left OCR unchanged. Verified the database baseline counts, all 285 pre-existing storage-file hashes, the private environment checksum, HTTPS app-shell paths, main JavaScript/CSS assets, and unauthenticated API behavior. Retained the restricted SSH `/32` added for the deployment at the user's request. See [the production release record](docs/handoff/PRODUCTION_RELEASE_2026-11-07.md).
 

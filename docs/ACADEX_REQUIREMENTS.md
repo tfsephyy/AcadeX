@@ -6,6 +6,16 @@ This file is the durable record of the 16 requested improvements. It must be rea
 [ACADEX_PROGRESS.md](ACADEX_PROGRESS.md) and [ACADEX_DECISIONS.md](ACADEX_DECISIONS.md).
 The client-facing deployment history remains in [../ACADEX_CLIENT_AI_HANDOFF.md](../ACADEX_CLIENT_AI_HANDOFF.md).
 
+**Current production state (2026-11-08):** staged upload quota fix commit
+`6fa3fac` is live in the versioned backend/frontend release. No migration was
+added; the 1 GiB pending quota is cached, queue and scheduler use the new backend,
+and one-time cleanup removed 20 expired staged uploads. Root returned 200,
+anonymous protected upload status returned 401, and Chrome rendered the live page.
+The November 7 production migrations and verified backup remain part of the
+underlying release. This does not claim that every feature flow was replayed
+against production accounts or documents. See the [staged upload release record](handoff/STAGED_UPLOAD_QUOTA_FIX_2026-11-07.md)
+and the [November 7 production release record](handoff/PRODUCTION_RELEASE_2026-11-07.md).
+
 ## Global constraints
 
 - Preserve existing roles, approvals, authorization boundaries, encrypted documents, and production data.
@@ -324,3 +334,24 @@ The configured application migrations are applied, Faculty and real resumable
 upload/extraction checks passed, icon controls and responsive Assigned cards passed.
 See the final progress entry and [repair evidence](ui/2026-11-07-runtime-registration-controls.md).
 Production deployment was not requested or performed.
+
+## November 7, 2026 staged upload quota and cleanup
+
+- Exclude expired staged uploads from per-owner quotas and show current usage in
+  the shared quota error.
+- Prune expired unclaimed rows and encrypted files hourly; preserve active
+  processing, claimed uploads, and any file path referenced by a capstone or
+  resource. Remove leftover transfer chunks before cascading transfer metadata.
+- Let owners explicitly discard eligible staged uploads. Backing out of review
+  confirms and discards; moving forward and successful submission must retain or
+  claim the upload.
+- Expire a failed-finalization reservation so a subsequent attempt can proceed;
+  show a clear reselection message when the same expired transfer is resumed.
+- Raise the pending encrypted-byte quota default to 1 GiB while preserving the
+  128 MiB per-file ceiling, encryption format, application key, and 2 GiB disk
+  reserve. No schema migration is needed.
+
+Status: implementation and local verification passed; deployed November 8 from
+commit `6fa3fac`. No migration was added. The hourly scheduler is active, the
+one-time prune removed 20 expired staged uploads, and production smoke checks
+passed. See the [deployment and verification report](handoff/STAGED_UPLOAD_QUOTA_FIX_2026-11-07.md).

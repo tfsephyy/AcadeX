@@ -1,5 +1,23 @@
 # AcadeX implementation progress
 
+## 2026-11-07 - Staged upload quota lifecycle fix
+
+Verified the checked out source against the initial diagnosis. Pending usage counts
+every unexpired, unclaimed row; prune/discard take the owner lock first, preserve
+capstone/resource references, and remove existing chunk files before cascading
+transfer metadata. Finalization quota failures expire their transfer; retrying the
+same ID returns 410 with PDF reselection guidance. Review Back confirms and
+discards, while progression and successful submission retain/claim the upload.
+
+Local verification used the guarded disposable database: full backend suite **112
+passed / 1,021 assertions**, focused staged-upload suite **13 passed / 69
+assertions**; frontend **50 passed**; lint **0 errors / 32 warnings**; production
+build **846 modules**. Deployed on November 8 from commit `6fa3fac`; no migration
+was added. The 1 GiB quota was cached, both services use the new release, and the
+one-time prune removed **20** expired uploads. Production root returned 200,
+anonymous upload status returned 401, and the page rendered in Chrome. Recovery
+backup checksums passed; see the fix handoff for its path and details.
+
 ## 2026-11-07 — Interface/PDF follow-up, done (local), not deployed
 
 Preserved the pre-existing dirty worktree, upload activity implementation and
