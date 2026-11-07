@@ -2,7 +2,7 @@
 
 Prepared: **October 19, 2026, Asia/Manila**.
 
-**November 7, 2026 staged upload quota fix and leak prevention:** [Staged upload quota leak fix and lifecycle management](docs/handoff/STAGED_UPLOAD_QUOTA_FIX_2026-11-07.md) resolves upload failures from unreleased staged upload allocations. Expired uploads are ignored in quota calculation; new `acadex:prune-staged-uploads` scheduler command removes dead uploads and chunk files hourly; owner discard endpoint `DELETE /api/v1/uploads/{id}` frees quota on demand; transfer reservations expire on finalization failure; default quota is increased to 1 GiB. Ready for review; not yet deployed to production.
+**November 7, 2026 staged upload quota fix and leak prevention:** [Staged upload quota leak fix and lifecycle management](docs/handoff/STAGED_UPLOAD_QUOTA_FIX_2026-11-07.md) resolves upload failures from unreleased staged upload allocations. Expired uploads are ignored in quota calculation; new `acadex:prune-staged-uploads` scheduler command removes dead uploads and chunk files hourly; owner discard endpoint `DELETE /api/v1/uploads/{id}` frees quota on demand; transfer reservations expire on finalization failure; default quota is increased to 1 GiB. Local verification passed (112 backend tests / 1,021 assertions and 50 frontend tests; lint has 0 errors and 32 warnings; production build passed). This source change is not deployed to production.
 
 **November 7, 2026 production redeployment:** the live release is source commit
 `a6025cf5a782b37dad9260352794df8b39f36473` at
@@ -287,7 +287,7 @@ Attachments, resources, IMRAD files, preview/download routes, queries, reference
 
 Private file encryption is implemented by `PdfEncryptorService`. The application key and encrypted storage belong to the same recovery set. A SQL-only backup is insufficient to restore the archive; a source-only Git clone is also insufficient.
 
-Staged uploads are opaque owner/purpose-bound references. Limits introduced during finalization: 20 pending references per owner, 256 MiB of pending encrypted bytes, and a 2 GiB free-space reserve before new encrypted writes. Upload routes use a shared authenticated-owner rate limit of 30 per hour. The application no longer imposes a separate 50 MiB per-file rule; the effective ceiling is PHP-FPM (`public/.user.ini`, currently 64M per file / 70M per request / 512M memory) or an optional `ACADEX_MAX_UPLOAD_BYTES` which can only lower the 64 MiB memory-safe ceiling. Supporting a genuine 128 MiB limit requires a reviewed streaming/chunked encryption design or separately validated server capacity; it is not supported by the current whole-file implementation. Inspect `DocumentUploads`, `PdfEncryptorService`, `UploadLimits`, `RejectOversizedUploads`, `config/acadex.php`, `AppServiceProvider`, and `routes/api.php` before changing these values.
+Staged uploads are opaque owner/purpose-bound references. Current source defaults allow 20 pending references per owner, 1 GiB of pending encrypted bytes, and require a 2 GiB free-space reserve before new encrypted writes. Upload routes use a shared authenticated-owner rate limit of 30 per hour. The per-file ceiling remains 128 MiB in `UploadLimits`; PHP-FPM examples use `public/.user.ini` values of 128M per file / 140M per request / 512M memory, and optional `ACADEX_MAX_UPLOAD_BYTES` can only lower the safe application ceiling. Resumable PDF uploads send encrypted 2 MiB chunks and reassemble privately before the same per-file validation. Other multipart routes remain subject to their PHP and request limits. Inspect `DocumentUploads`, `PdfEncryptorService`, `UploadLimits`, `RejectOversizedUploads`, `config/acadex.php`, `AppServiceProvider`, and `routes/api.php` before changing these values.
 
 The adviser projection was narrowed to identity fields rather than serializing a complete account/profile. Full extracted PDF text and physical storage paths should not become API response fields.
 
@@ -766,9 +766,9 @@ Never copy the laptop `.env` over production. It can point to a different schema
 | `MAX_PENDING_UPLOADS` | Source default 20 per owner |
 | `MAX_PENDING_UPLOAD_BYTES` | Source default 1073741824 bytes / 1 GiB (sized for 128 MiB per-file limit) |
 | `MIN_FREE_STORAGE_BYTES` | Source default 2147483648 bytes / 2 GiB |
-| `ACADEX_MAX_UPLOAD_BYTES` | Optional application ceiling; `0` means automatic memory-safe ceiling (at most 64 MiB); a positive value can only lower it |
+| `ACADEX_MAX_UPLOAD_BYTES` | Optional application ceiling; `0` means the automatic 128 MiB safe ceiling; a positive value can only lower it |
 | `UPLOAD_LOCK_STORE` | Inter-process cache store for upload concurrency locking across PHP-FPM workers; defaults to `CACHE_STORE`. In production, must be an inter-process store (`database`, `file`, `redis`); process-local stores (`array`, `null`) are rejected |
-| `public/.user.ini` | PHP-FPM upload ceilings: 64M per file / 70M per request, 600s timeouts, 512M memory; adjust with server RAM |
+| `public/.user.ini` | PHP-FPM upload ceilings: 128M per file / 140M per request, 600s timeouts, 512M memory; adjust with server RAM |
 | Upload limiter in `AppServiceProvider` / route middleware | Shared 30 uploads per hour per authenticated owner |
 | OCR `HOME`, `OCR_MODEL_CACHE`, `TMPDIR` | Actual service-process directories; read current unit, do not assume the example file is loaded |
 | `OMP_NUM_THREADS`, `MKL_NUM_THREADS` | Preserve the measured bounded service settings; inspect actual unit rather than multiplying CPU concurrency |

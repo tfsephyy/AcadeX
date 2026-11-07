@@ -404,9 +404,8 @@ class CapstoneController extends Controller
         }
 
         $deletedPath = null;
-        $deletedChunkFiles = [];
 
-        DB::transaction(function () use ($request, $upload, &$deletedPath, &$deletedChunkFiles) {
+        DB::transaction(function () use ($request, $upload, &$deletedPath) {
             // Lock order: User first, then DocumentUpload / UploadTransfer.
             User::whereKey($request->user()->id)->lockForUpdate()->firstOrFail();
             $target = DocumentUpload::whereKey($upload)
@@ -421,26 +420,38 @@ class CapstoneController extends Controller
                 && $target->processing_started_at->isAfter(now()->subMinutes(15))) {
                 abort(409, 'This upload is currently being processed.');
             }
+            if (app(\App\Services\DocumentUploads::class)->isPathReferenced($target->path)) {
+                abort(409, 'This upload file is referenced by a capstone or resource and cannot be discarded.');
+            }
 
             // Find and collect chunk files from any related transfers before cascading delete.
             $transfers = UploadTransfer::where('upload_id', $target->id)->lockForUpdate()->get();
+            $deletedChunkFiles = [];
             foreach ($transfers as $transfer) {
                 if (!empty($transfer->chunks)) {
                     $deletedChunkFiles = array_merge($deletedChunkFiles, array_column($transfer->chunks, 'path'));
                 }
             }
 
+            // Remove chunk files before deleting the upload and cascading transfer rows.
+            $disk = Storage::disk('local');
+            $existingChunkFiles = array_values(array_filter($deletedChunkFiles, fn ($path) => $disk->exists($path)));
+            if ($existingChunkFiles && !$disk->delete($existingChunkFiles)) {
+                throw new \RuntimeException('Unable to remove staged upload transfer chunks.');
+            }
+
+            if (!$target->delete()) {
+                throw new \RuntimeException('Unable to remove staged upload record.');
+            }
             $deletedPath = $target->path;
-            $target->delete();
         });
 
         // Delete files after the transaction commits
         $disk = Storage::disk('local');
-        if (!empty($deletedChunkFiles)) {
-            $disk->delete($deletedChunkFiles);
-        }
-        if ($deletedPath) {
-            $disk->delete($deletedPath);
+        if ($deletedPath && $disk->exists($deletedPath) && !$disk->delete($deletedPath)) {
+            \Illuminate\Support\Facades\Log::warning("CapstoneController: Could not remove discarded upload file [{$upload}].", [
+                'upload_id' => $upload,
+            ]);
         }
 
         return $this->successResponse(null, 'Upload discarded successfully.');

@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Capstone;
+use App\Models\CapstoneResource;
 use App\Models\DocumentUpload;
 use App\Models\User;
 use Illuminate\Support\Facades\Storage;
@@ -25,14 +26,21 @@ class DocumentUploads
             ->get(['path']);
         $disk = Storage::disk('local');
         $bytes = 0;
-        $count = 0;
         foreach ($pending as $upload) {
             if ($disk->exists($upload->path)) {
                 $bytes += $disk->size($upload->path);
-                $count++;
             }
         }
-        return ['count' => $count, 'bytes' => $bytes];
+        return ['count' => $pending->count(), 'bytes' => $bytes];
+    }
+
+    /** A staged file must remain if any saved record still points to it. */
+    public function isPathReferenced(string $path): bool
+    {
+        return Capstone::where('pdf_path', $path)
+            ->orWhere('imrad_path', $path)
+            ->exists()
+            || CapstoneResource::where('file_path', $path)->exists();
     }
 
     public static function quotaMessage(int $count, int $bytes, int $maxBytes): string

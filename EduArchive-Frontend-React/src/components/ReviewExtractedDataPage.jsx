@@ -211,16 +211,14 @@ export default function ReviewExtractedDataPage({ nextPath, backPath }) {
         setForm(prev => ({ ...prev, keywords: prev.keywords.filter((_, i) => i !== idx) }));
     };
 
-    const handleBack = async () => {
+    const handleBack = () => {
         if (window.confirm('Discard this uploaded PDF and return to the upload step?')) {
-            if (uploadId) {
-                try {
-                    await api.delete(`/uploads/${uploadId}`);
-                } catch (error) {
-                    void error;
-                }
+            const activeUploadId = uploadManager.getSnapshot().task?.data?.upload_id;
+            if (!uploadId || activeUploadId === uploadId) {
+                uploadManager.dismiss();
+            } else {
+                void api.delete(`/uploads/${uploadId}`).catch(() => {});
             }
-            uploadManager.dismiss();
             navigate(backPath);
         }
     };

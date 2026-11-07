@@ -2,10 +2,10 @@
 
 namespace App\Console\Commands;
 
-use App\Models\Capstone;
-use App\Models\CapstoneResource;
 use App\Models\DocumentUpload;
 use App\Models\UploadTransfer;
+use App\Models\User;
+use App\Services\DocumentUploads;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -22,13 +22,15 @@ class PruneStagedUploads extends Command
 
         DocumentUpload::whereNull('capstone_id')
             ->where('expires_at', '<=', now())
-            ->select('id')
+            ->select(['id', 'user_id'])
             ->chunkById(100, function ($rows) use (&$pruned) {
                 foreach ($rows as $row) {
                     $deletedPath = null;
-                    $deletedChunkFiles = [];
 
-                    DB::transaction(function () use ($row, &$deletedPath, &$deletedChunkFiles, &$pruned) {
+                    DB::transaction(function () use ($row, &$deletedPath, &$pruned) {
+                        // Match allocation/submission lock order to avoid deadlocks.
+                        if (!User::whereKey($row->user_id)->lockForUpdate()->first()) return;
+
                         $upload = DocumentUpload::whereKey($row->id)
                             ->whereNull('capstone_id')
                             ->where('expires_at', '<=', now())
@@ -46,12 +48,7 @@ class PruneStagedUploads extends Command
 
                         // Never delete if any capstone or resource references this path.
                         $path = $upload->path;
-                        $isReferenced = Capstone::where('pdf_path', $path)
-                            ->orWhere('imrad_path', $path)
-                            ->exists()
-                            || CapstoneResource::where('file_path', $path)->exists();
-
-                        if ($isReferenced) {
+                        if (app(DocumentUploads::class)->isPathReferenced($path)) {
                             Log::warning("PruneStagedUploads: Staged upload [{$upload->id}] path is referenced by a capstone or resource; skipping deletion.", [
                                 'upload_id' => $upload->id,
                                 'path' => $path,
@@ -61,24 +58,41 @@ class PruneStagedUploads extends Command
 
                         // Collect transfer chunk files pointing to this upload.
                         $transfers = UploadTransfer::where('upload_id', $upload->id)->lockForUpdate()->get();
+                        $deletedChunkFiles = [];
                         foreach ($transfers as $transfer) {
                             if (!empty($transfer->chunks)) {
                                 $deletedChunkFiles = array_merge($deletedChunkFiles, array_column($transfer->chunks, 'path'));
                             }
                         }
 
+                        // Remove chunk files before deleting the upload, which cascades
+                        // its transfer rows and their chunk-path metadata.
+                        $disk = Storage::disk('local');
+                        $existingChunkFiles = array_values(array_filter($deletedChunkFiles, fn ($path) => $disk->exists($path)));
+                        if ($existingChunkFiles && !$disk->delete($existingChunkFiles)) {
+                            Log::warning("PruneStagedUploads: Could not remove transfer chunks for upload [{$upload->id}]; leaving the upload for a later retry.", [
+                                'upload_id' => $upload->id,
+                            ]);
+                            return;
+                        }
+
+                        if (!$upload->delete()) {
+                            Log::warning("PruneStagedUploads: Could not remove staged upload row [{$upload->id}].", [
+                                'upload_id' => $upload->id,
+                            ]);
+                            return;
+                        }
+
                         $deletedPath = $path;
-                        $upload->delete();
                         $pruned++;
                     });
 
                     // Delete storage files after transaction
                     $disk = Storage::disk('local');
-                    if (!empty($deletedChunkFiles)) {
-                        $disk->delete($deletedChunkFiles);
-                    }
-                    if ($deletedPath) {
-                        $disk->delete($deletedPath);
+                    if ($deletedPath && $disk->exists($deletedPath) && !$disk->delete($deletedPath)) {
+                        Log::warning("PruneStagedUploads: Could not remove encrypted file for upload [{$row->id}].", [
+                            'upload_id' => $row->id,
+                        ]);
                     }
                 }
             });

@@ -8,7 +8,7 @@ This maintenance release fixes a production bug where uploading PDFs fails with 
 
 While initially observed with large files (~94 MiB+), the quota leak accumulated leftover unsubmitted staged uploads and unfinished transfers until the user's quota (256 MiB or 20 uploads) was completely exhausted. Once exhausted, uploads of **any** size (even small 1 MB files) failed permanently.
 
-**This fix is implemented, covered by tests, and verified locally. It is NOT yet deployed to production.**
+**This fix is implemented and locally verified. Deployment was requested on November 7, 2026; see the deployment status at the end of this report.**
 
 ---
 
@@ -24,7 +24,7 @@ While initially observed with large files (~94 MiB+), the quota leak accumulated
    In `capstoneUploadManager.js`, `dismiss()` only called `DELETE /uploads/transfers/{transferId}` if `upload_id` was absent. Once a transfer finished and staged an upload (`upload_id` present), dismissal only cleared client state with no server API to delete the staged document upload.
 
 4. **D. Leaving Review page retained staged files against quota:**
-   When users navigated back from `ReviewExtractedDataPage.jsx` to start over or cancel, the staged upload was not discarded. Furthermore, navigating forward called `dismiss()`, which previously risked clearing manager state.
+   Backing out of review without submitting kept the staged upload. Back now asks for confirmation and discards that upload. Advancing to additional information or successfully submitting must retain/claim the upload; those actions do not call discard.
 
 5. **E. Failed finalization locked reservations for 24 hours:**
    When `UploadTransferController::complete()` encountered a finalization failure (such as quota validation error), the `upload_transfers` row remained unexpired with `upload_id = NULL`, continuing to reserve its full byte size for 24 hours. Re-selecting the file created a new transfer, counting the same bytes twice.
@@ -43,9 +43,10 @@ While initially observed with large files (~94 MiB+), the quota leak accumulated
 ### 2. Scheduled Prune Command (`acadex:prune-staged-uploads`)
 - Implemented `App\Console\Commands\PruneStagedUploads` (`acadex:prune-staged-uploads`).
 - Finds `document_uploads` where `capstone_id IS NULL` and `expires_at <= now()`.
+- Locks the owner row before the upload/transfer rows, matching the allocation and submission lock order.
 - Locks each row; skips if `processing_status = 'processing'` and `processing_started_at` is under 15 minutes old.
 - Skips with a warning log if the file path is referenced by any existing capstone (`pdf_path`, `imrad_path`) or resource (`file_path`).
-- Cleans up leftover chunk files of any related transfer, deletes the row, and deletes the encrypted file from storage.
+- Removes existing leftover chunk files before deleting the upload row and cascading transfer rows, then deletes the encrypted file after the row transaction commits. Missing files are tolerated; failed chunk cleanup leaves the row for a later retry.
 - Registered in `routes/console.php` with `->hourly()->withoutOverlapping()`. Picks up automatically via `php artisan schedule:work` / `acadex-scheduler.service`.
 
 ### 3. Discard API for Staged Uploads
@@ -55,7 +56,8 @@ While initially observed with large files (~94 MiB+), the quota leak accumulated
   - Returns 404 if not found/unowned (idempotent for repeat calls).
   - Returns 409 if already submitted (`capstone_id !== null`).
   - Returns 409 if active processing started within 15 minutes.
-  - Deletes related transfer chunk files, deletes the upload row, and removes the encrypted storage file.
+  - Refuses to delete a file path still referenced by a capstone or resource.
+  - Locks the owner row first, removes existing transfer chunk files before deleting the upload row, then removes the encrypted file after commit.
 - Updated `capstoneUploadManager.js`:
   - `dismiss()` calls `DELETE /uploads/{upload_id}` (fire-and-forget, ignoring 404) if `upload_id` exists and is not submitted.
   - Allows dismissal in phase `queued` as well as failed/cancelled/completed states.
@@ -68,7 +70,7 @@ While initially observed with large files (~94 MiB+), the quota leak accumulated
 ### 4. Immediate Reservation Release on Finalization Failure
 - In `UploadTransferController::complete()`: if `CapstoneController::upload()` returns `>= 400` or throws `ValidationException`, the transfer record is immediately expired (`expires_at = now()`).
 - This instantly frees the byte reservation so subsequent upload attempts are not blocked by duplicate counting.
-- Temporary chunk files are retained until pruned, allowing standard cleanup.
+- Temporary chunk files are retained until pruned. A retry using that expired transfer ID receives HTTP 410 with “This upload expired. Select the PDF again.” The upload activity displays that instruction; the user dismisses it and selects the PDF again to start a fresh transfer.
 
 ### 5. Increased Default Quota
 - Updated `config/acadex.php` default `max_pending_upload_bytes` from `268435456` (256 MiB) to `1073741824` (1 GiB), properly accommodating multiple 128 MiB upload attempts.
@@ -81,11 +83,11 @@ While initially observed with large files (~94 MiB+), the quota leak accumulated
 ### Backend Tests
 Ran full test suite using the isolated disposable MySQL runner:
 ```
-php artisan test --env=testing
+$env:APP_ENV='testing'; $env:DB_CONNECTION='mysql'; $env:DB_DATABASE='acadex_remediation_test_5954d321a1'; php artisan test --env=testing
 ```
-- **Result:** `110 passed (1007 assertions), 0 failed`
-- **Duration:** 30.15s
-- **New Feature Tests in `Tests\Feature\StagedUploadQuotaAndPruneTest` (11 passed):**
+- **Latest full-suite result:** `112 passed (1021 assertions), 0 failed` in 30.07s.
+- **Focused staged-upload result:** `13 passed (69 assertions), 0 failed` in 4.67s.
+- **Feature Tests in `Tests\Feature\StagedUploadQuotaAndPruneTest` (13 passed):**
   1. `✓ expired staged upload does not count toward quota in stage and start`
   2. `✓ unexpired staged uploads still count toward quota with actionable message`
   3. `✓ delete uploads endpoint owner can discard unsubmitted upload`
@@ -94,9 +96,11 @@ php artisan test --env=testing
   6. `✓ delete uploads endpoint recent processing returns 409`
   7. `✓ delete uploads endpoint repeat call returns 404`
   8. `✓ discard removes transfer chunks and cascaded transfer row`
-  9. `✓ prune staged uploads command`
-  10. `✓ finalize failing on quota does not leave reservation`
+  9. `✓ prune staged uploads command` (including chunk cleanup, capstone/resource references, active processing, and summary count)
+  10. `✓ finalize failing on quota does not leave reservation` (same transfer ID returns 410 with reselection instructions)
   11. `✓ regression quota upload discard sequence`
+  12. `✓ unexpired staged rows count even when the encrypted file is missing`
+  13. `✓ discard does not remove a file referenced by a resource`
 - **Updated Regression Test in `Tests\Feature\DeploymentHardeningTest`:**
   - `✓ pending count ignores expired allocations and rejection removes only new file`
 
@@ -105,22 +109,31 @@ In `EduArchive-Frontend-React`:
 ```
 npm test
 npm run lint
-npm run build
+$env:VITE_API_BASE_URL='/api/v1'; npm run build
 ```
-- **Tests:** `49 passed (0 failed, 13 in capstoneUploadManager.test.js)`
+- **Tests:** `50 passed (0 failed, 14 in capstoneUploadManager.test.js)`
   - `✓ dismiss with upload_id calls DELETE /uploads/{id}`
   - `✓ dismiss without upload_id calls DELETE /uploads/transfers/{transferId}`
   - `✓ dismiss ignores 404 error from DELETE /uploads/{id}`
   - `✓ dismiss while uploading or processing does nothing`
   - `✓ dismiss allowed in phase queued`
-- **Lint:** `0 errors, 32 warnings` (pre-existing exhaustive-deps warnings preserved)
-- **Build:** `✓ built in 12.27s` (846 modules transformed cleanly)
+- **Expired-finalization recovery:** a quota 422 followed by same-transfer 410 shows the reselection instruction; dismissal clears the expired activity and a new selection starts a fresh transfer.
+- **Lint:** `0 errors, 32 warnings` (React hook dependency warnings)
+- **Build:** `✓ built in 19.40s` (846 modules transformed cleanly)
+
+The backend process-scoped variables match the schema configured in `.env.testing`; `SecurityTestCase` checks the active database identity before starting any test transaction. No tests targeted the local application database or production.
 
 ---
 
-## Deployment Notes (When Approved)
+## Deployment Notes
 
 1. **No database migrations required:** All changes use the existing schema.
 2. **Scheduler:** The new `acadex:prune-staged-uploads` command is registered in `routes/console.php` and will be automatically invoked by the running `acadex-scheduler.service` (`php artisan schedule:work`).
 3. **Configuration cache:** Run `php artisan config:cache` after pulling code to update the default `max_pending_upload_bytes` setting if not overridden in `.env`.
 4. **Immediate cleanup (optional):** A one-time execution of `php artisan acadex:prune-staged-uploads` can be run immediately following deployment to clean up any historical expired staged uploads.
+
+5. **Pending list UI:** The optional `GET /uploads/pending` endpoint and dedicated discard control in the upload-error view were skipped to keep the change bounded; upload activity dismissal and review Back actions handle discards.
+
+## Deployment status
+
+The user requested deployment after local verification. Record the deployed source/release, configuration cache, existing scheduler, backup and post-release checks here when the operation completes. No migration is required. The 128 MiB per-file ceiling, original `APP_KEY`, encrypted document format, and 2 GiB free-space reserve remain unchanged.

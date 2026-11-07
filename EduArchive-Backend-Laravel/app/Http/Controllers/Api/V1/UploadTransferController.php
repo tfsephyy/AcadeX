@@ -76,6 +76,7 @@ class UploadTransferController extends Controller
         $path = null;
         try {
             $record = DB::transaction(function () use ($request, $transfer, &$path) {
+                User::whereKey($request->user()->id)->lockForUpdate()->firstOrFail();
                 $record = $this->owned($request, $transfer);
                 if ($record->upload_id) return $record;
                 $offset = (int) $request->input('offset');
@@ -179,6 +180,7 @@ class UploadTransferController extends Controller
     public function cancel(Request $request, string $transfer): JsonResponse
     {
         DB::transaction(function () use ($request, $transfer) {
+            User::whereKey($request->user()->id)->lockForUpdate()->firstOrFail();
             $record = $this->owned($request, $transfer);
             // Completed extraction is retained; cancellation only stops a transfer.
             if ($record->upload_id) return;

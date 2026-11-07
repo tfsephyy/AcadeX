@@ -81,6 +81,30 @@ class StagedUploadQuotaAndPruneTest extends SecurityTestCase
         self::assertStringContainsString('unsubmitted upload', $message);
         self::assertStringContainsString('Submit or discard', $message);
         self::assertStringContainsString('24 hours', $message);
+
+        // Transfer reservations use the same staged usage and actionable error.
+        $transferResponse = $this->putJson('/api/v1/uploads/transfers/'.Str::uuid(), [
+            'name' => 'test.pdf', 'size' => 1024,
+        ])->assertStatus(422);
+        self::assertStringContainsString('unsubmitted upload', $transferResponse->json('errors.pdf.0'));
+    }
+
+    public function test_unexpired_staged_rows_count_even_when_the_encrypted_file_is_missing(): void
+    {
+        $user = $this->user('student');
+        $this->asUser($user);
+        config(['acadex.max_pending_uploads' => 1, 'acadex.min_free_storage_bytes' => 0]);
+
+        DocumentUpload::create([
+            'id' => (string) Str::uuid(),
+            'user_id' => $user->id,
+            'purpose' => 'pdf',
+            'path' => 'capstones/missing-staged-file.enc',
+            'expires_at' => now()->addHour(),
+            'processing_status' => DocumentUpload::STATUS_COMPLETED,
+        ]);
+
+        $this->uploadResource()->assertStatus(422);
     }
 
     public function test_delete_uploads_endpoint_owner_can_discard_unsubmitted_upload(): void
@@ -132,6 +156,26 @@ class StagedUploadQuotaAndPruneTest extends SecurityTestCase
         DocumentUpload::whereKey($uploadId)->update(['capstone_id' => $capstone->id]);
 
         $this->deleteJson('/api/v1/uploads/'.$uploadId)->assertStatus(409);
+    }
+
+    public function test_discard_does_not_remove_a_file_referenced_by_a_resource(): void
+    {
+        $owner = $this->user('student');
+        $this->asUser($owner);
+
+        $res = $this->uploadResource()->assertOk();
+        $uploadId = substr($res->json('data.file_path'), 7);
+        $upload = DocumentUpload::findOrFail($uploadId);
+        $capstone = $this->capstone($owner);
+        CapstoneResource::create([
+            'capstone_id' => $capstone->id,
+            'name' => 'Synthetic resource',
+            'file_path' => $upload->path,
+        ]);
+
+        $this->deleteJson('/api/v1/uploads/'.$uploadId)->assertStatus(409);
+        self::assertNotNull(DocumentUpload::find($uploadId));
+        self::assertTrue(Storage::disk('local')->exists($upload->path));
     }
 
     public function test_delete_uploads_endpoint_recent_processing_returns_409(): void
@@ -207,6 +251,18 @@ class StagedUploadQuotaAndPruneTest extends SecurityTestCase
             'expires_at' => now()->subHour(),
             'processing_status' => DocumentUpload::STATUS_COMPLETED,
         ]);
+        $chunk1 = 'transfer-chunks/prune1-chunk.enc';
+        Storage::disk('local')->put($chunk1, 'encrypted chunk');
+        UploadTransfer::create([
+            'id' => (string) Str::uuid(),
+            'user_id' => $owner->id,
+            'original_name' => 'expired.pdf',
+            'size' => 14,
+            'received_bytes' => 14,
+            'chunks' => [['path' => $chunk1, 'offset' => 0, 'hash' => 'fake', 'size' => 14]],
+            'upload_id' => $upload1->id,
+            'expires_at' => now()->subHour(),
+        ]);
 
         // 2. Unexpired unclaimed upload -> should be kept
         $file2 = 'capstones/keep2.enc';
@@ -260,11 +316,32 @@ class StagedUploadQuotaAndPruneTest extends SecurityTestCase
             'processing_status' => DocumentUpload::STATUS_COMPLETED,
         ]);
 
-        $this->artisan('acadex:prune-staged-uploads')->assertSuccessful();
+        // 6. Expired staged file referenced by a saved resource -> should be kept.
+        $file6 = 'capstones/referenced-resource.enc';
+        Storage::disk('local')->put($file6, 'data6');
+        $resourceCapstone = $this->capstone($owner);
+        CapstoneResource::create([
+            'capstone_id' => $resourceCapstone->id,
+            'name' => 'Referenced resource',
+            'file_path' => $file6,
+        ]);
+        $upload6 = DocumentUpload::create([
+            'id' => (string) Str::uuid(),
+            'user_id' => $owner->id,
+            'purpose' => 'resource',
+            'path' => $file6,
+            'expires_at' => now()->subHour(),
+            'processing_status' => DocumentUpload::STATUS_COMPLETED,
+        ]);
+
+        $this->artisan('acadex:prune-staged-uploads')
+            ->expectsOutput('Expired staged uploads removed (1).')
+            ->assertSuccessful();
 
         // Assert 1 was pruned
         self::assertNull(DocumentUpload::find($upload1->id));
         self::assertFalse(Storage::disk('local')->exists($file1));
+        self::assertFalse(Storage::disk('local')->exists($chunk1));
 
         // Assert 2 was kept
         self::assertNotNull(DocumentUpload::find($upload2->id));
@@ -281,6 +358,10 @@ class StagedUploadQuotaAndPruneTest extends SecurityTestCase
         // Assert 5 was kept
         self::assertNotNull(DocumentUpload::find($upload5->id));
         self::assertTrue(Storage::disk('local')->exists($file5));
+
+        // Assert 6 was kept because a capstone resource still references it.
+        self::assertNotNull(DocumentUpload::find($upload6->id));
+        self::assertTrue(Storage::disk('local')->exists($file6));
     }
 
     public function test_finalize_failing_on_quota_does_not_leave_reservation(): void
@@ -310,6 +391,10 @@ class StagedUploadQuotaAndPruneTest extends SecurityTestCase
         // The failed transfer must be expired so its reservation is released
         $transfer = UploadTransfer::findOrFail($transferId);
         self::assertTrue($transfer->expires_at->isPast() || $transfer->expires_at->isCurrentSecond());
+        self::assertNotEmpty($transfer->chunks);
+        $this->putJson('/api/v1/uploads/transfers/'.$transferId, [
+            'name' => 'synthetic.pdf', 'size' => strlen($part),
+        ])->assertStatus(410)->assertJsonPath('message', 'This upload expired. Select the PDF again.');
 
         // Now if we start a new transfer with 600 bytes:
         // Staged bytes ~ 3000. 3000 + 600 = 3600 <= 4000.

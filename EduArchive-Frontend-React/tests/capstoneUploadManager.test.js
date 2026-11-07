@@ -234,3 +234,52 @@ test('dismiss allowed in phase queued', async t => {
   assert.equal(deletes[0].path, '/uploads/upload-queued')
   assert.equal(manager.getSnapshot().task, null)
 })
+
+test('an expired resumed transfer asks for the PDF again and can be dismissed', async t => {
+  let attempts = 0
+  let nextTransfer = 0
+  const deletes = []
+  const transferIds = []
+  const manager = createCapstoneUploadManager({
+    api: {
+      post: () => Promise.resolve(stored()),
+      get: () => new Promise(() => {}),
+      delete: path => { deletes.push(path); return Promise.reject({ response: { status: 410 } }) },
+    },
+    sendFile: async ({ task }) => {
+      attempts++
+      transferIds.push(task.transferId)
+      if (attempts === 1) {
+        throw { response: { status: 422, data: { message: 'Pending uploads have reached the storage limit.' } } }
+      }
+      if (attempts === 2) {
+        throw { response: { status: 410, data: { message: 'This upload expired. Select the PDF again.' } } }
+      }
+      return stored('upload-after-reselect')
+    },
+    uuid: () => `transfer-${++nextTransfer}`,
+    errorMessage: (error, fallback) => error.response?.data?.message || fallback,
+  })
+  manager.setOwner(42)
+  t.after(() => manager.dispose())
+
+  assert.equal(manager.start(pdf(), 'student'), true)
+  await settle()
+  assert.equal(manager.getSnapshot().task.phase, 'error')
+  manager.retry()
+  await settle()
+  assert.equal(manager.getSnapshot().task.phase, 'unavailable')
+  assert.equal(manager.getSnapshot().task.error, 'This upload expired. Select the PDF again.')
+  manager.retry()
+  assert.equal(attempts, 2)
+  assert.equal(transferIds[0], transferIds[1])
+
+  manager.dismiss()
+  assert.deepEqual(deletes, ['/uploads/transfers/transfer-1'])
+  assert.equal(manager.getSnapshot().task, null)
+  assert.equal(manager.start(pdf(), 'student'), true)
+  await settle()
+  assert.equal(attempts, 3)
+  assert.notEqual(transferIds[1], transferIds[2])
+  assert.equal(manager.getSnapshot().task.data.upload_id, 'upload-after-reselect')
+})
