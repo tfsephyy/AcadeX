@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Models\Capstone;
+use App\Services\Chatbot\ChatbotAiService;
 use App\Services\Chatbot\ChatbotAnalyticsService;
 use App\Services\Chatbot\ChatbotIntentService;
 use App\Services\Chatbot\ChatbotPermissionService;
@@ -17,19 +18,16 @@ use Illuminate\Support\Facades\Log;
 /**
  * ChatbotController
  *
- * Architecture: DATABASE FIRST → PERMISSION FIRST → RESPONSE SECOND
+ * Architecture: DATABASE FIRST → PERMISSION FIRST → AI (GROQ PRIMARY → GEMINI FALLBACK → LOCAL PHP FALLBACK)
  *
- * ┌─────────────────────────────────────────────────┐
- * │  NO EXTERNAL AI CALLS. NO GROQ. NO OPENAI.      │
- * │                                                  │
- * │  Flow:                                           │
- * │  1. Authenticate user → get role (server-side)  │
- * │  2. PHP pattern-matching intent detection        │
- * │  3. Permission gate (deny before any DB query)   │
- * │  4. Role-scoped DB query                        │
- * │  5. PHP response formatter (ChatbotResponseSvc)  │
- * │  6. Return JSON — no external latency, ever.     │
- * └─────────────────────────────────────────────────┘
+ * ┌─────────────────────────────────────────────────────────────┐
+ * │  Flow:                                                       │
+ * │  1. Authenticate user → get role (server-side)              │
+ * │  2. PHP pattern-matching intent detection                    │
+ * │  3. Permission gate (deny before any DB query or AI call)   │
+ * │  4. Role-scoped DB query & deterministic context            │
+ * │  5. Groq primary → Google Gemini fallback → Local fallback  │
+ * └─────────────────────────────────────────────────────────────┘
  */
 class ChatbotController extends Controller
 {
@@ -40,6 +38,7 @@ class ChatbotController extends Controller
     private ChatbotQueryService     $querySvc;
     private ChatbotAnalyticsService $analyticsSvc;
     private ChatbotResponseService  $responseSvc;
+    private ChatbotAiService        $aiSvc;
 
     public function __construct()
     {
@@ -48,6 +47,7 @@ class ChatbotController extends Controller
         $this->querySvc     = new ChatbotQueryService();
         $this->analyticsSvc = new ChatbotAnalyticsService();
         $this->responseSvc  = new ChatbotResponseService();
+        $this->aiSvc        = new ChatbotAiService();
     }
 
     // ── Entry point ────────────────────────────────────────────────────────────
@@ -56,9 +56,12 @@ class ChatbotController extends Controller
     {
         // ── 1. Validate ─────────────────────────────────────────────────────────
         $validated = $request->validate([
-            'message'    => 'required|string|max:2000',
-            'capstone_id' => 'nullable|integer|exists:capstones,id',
-            'selected_adviser_id' => 'nullable|integer|exists:users,id',
+            'message'                        => 'required|string|max:2000',
+            'capstone_id'                    => 'nullable|integer|exists:capstones,id',
+            'selected_adviser_id'            => 'nullable|integer|exists:users,id',
+            'conversation_history'           => 'nullable|array|max:20',
+            'conversation_history.*.role'    => 'required|string|in:user,assistant',
+            'conversation_history.*.content' => 'required|string|max:4000',
         ]);
 
         // ── 2. Role from authenticated server-side session (never from message) ──
@@ -90,7 +93,7 @@ class ChatbotController extends Controller
             $openCapstone = $this->querySvc->findById($role, (int) $validated['capstone_id']);
         }
 
-        // ── 6. Handle intent → query DB → format response ───────────────────────
+        // ── 6. Handle intent → query DB → format deterministic baseline ─────────
         try {
             $result = $this->handleIntent($intent, $msg, $role, $filters, $openCapstone, $user, $validated['selected_adviser_id'] ?? null);
         } catch (\Throwable $e) {
@@ -103,6 +106,41 @@ class ChatbotController extends Controller
             return $this->buildResponse($this->responseSvc->dbError(), $intent);
         }
 
+        // Preserve interactive adviser-selection button prompt without AI rewriting
+        if (!empty($result['faculty_list'])) {
+            $result['provider'] = 'local';
+            return $this->buildResponse($result, $intent);
+        }
+
+        // ── 7. AI generation (Groq primary → Gemini fallback → Local fallback) ──
+        $searchResults = collect();
+        try {
+            $searchResults = $this->querySvc->search($role, $msg, $filters);
+            if ($searchResults->isEmpty()) {
+                $searchResults = $this->querySvc->recent($role, 5);
+            }
+        } catch (\Throwable $e) {
+            $searchResults = collect();
+        }
+
+        $aiResult = $this->aiSvc->generateResponse(
+            $msg,
+            $validated['conversation_history'] ?? [],
+            $openCapstone,
+            $searchResults,
+            $role,
+            $user,
+            $result['reply'] ?? ''
+        );
+
+        if ($aiResult !== null) {
+            if (empty($aiResult['suggested_capstones']) && !empty($result['suggested_capstones'])) {
+                $aiResult['suggested_capstones'] = $result['suggested_capstones'];
+            }
+            return $this->buildResponse($aiResult, $intent);
+        }
+
+        $result['provider'] = 'local';
         return $this->buildResponse($result, $intent);
     }
 
@@ -467,21 +505,8 @@ class ChatbotController extends Controller
             'reply'               => $data['reply']               ?? '',
             'suggested_capstones' => $data['suggested_capstones'] ?? [],
             'intent'              => $intent,
+            'provider'            => $data['provider']            ?? 'local',
         ];
-
-        // Resolve generated links in one access-scoped query. Existing saved
-        // conversations can still contain numeric links, which remain valid.
-        preg_match_all('/\[LINK:(\d+)\]/', $payload['reply'], $matches);
-        $ids = array_unique(array_merge($matches[1], array_column($payload['suggested_capstones'], 'id')));
-        if ($ids) {
-            $slugs = Capstone::whereIn('id', $ids)->pluck('slug', 'id');
-            $payload['reply'] = preg_replace_callback('/\[LINK:(\d+)\]/',
-                fn ($match) => '[LINK:'.(($slugs[$match[1]] ?? null) ?: $match[1]).']', $payload['reply']);
-            $payload['suggested_capstones'] = array_map(function ($capstone) use ($slugs) {
-                $capstone['slug'] = $slugs[$capstone['id']] ?? null;
-                return $capstone;
-            }, $payload['suggested_capstones']);
-        }
 
         // Pass faculty_list through when present (adviser selection flow)
         if (!empty($data['faculty_list'])) {

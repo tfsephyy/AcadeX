@@ -3,10 +3,90 @@ import { Document, pdfjs } from 'react-pdf'
 import { useAuth } from '../context/useAuth'
 import { usePdfReadingProgress } from './usePdfReadingProgress'
 
-const CHUNK_BYTES = 1024 * 1024
+const CHUNK_BYTES = 64 * 1024
+
+const STALL_MS = 60000
+
+/**
+ * Fetch one byte range with a stall detector instead of an overall timeout.
+ * If no data arrives for 60 seconds the request aborts. Slow continuous
+ * downloads are not killed.
+ */
+async function fetchRangeStreaming(url, begin, end, outerSignal, onActivity) {
+  outerSignal?.throwIfAborted()
+  const controller = new AbortController()
+  const onOuterAbort = () => {
+    if (outerSignal?.aborted) controller.abort(outerSignal.reason)
+  }
+  outerSignal?.addEventListener('abort', onOuterAbort, { once: true })
+
+  let stall
+  const resetStall = () => {
+    clearTimeout(stall)
+    stall = setTimeout(() => controller.abort(new Error('Document request timeout')), STALL_MS)
+  }
+  try {
+    resetStall()
+    const response = await fetch(url, {
+      credentials: 'include',
+      signal: controller.signal,
+      headers: { Range: `bytes=${begin}-${end - 1}` },
+    })
+    if (!response.ok) throw new Error(`Document request failed (${response.status})`)
+    if (!response.body?.getReader) {
+      const data = new Uint8Array(await response.arrayBuffer())
+      onActivity?.(data.length)
+      return { response, data }
+    }
+
+    const reader = response.body.getReader()
+    const chunks = []
+    let received = 0
+    for (;;) {
+      const { done, value } = await reader.read()
+      if (done) break
+      if (value?.length) {
+        resetStall()
+        chunks.push(value)
+        received += value.length
+        onActivity?.(value.length)
+      }
+    }
+
+    const data = new Uint8Array(received)
+    let offset = 0
+    for (const chunk of chunks) {
+      data.set(chunk, offset)
+      offset += chunk.length
+    }
+    return { response, data }
+  } finally {
+    clearTimeout(stall)
+    outerSignal?.removeEventListener('abort', onOuterAbort)
+  }
+}
+
+// Bound PDF.js page-dictionary bursts on large scanned documents.
+function createRangeFetcher(url, signal, onActivity) {
+  const queue = []
+  let active = 0
+  const drain = () => {
+    while (active < 4 && queue.length) {
+      const { begin, end, resolve, reject } = queue.shift()
+      active++
+      fetchRangeStreaming(url, begin, end, signal, onActivity)
+        .then(resolve, reject)
+        .finally(() => { active--; drain() })
+    }
+  }
+  return (begin, end) => new Promise((resolve, reject) => {
+    queue.push({ begin, end, resolve, reject })
+    drain()
+  })
+}
 
 /** Each viewer owns its transport, including a separate fullscreen instance. */
-export default function ProgressivePdfDocument({ file, onLoadError, onLoadProgress, loading, documentId, progressActive = true, onLoadSuccess, ...props }) {
+export default function ProgressivePdfDocument({ file, onLoadError, onLoadProgress, onLoadActivity = file?.onActivity, loading, documentId, progressActive = true, onLoadSuccess, ...props }) {
   const url = file?.url
   const { user } = useAuth()
   const [loaded, setLoaded] = useState(null)
@@ -27,24 +107,7 @@ export default function ProgressivePdfDocument({ file, onLoadError, onLoadProgre
       setFailure(true)
       onLoadError?.(error)
     }
-    const fetchRange = async (begin, end) => {
-      const requestController = new AbortController()
-      const cancel = () => requestController.abort(controller.signal.reason)
-      controller.signal.addEventListener('abort', cancel, { once: true })
-      const timeout = setTimeout(() => requestController.abort(new Error('Document request timeout')), 180000)
-      try {
-        if (controller.signal.aborted) cancel()
-        const response = await fetch(url, {
-          credentials: 'include', signal: requestController.signal,
-          headers: { Range: `bytes=${begin}-${end - 1}` },
-        })
-        if (!response.ok) throw new Error(`Document request failed (${response.status})`)
-        return { response, data: new Uint8Array(await response.arrayBuffer()) }
-      } finally {
-        clearTimeout(timeout)
-        controller.signal.removeEventListener('abort', cancel)
-      }
-    }
+    const fetchRange = createRangeFetcher(url, controller.signal, onLoadActivity)
     const start = async () => {
       const { response, data } = await fetchRange(0, CHUNK_BYTES)
       if (!active) return

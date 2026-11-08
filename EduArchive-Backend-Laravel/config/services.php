@@ -37,10 +37,15 @@ return [
 
     'groq' => [
         'key' => env('GROQ_API_KEY'),
+        'model' => env('GROQ_MODEL', 'openai/gpt-oss-120b'),
     ],
 
-    // Google Identity Services uses the public client ID to verify signed ID
-    // tokens against Google's rotating signing keys.
+    'gemini' => [
+        'key' => env('GEMINI_API_KEY'),
+        'model' => env('GEMINI_MODEL', 'gemini-3.5-flash-lite'),
+    ],
+
+    // Google Identity Services verifies signed ID tokens against Google's rotating keys.
     'google' => [
         'client_id' => env('GOOGLE_CLIENT_ID'),
         'client_secret' => env('GOOGLE_CLIENT_SECRET'),

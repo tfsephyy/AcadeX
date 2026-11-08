@@ -269,3 +269,84 @@ actual test database/storage/mail configuration before any mutation. One initial
 synthetic verification row reached the local application DB and was removed;
 the detailed report records cleanup and the preservation boundary. No production
 access or account-approval relaxation was used.
+
+## D-016 — Byte inactivity, small ranges and bounded concurrency (2026-11-05 evening)
+
+The client's screenshot matches the hook's overall timeout message; it does not prove a bad connection. The old hook could also rearm after readiness or treat an unchanged rounded percentage as a stall. Testing the real 176-page PDF showed that its flat page tree made PDF.js prefetch page dictionaries scattered across nearly the entire 97 MB file with 1 MiB requests.
+
+Use 64 KiB ranges and at most four simultaneous requests per viewer. Server encryption blocks remain 1 MiB and unchanged. Reset inactivity from actual received bytes and PDF.js progress, including bytes that do not change the rounded percentage. Cover waiting for headers and body data. Stop the hook timer on ready/error, and ignore late progress after a terminal state. Keep existing authorization and the independent fullscreen transport. This supersedes D-001's requirement to align viewer requests with the encrypted block size.
+
+The bounded 64 KiB parser check requested about 11.6 MB before page 1 became available, versus approximately 97 MB before. It does not eliminate page-tree traversal or promise instant opening. Keep the previous frontend assets and rollback paths; deploy no backend or persistent-data changes for this fix.
+
+## D-017 - Preserve workstation fixes during client synchronization (2026-11-07)
+
+Fast-forward `release/ui-refinement` to the client's `a6025cf` without publishing
+local work. Retain both the upstream reading-position integration and this
+workstation's November 5 byte-inactivity/range fix. Keep a recovery stash of the
+entire original tracked/untracked change set. The retained byte-inactivity
+decision is numbered D-016 here to avoid colliding with the client's D-011.
+Incoming runtime/DB verification describes the originating client workstation;
+verify this laptop separately. The pull does not authorize deployment or establish
+that pending local migrations have been applied.
+
+## D-018 - Backed-up ASUS local setup and repeatable startup (2026-11-07)
+
+The user explicitly authorized completing this workstation's local setup. Verify
+the runtime's actual loopback `acadex_local` identity, preserve its existing key,
+configuration, database rows and storage together, and apply only reviewed pending
+forward migrations after a verified coherent private backup. Never substitute
+the client workstation's database name or seed/reset the existing application.
+
+The local launcher reads Vite's development environment to choose the loopback API
+port and starts the database worker plus Laravel scheduler. Preserve existing env
+files; do not hard-code this laptop's port into shared frontend source. Keep
+process ownership receipts with known executable paths for reliable stop/restart.
+All synthetic feature checks use the guarded disposable schema and independent
+private storage/mail configuration, with actual runtime assertions before writes.
+Account for new anonymous browser sessions separately from original-row checks.
+
+## D-019 — Run production upload cleanup through a release-aware scheduler (2026-11-07)
+
+The resumable-upload release schedules `acadex:prune-upload-transfers` hourly.
+Production previously had a database queue worker but no Laravel scheduler, so
+expired temporary chunks would otherwise remain indefinitely. Run
+`php artisan schedule:work` as `www-data` in the active backend release through
+the enabled systemd unit `acadex-scheduler.service`. Keep its working directory
+aligned with the queue worker and Apache backend on every backend release.
+Continue running one queue worker on the configured database queue. Keep OCR on
+its separately managed source and do not restart it for frontend/backend-only
+releases unless OCR code or dependencies change.
+
+## D-020 — Staged upload quota and cleanup lifecycle (2026-11-07)
+
+Calculate one owner's pending usage from every unexpired, unclaimed
+`document_uploads` row and its existing encrypted file size. Keep one shared
+calculation for direct staging and transfer start, and include unexpired
+unfinished transfer reservations in the latter. Expired rows stop reserving
+quota immediately and are removed hourly by the Laravel scheduler.
+
+Serialize staged allocation, discard and prune operations by locking the owner
+row before upload/transfer rows. Before cascading transfer metadata, remove
+existing encrypted chunk files. Retain a staged file whenever a capstone or
+resource references its path; remove the staged encrypted file only after its
+row deletion commits. Return 410 for a resumed transfer whose failed finalization
+released its reservation, and ask the user to select the PDF again.
+
+The pending encrypted-byte default is 1 GiB to allow repeated 128 MiB uploads.
+Keep the per-file 128 MiB ceiling, 2 GiB free-space reserve, existing encryption
+format, APP_KEY handling, and schema unchanged. The optional pending-list API/UI
+was omitted. Local tests are not evidence of production verification.
+
+## D-021 — Keep external chatbot providers opt-in until production credentials exist (2026-11-08)
+
+The AcadeX chatbot supports Groq as primary, Gemini as fallback, and a
+deterministic local response when provider credentials are unavailable. The
+production environment contained Google sign-in credentials but no Groq or
+Gemini API keys at deployment time.
+
+Deploy the integration code with the local fallback active. Do not copy provider
+credentials from a workstation, send capstone/user context to external model
+providers, or incur provider usage until keys are added through the client's
+private environment channel. Rebuild Laravel's configuration cache after such a
+change. Preserve the existing Google identity configuration in
+`config/services.php`.

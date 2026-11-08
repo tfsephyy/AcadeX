@@ -1,5 +1,33 @@
 # AcadeX implementation progress
 
+## 2026-11-08 — AI Capstone Research Assistant production release
+
+Deployed the chatbot controller/service, Groq-primary/Gemini-fallback
+configuration, and the production React build to
+`/srv/acadex-staging/releases/acadex-20261108-ai-research-86c2487` and
+`/srv/acadex-staging/frontend-releases/acadex-20261108-ai-research-86c2487/dist`.
+The release was packaged from base commit `86c2487` plus selected local runtime
+changes; no GitHub commit or push was made. Existing hashed frontend assets were
+retained.
+
+Created and verified root-only recovery set
+`/var/backups/acadex/chatbot-release-20261108T022610Z`, including database,
+environment, encrypted storage, current releases and service configuration.
+The original environment checksum and shared `.env`/storage targets remain
+unchanged. `php artisan migrate --force` reported **Nothing to migrate**;
+production `migrate:status` showed no pending migrations. `optimize:clear`,
+config, route and view caches completed.
+
+Apache syntax passed; Apache and PHP-FPM were gracefully reloaded. Queue and
+scheduler are active on the new backend path; OCR remains untouched. HTTPS root
+and new JS/CSS assets returned 200, anonymous JSON `/api/v1/user` returned 401,
+and the database connectivity check passed.
+
+Production has no Groq or Gemini API keys configured. The chatbot is deployed
+with its deterministic local fallback active; provider calls require keys added
+through the private environment channel. No provider keys were copied or used.
+No production feature tests were rerun, per request. See the [release record](handoff/PRODUCTION_RELEASE_2026-11-08_AI_CAPSTONE.md).
+
 ## 2026-11-07 - Staged upload quota lifecycle fix
 
 Verified the checked out source against the initial diagnosis. Pending usage counts
@@ -17,6 +45,59 @@ was added. The 1 GiB quota was cached, both services use the new release, and th
 one-time prune removed **20** expired uploads. Production root returned 200,
 anonymous upload status returned 401, and the page rendered in Chrome. Recovery
 backup checksums passed; see the fix handoff for its path and details.
+
+## 2026-11-07 - ASUS local setup complete, not deployed
+
+User authorized backup, pending local migrations and feature verification.
+Verified the actual loopback `acadex_local` target (five users, zero capstones).
+Created and verified private SQL/configuration/storage backups under ignored
+`.local/local-setup-backup-20261107-asus`, then applied exactly the nine pending
+migrations. None remain pending. Every original row value in the 24 original
+non-migration tables, all four original storage files and exact environment/APP_KEY
+matched afterward. A browser sign-in-page check added two anonymous sessions;
+original sessions were separately verified against the backup and retained.
+
+Fixed local startup to follow Vite's development API address (8010 here) and
+start the cleanup scheduler with the queue worker. Process receipts retain known
+executables. Full stop/restart and repeat-start reuse passed. The frontend, API
+and OCR health checks pass, and the sign-in page renders. Two old synchronous
+metadata-test expectations were updated to verify queued extraction/status.
+
+Fresh checks: 99 guarded disposable-MySQL tests / 950 assertions, 44 frontend
+tests, quiet lint, production build (846 modules), PHP syntax and whitespace
+passed. Actual isolated HTTP transfer resumed a roughly 5 MiB synthetic PDF at
+the confirmed 2 MiB offset, deduplicated replay/finalization, and completed real
+extraction through an independent database queue worker. Decrypted bytes match
+the original; no pending/failed jobs remained. Owned helper fixtures/server were
+cleaned up. Composer locks/platform match; no dependency changes were needed.
+
+See [the complete local report](handoff/LOCAL_SETUP_2026-11-07_ASUS.md) for backup,
+preservation, operating instructions and external/large-transfer boundaries.
+No production connection, deployment, password reset, key regeneration, seed,
+commit or push occurred. Prior workstation-specific entries remain historical.
+
+## 2026-11-07 - Client source pulled on the ASUS workstation
+
+Fast-forwarded `release/ui-refinement` from `9d829d6` to client commit
+`a6025cf5a782b37dad9260352794df8b39f36473` (November 7, 5:00 PM Asia/Manila).
+The remote branch check confirms this is the latest published branch tip; `main`
+remains at `6740efc`. Retained all six modified and three untracked local files.
+Resolved overlapping PDF component changes by combining upstream reading-position
+support with the existing local 64 KiB/four-request/inactivity fix. Both sets of
+documentation are retained. Recovery stash:
+`088e745e286fd15afaf7f00aff2576faa2edb576`; no local commit or push was made.
+
+Current verification: 44 frontend tests passed; all 21 changed/new PHP files passed
+syntax checks. Quiet ESLint and the production build passed (846 modules,
+process-local `VITE_API_BASE_URL=/api/v1`). Git whitespace checks passed, there are
+no unresolved conflicts or staged files, and HEAD is 0 ahead / 0 behind the remote
+branch. No database tests were run. A read-only `migrate:status` check found nine pending local migrations:
+November 5 `000001`-`000006` and `000008`, and both November 7 migrations. The
+Google identity migration (`000007`) is already applied. No schema, application
+records, environment, APP_KEY, private documents, or production resources were
+changed. The earlier client-workstation runtime repair is not evidence that this
+ASUS workstation has been migrated. Local runtime setup and deployment remain
+separate from this source pull.
 
 ## 2026-11-07 — Interface/PDF follow-up, done (local), not deployed
 
@@ -56,7 +137,7 @@ User Management was checked at 1440/768/390px without document overflow or neste
 navigation scrolling. No database tests or production operations were performed.
 See [the detailed local report](ui/2026-11-07-panel-pdf-followup.md) for boundaries.
 
-Last updated: 2026-11-07. Local checkout setup and upload cancellation/floating progress are recorded below separately from the November 5 deployment. Large-document first-page latency remains under investigation; do not treat the performance acceptance criterion as complete. See the latest dated entries for current evidence.
+Last updated: 2026-11-07. The client source update and this workstation's retained November 5 PDF hotfix are combined locally; see the synchronization entry at the end. Earlier local-runtime observations belong to the client workstation that recorded them. No database migration or deployment was performed by this pull.
 Read first: [ACADEX_REQUIREMENTS.md](ACADEX_REQUIREMENTS.md) and
 [ACADEX_DECISIONS.md](ACADEX_DECISIONS.md).
 
@@ -530,7 +611,7 @@ per user request. Changes (local only, not deployed):
 Backend route list no longer contains adviser management or faculty-list endpoints.
 
 
-## 2026-11-07 — Layouts, upload recovery and reference counting (in progress, local)
+## 2026-11-07 — Layouts, upload recovery and reference counting (local verification complete)
 
 Preserved the existing dirty worktree, including adviser removal and previous
 UI/upload work. Added responsive My Uploads defaults, Pending Approvals tables
@@ -594,7 +675,7 @@ local synthetic suite. Production APP_KEY, accounts and original private documen
 were not accessed or changed. Existing dirty worktree changes are retained.
 
 
-## 2026-11-07 — Runtime schema repair and interface controls (in progress)
+## 2026-11-07 — Runtime schema repair and interface controls (local verification complete)
 
 Confirmed local configured MySQL resolves to `eduarchivedb`; upload_transfers was
 missing and both November 7 migrations were pending. Faculty role, faculty_program,
@@ -659,3 +740,54 @@ and added an actual HTTP database/storage/mail-environment assertion before furt
 mutations. Subsequent browser mutations and all database-backed test suites used
 the schema-restricted disposable target. Do not describe the initial attempt as
 isolated or claim that account activity timestamps stayed byte-identical.
+
+## 2026-11-05 evening — Client PDF timeout verification and frontend release
+
+Reviewed the client's screenshot and the two local viewer modifications. The screenshot text originates from the hook's overall timer, not the per-range timeout; slow networking alone was an unproven explanation. Found the first request still at 1 MiB, missing timeout coverage while waiting for response headers, percentage-based timer resets, and a timer that could rearm after successful loading. Added actual-byte activity, 64 KiB requests, a four-request concurrency limit, header/body stall detection, and ready/error protection including late PDF.js progress.
+
+Local verification: 23 tests passed, including slow continuous transfers beyond 180 seconds, header/body stalls, retry, cancellation, concurrency, unchanged rounded progress, and readiness protection. Quiet lint and the production build passed (829 modules). No database test ran against production.
+
+Deployed frontend `/srv/acadex-staging/frontend-releases/acadex-pdf-stall-20261105-v2/dist` after fresh archive-checked private database/environment/storage/frontend/routing backups at `/var/backups/acadex/pdf-stall-20261105`. The public index matches the release and the 74 packaged file hashes were verified. Backend remains `/srv/acadex-staging/releases/acadex-20261105-final`; no migrations, key/configuration replacement, storage rewrite, or queue/OCR restart occurred. Source changes and tests remain uncommitted locally.
+
+Current production has six users, two capstones and 35 storage files. Private file hashes and APP_KEY matched the pre-release baseline. An intervening login changed users/login_audits before the switch; do not describe all database rows as byte-identical. The release itself does not write application records. Browser acceptance uses the existing authorized student session, so ordinary view analytics can change.
+
+Final live verification, completed before 10:30 pm Asia/Manila: both the 176-page and 171-page capstones render through View Full Page and fullscreen, with no alert. Final pages render for both documents in fullscreen, and the 171-page document's last page also renders inline. The 176-page document remains open beyond the old overall-timeout period without reverting to an error. These are observations in the authorized Chrome student session, not a physical-client-device certificate. Phone viewport emulation did not produce a verified phone-size layout, so no mobile acceptance claim is made.
+
+Final operational checks: all 35 baseline storage hashes and APP_KEY match; six users and two capstones remain; no owned diagnostic tokens, pending jobs or failed jobs remain. Public index and PDF bundle hashes match the final release; health/login/register return 200 and anonymous JSON user access returns 401. Apache, PHP-FPM, MySQL, database queue and OCR services are active. All three private backup archive checksums pass. Removed the temporary workstation-only SSH rule and observed AWS success plus the original four inbound rule IDs/values. Previous releases/assets and backups remain available. See [the hotfix report](handoff/PDF_VIEWER_HOTFIX_2026-11-05.md).
+
+## 2026-11-07 — Production redeployment
+
+Deployed client source commit `a6025cf5a782b37dad9260352794df8b39f36473` and
+the retained local PDF viewer fixes. The frontend serves the newly built artifact
+from `/srv/acadex-staging/frontend-releases/acadex-20261107-a6025cf/dist`, while
+the backend serves from `/srv/acadex-staging/releases/acadex-20261107-a6025cf`.
+Previous backend/frontend releases and hashed browser assets were preserved.
+
+Before changing the application or schema, created and verified the private
+recovery set `/var/backups/acadex/redeploy-20261107T133643Z`. It contains the
+production SQL dump, active code/build, environment and application key,
+persistent storage, relevant service/configuration files, OCR package inventory,
+and preservation manifests. The SQL gzip, runtime archive, and backup checksums
+passed.
+
+Applied exactly two pending additive migrations:
+`2026_11_07_000001_add_citation_copy_idempotency` and
+`2026_11_07_000002_create_upload_transfers`. Production reports no pending
+migrations. Database counts for users, capstones, document uploads, jobs, failed
+jobs and citation events match the pre-release baseline. The new upload-transfer
+table is empty. The original private environment checksum and all 285 storage
+file hashes match the backup.
+
+Updated the active Apache frontend/backend paths, restarted the queue worker on
+the new backend, and enabled `acadex-scheduler.service` to run the hourly
+expired-transfer cleanup. Apache, PHP-FPM, MySQL, queue, scheduler and OCR are
+active; OCR stayed on its existing release and was not restarted. At the user's
+request, retained the additional SSH source rule `143.44.156.189/32` alongside
+the two original `/32` rules.
+
+HTTPS `/`, `/login` and `/register` return 200; the live root and entry JS/CSS
+hashes match the release; unauthenticated JSON `/api/v1/user` returns 401. The
+four resumable-transfer routes and hourly schedule are registered. Production
+login, role actions, uploads and real document workflows were not replayed; the
+client had already tested feature workflows locally. See the
+[production release record](handoff/PRODUCTION_RELEASE_2026-11-07.md).

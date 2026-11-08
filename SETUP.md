@@ -82,13 +82,13 @@ Keep MySQL running in Laragon, then run these commands from the repository root:
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\start-local.ps1
 ```
 
-The launcher starts the Laravel API, queue worker, React dev server, and OCR service in the background. Logs and process receipts are stored in `.local`. OCR may take time to load models before its health endpoint becomes available. Running the launcher again preserves services already started by it and refuses occupied ports belonging to other processes.
+The launcher starts the Laravel API, queue worker, scheduler, React dev server, and OCR service in the background. It reads `VITE_API_BASE_URL` using Vite's development environment loader and starts the API on that loopback HTTP port; the fallback is 8000. Logs and process receipts are stored in `.local`. OCR may take time to load models before its health endpoint becomes available. Running the launcher again preserves services already started by it and refuses occupied ports belonging to other processes.
 
 | Service | Address |
 | --- | --- |
 | React frontend | http://localhost:5173 |
-| Laravel API | http://localhost:8000/api/v1 |
-| Laravel health | http://localhost:8000/up |
+| Laravel API | Matches local `VITE_API_BASE_URL`; currently http://localhost:8010/api/v1 on ASUS |
+| Laravel health | Same API origin plus `/up`; currently http://localhost:8010/up on ASUS |
 | OCR health | http://localhost:8001/health |
 | OCR API documentation | http://localhost:8001/docs |
 
@@ -105,7 +105,13 @@ Stop the services with:
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\stop-local.ps1
 ```
 
-The stop script checks recorded process identities and stops their child processes. Laragon and MySQL remain running. To run the core application without OCR, pass `-WithoutOcr` to the start script.
+The stop script checks recorded process identities and stops their child processes, including the scheduler. Laragon and MySQL remain running. To run the core application without OCR, pass `-WithoutOcr` to the start script.
+
+November 7 ASUS update: all nine pending migrations were applied after a verified
+private backup, preserving existing data and the original application key. The
+local app, queue, scheduler and OCR are verified. See the
+[current local setup and preservation report](docs/handoff/LOCAL_SETUP_2026-11-07_ASUS.md).
+The older installation and verification sections below are dated history.
 
 ## Installed configuration
 

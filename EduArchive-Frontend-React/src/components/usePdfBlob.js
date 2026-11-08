@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import api from '../api/axios'
 
-export const PDF_REQUEST_TIMEOUT_MS = 180000
+export const PDF_REQUEST_TIMEOUT_MS = 60000
 
 function messageFor(error) {
   const message = String(error?.message || '').toLowerCase()
@@ -21,7 +21,11 @@ export function usePdfBlob(endpoint, { enabled = true, timeout = PDF_REQUEST_TIM
   const [attempt, setAttempt] = useState(0)
   const [loadState, setLoadState] = useState({ requestKey: null, status: 'idle', progress: null, error: null })
   const timeoutRef = useRef(null)
+  const lastActivityRef = useRef(0)
   const requestKey = enabled && endpoint ? `${endpoint}\u0000${attempt}` : null
+  const onLoadActivity = useCallback(() => {
+    lastActivityRef.current = Date.now()
+  }, [])
 
   const url = useMemo(() => {
     if (!enabled || !endpoint) return null
@@ -34,12 +38,12 @@ export function usePdfBlob(endpoint, { enabled = true, timeout = PDF_REQUEST_TIM
   const file = useMemo(() => url ? {
     url,
     withCredentials: true,
-    // Match the server's authenticated 1 MiB blocks and let PDF.js fetch only
-    // the ranges needed to display and navigate the document.
-    rangeChunkSize: 1024 * 1024,
+    onActivity: onLoadActivity,
+    // Request only the small ranges PDF.js needs to open and navigate.
+    rangeChunkSize: 64 * 1024,
     disableStream: true,
     disableAutoFetch: true,
-  } : null, [url])
+  } : null, [url, onLoadActivity])
 
   const currentState = !requestKey
     ? { status: 'idle', progress: null, error: null }
@@ -48,8 +52,9 @@ export function usePdfBlob(endpoint, { enabled = true, timeout = PDF_REQUEST_TIM
       : { status: 'loading', progress: null, error: null }
 
   const onLoadProgress = useCallback(({ loaded, total } = {}) => {
+    lastActivityRef.current = Date.now()
     if (total > 0) {
-      setLoadState({
+      setLoadState(previous => previous.requestKey === requestKey && ['ready', 'error'].includes(previous.status) ? previous : {
         requestKey,
         status: 'loading',
         progress: Math.min(100, Math.round((loaded / total) * 100)),
@@ -73,20 +78,30 @@ export function usePdfBlob(endpoint, { enabled = true, timeout = PDF_REQUEST_TIM
     setAttempt(value => value + 1)
   }, [])
 
+  // Reset the stall timer whenever PDF.js reports progress. A slow but
+  // continuously arriving document should not be killed just because the
+  // total elapsed time exceeded the stall threshold.
   useEffect(() => {
     clearTimeout(timeoutRef.current)
-    if (!requestKey) return undefined
-    timeoutRef.current = window.setTimeout(() => {
+    if (!requestKey || currentState.status !== 'loading') return undefined
+    lastActivityRef.current = Date.now()
+    const checkStall = () => {
+      const remaining = timeout - (Date.now() - lastActivityRef.current)
+      if (remaining > 0) {
+        timeoutRef.current = window.setTimeout(checkStall, remaining)
+        return
+      }
       setLoadState({
         requestKey,
         status: 'error',
         progress: null,
         error: 'The document is taking too long to open. Check your connection and retry.',
       })
-    }, timeout)
+    }
+    timeoutRef.current = window.setTimeout(checkStall, timeout)
 
     return () => clearTimeout(timeoutRef.current)
-  }, [requestKey, timeout])
+  }, [requestKey, timeout, currentState.status])
 
   return {
     url,
@@ -96,6 +111,7 @@ export function usePdfBlob(endpoint, { enabled = true, timeout = PDF_REQUEST_TIM
     error: currentState.error,
     retry,
     onLoadProgress,
+    onLoadActivity,
     onLoadSuccess,
     onLoadError,
   }

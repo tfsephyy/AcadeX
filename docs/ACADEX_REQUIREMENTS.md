@@ -21,13 +21,13 @@ and the [November 7 production release record](handoff/PRODUCTION_RELEASE_2026-1
 - Preserve existing roles, approvals, authorization boundaries, encrypted documents, and production data.
 - No destructive schema operations. Every schema change is a forward migration with a rollback that does not destroy records.
 - Existing numeric capstone URLs must keep working when slugs are introduced.
-- Production writes require an approved backup. Authorized access and backup verification were established on November 5; read the latest progress entry for the actual deployed state.
+- Production writes require an approved backup. The November 7 release used the verified private recovery set recorded in the latest progress entry.
 - Local verification and deployed verification are recorded separately and are never conflated.
 - Background processing must degrade safely when Redis/Ollama are unavailable.
 - Existing-local setup after a pull must install locked dependencies, back up and
   migrate the verified local schema, and retain its APP_KEY, accounts and storage.
-  See the November 6 local setup entry in the progress log; it is separate from
-  production deployment and does not certify outstanding feature acceptance.
+  See the November 7 ASUS local setup entry in the progress log; it is separate
+  from production deployment and does not certify outstanding feature acceptance.
 
 ## R1 — Capstone loading and document viewer (priority: high)
 
@@ -46,6 +46,8 @@ and the [November 7 production release record](handoff/PRODUCTION_RELEASE_2026-1
 
 **Dependencies:** none. **Evidence:** browser test against a seeded local capstone and a
 large synthetic encrypted PDF.
+
+**November 5 evening evidence:** the deployed viewer uses 64 KiB authenticated ranges, at most four concurrent requests per viewer, 60-second byte-inactivity detection, and terminal-state protection. Both current production capstones (176 and 171 pages) open through View Full Page. The current local suite has 23 passing tests; lint and the production build pass. Detailed verification and remaining client-device boundaries are in [the hotfix report](handoff/PDF_VIEWER_HOTFIX_2026-11-05.md). This does not certify arbitrary future PDFs or the client's physical devices.
 
 ## R2 — Logo background and theme compatibility (priority: medium)
 
@@ -355,3 +357,29 @@ Status: implementation and local verification passed; deployed November 8 from
 commit `6fa3fac`. No migration was added. The hourly scheduler is active, the
 one-time prune removed 20 expired staged uploads, and production smoke checks
 passed. See the [deployment and verification report](handoff/STAGED_UPLOAD_QUOTA_FIX_2026-11-07.md).
+
+## November 7, 2026 client source synchronization (ASUS workstation)
+
+The requested Git pull brings in client commit `a6025cf` while retaining this
+workstation's existing PDF timeout hotfix. The incoming runtime-repair evidence
+belongs to the client's workstation. Here, a read-only migration-status check
+found nine pending migrations; source synchronization does not complete local
+runtime setup or deployed acceptance. Requirements and feature scope are unchanged.
+
+### ASUS setup completion after source synchronization
+
+The authorized local setup is complete: all nine pending migrations are applied
+after a verified private backup, original data/key/files are preserved, and the
+launcher runs the configured API, frontend, queue, scheduler and OCR. Fresh local
+feature verification passed in the separate guarded disposable database and HTTP
+runtime. See [the local setup report](handoff/LOCAL_SETUP_2026-11-07_ASUS.md).
+This supersedes the pending-local-migration state immediately above; deployed
+acceptance and external integrations remain separate.
+
+## November 8, 2026 production deployment — AI Capstone Research Assistant
+
+The assistant controller/service and frontend build are deployed. Production
+schema has no pending migrations. The production environment lacks Groq and
+Gemini API keys, so the deterministic local fallback is active; live provider
+integration acceptance remains pending private key configuration. See the
+[production release record](handoff/PRODUCTION_RELEASE_2026-11-08_AI_CAPSTONE.md).
