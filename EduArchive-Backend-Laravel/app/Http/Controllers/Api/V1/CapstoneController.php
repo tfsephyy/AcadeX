@@ -17,6 +17,7 @@ use App\Models\Notification;
 use App\Models\UploadTransfer;
 use App\Models\User;
 use App\Services\CitationService;
+use App\Services\KeywordInput;
 use App\Services\NlpSearchService;
 use App\Services\PdfEncryptorService;
 use App\Services\PdfExtractorService;
@@ -471,7 +472,7 @@ class CapstoneController extends Controller
         }
 
         $metadata = $record->extractedMetadata();
-        $hasMetadata = (bool) array_filter($metadata);
+        $hasMetadata = (bool) array_filter(array_diff_key($metadata, ['program' => true]));
         $processing = $record->processing_status;
         $extractionStatus = match (true) {
             $processing === \App\Models\DocumentUpload::STATUS_SKIPPED => 'skipped',
@@ -624,9 +625,10 @@ class CapstoneController extends Controller
 
     private function storeNew(Request $request): JsonResponse
     {
+        $request->merge(['program' => 'BSIT']);
         // Accept either a comma-separated string or an array from the client.
-        if (is_string($request->input('keywords'))) {
-            $request->merge(['keywords' => [$request->input('keywords')]]);
+        if ($request->exists('keywords')) {
+            $request->merge(['keywords' => KeywordInput::normalize($request->input('keywords'))]);
         }
 
         $validator = Validator::make($request->all(), [
@@ -642,10 +644,10 @@ class CapstoneController extends Controller
             'abstract'           => 'nullable|string',
             'pdf_path'           => 'required|string',
             'pdf_original_name'  => 'nullable|string',
-            'keywords'           => 'nullable|array',
+            'keywords'           => 'nullable|array|max:'.KeywordInput::MAX_KEYWORDS,
             'keywords.*'         => 'string|max:100',
-            'publication_status' => 'nullable|in:published,unpublished,in_progress',
-            'copyright_status'   => 'nullable|in:copyrighted,pending,unprotected',
+            'publication_status' => 'required|in:published,unpublished,in_progress',
+            'copyright_status'   => 'required|in:copyrighted,pending,unprotected',
             'imrad_path'         => 'nullable|string',
             'imrad_original_name' => 'nullable|string',
             'adviser_id'         => 'nullable|exists:users,id',
@@ -676,9 +678,8 @@ class CapstoneController extends Controller
 
         $status = $isStudent ? 'pending' : 'approved';
         $approvalStatus = $isStudent ? 'pending' : 'approved';
-        // Selections never bypass approval. Null defaults to internal only.
-        $rawPub = $request->input('publication_status');
-        $publicationStatus = $rawPub ?: 'unpublished';
+        // Explicit publication choices never bypass the approval gate.
+        $publicationStatus = $request->input('publication_status');
 
         $capstone = DB::transaction(function () use ($request, $user, $status, $approvalStatus, $publicationStatus) {
         $uploads = app(\App\Services\DocumentUploads::class);
@@ -702,7 +703,7 @@ class CapstoneController extends Controller
             'year'               => $request->year,
             'author'             => $request->author,
             'author_details'     => $request->input('author_details'),
-            'program'            => $request->program,
+            'program'            => 'BSIT',
             'category'           => $request->category,
             'abstract'           => $request->abstract,
             'pdf_path'           => $pdfPath,
@@ -810,19 +811,7 @@ class CapstoneController extends Controller
     /** @return string[] */
     private function normalizeKeywords(mixed $raw): array
     {
-        if (is_string($raw)) $raw = [$raw];
-        if (!is_array($raw)) return [];
-
-        $normalized = [];
-        foreach ($raw as $value) {
-            if (!is_string($value)) continue;
-            foreach (preg_split('/,/', $value) ?: [] as $name) {
-                $name = mb_strtolower(trim(preg_replace('/\s+/', ' ', $name) ?? ''));
-                if ($name === '' || mb_strlen($name) > 100) continue;
-                $normalized[$name] = $name;
-            }
-        }
-        return array_values($normalized);
+        return KeywordInput::normalize($raw) ?? [];
     }
 
     /**
@@ -1604,8 +1593,8 @@ class CapstoneController extends Controller
             return $this->errorResponse('You can only edit your own capstones.', 403);
         }
 
-        if (is_string($request->input('keywords'))) {
-            $request->merge(['keywords' => [$request->input('keywords')]]);
+        if ($request->exists('keywords')) {
+            $request->merge(['keywords' => KeywordInput::normalize($request->input('keywords'))]);
         }
 
         $validator = Validator::make($request->all(), [
@@ -1619,7 +1608,7 @@ class CapstoneController extends Controller
             'program'             => 'nullable|string|in:BSIT,BSCpE',
             'category'            => 'nullable|string|max:100',
             'abstract'            => 'nullable|string',
-            'keywords'            => 'nullable|array',
+            'keywords'            => 'nullable|array|max:'.KeywordInput::MAX_KEYWORDS,
             'keywords.*'          => 'string|max:100',
             'publication_status'  => 'nullable|in:published,unpublished,in_progress',
             'copyright_status'    => 'nullable|in:copyrighted,pending,unprotected',

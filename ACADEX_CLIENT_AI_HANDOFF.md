@@ -2,6 +2,43 @@
 
 Prepared: **October 19, 2026, Asia/Manila**.
 
+**November 8, 2026 upload layout and full-PDF keywords - local:** Step 2 now
+pairs adviser/keywords below year/program/category and gives abstract a full row.
+All three Step 3 role pages require explicit publication and copyright choices,
+pair IMRAD/resources and pair references/submission summary. New-submission API
+validation requires both choices. Keywords now rank source-matched computing and
+research/capstone terms by full-PDF frequency, capped at 15; bounded native OCR
+and visible incomplete-reading notes remain. This supersedes the computing-only
+and sampled-page keyword scope below. Guarded backend 171 tests / 1,566 assertions,
+frontend 58 tests/build/lint and synthetic desktop/mobile role checks passed.
+Owned local queue worker was gracefully reloaded with no backlog or failed jobs.
+No migration or production deployment. See
+[the implementation record](docs/ui/2026-11-08-upload-layout-full-pdf-keywords.md).
+
+**November 8, 2026 technical keywords and adviser editing - local:** automatic
+keywords now use source-matched technical vocabulary only, capped at 15, with no
+AI. Upload/edit share comma entry and individual tag editing/removal with matching
+server validation. The shared edit modal includes adviser text/Faculty matching;
+the placeholder is exactly Enter Manually here. Untouched adviser/keywords are
+preserved; no legacy data rewrite or migration. Guarded backend tests passed
+(164 / 1,452 assertions), frontend 58 tests/build/lint and synthetic role-specific
+browser checks passed. No production deployment. See
+[the implementation record](docs/ui/2026-11-08-technical-keywords-adviser-edit.md)
+and progress log for the local worker state. This supersedes the ten-keyword and
+general frequency/explicit-list acceptance behavior in the older report below.
+
+**November 8, 2026 modular extraction - local:** metadata rules now use separate
+title/author/year/adviser/abstract/keyword/contact services after shared page-aware
+cleanup. New uploads save fixed BSIT; CV contacts use up to 12 tail pages; source
+term ranking replaces the prior explicit-keywords-only rule. Metadata OCR now
+uses traditional native Tesseract only, with no Paddle/model calls. Full guarded
+backend verification passed (154 tests / 1,346 assertions), frontend tests/build
+and synthetic browser/native-scan checks passed, and the local queue worker was
+gracefully reloaded. No migration or production deployment. See
+[the implementation record](docs/ui/2026-11-08-modular-pdf-extraction.md) for page
+limits, unsupported Windows large-file sampling and remaining actual-PDF checks.
+This supersedes the older extraction behavior descriptions below.
+
 **November 8, 2026 local upload-503 schema repair:** the active loopback
 `EduArchiveDB` lacked `capstones.adviser_name`. After a fresh verified private
 SQL/env/storage backup, applied only the additive adviser-name migration.

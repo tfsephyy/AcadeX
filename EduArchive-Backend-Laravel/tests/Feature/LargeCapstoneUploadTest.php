@@ -43,6 +43,7 @@ class LargeCapstoneUploadTest extends SecurityTestCase
             $record = $this->postJson('/api/v1/student/capstones', [
                 'title' => 'Synthetic large '.bin2hex(random_bytes(5)), 'author' => 'Synthetic',
                 'pdf_path' => $upload->json('data.pdf_path'),
+                'publication_status' => 'unpublished', 'copyright_status' => 'unprotected',
             ])->assertCreated()->json('data');
             $stored = Capstone::withoutGlobalScopes()->findOrFail($record['id']);
             self::assertNull($stored->pdf_text);

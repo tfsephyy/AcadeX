@@ -15,7 +15,7 @@ class AdviserMatching
 
     public static function normalized(?string $name): string
     {
-        return mb_strtolower(self::displayName($name), 'UTF-8');
+        return \App\Services\Extraction\NameNormalizer::key($name);
     }
 
     public function eligible(): Builder

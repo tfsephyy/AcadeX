@@ -14,6 +14,27 @@ class PdfMetadataSampler
 
     public function create(UploadedFile $file): string
     {
+        return $this->createRange($file, 1, self::MAX_PAGES);
+    }
+
+    /** Optional bounded CV sample. Missing tools leave contacts for manual review. */
+    public function createTail(UploadedFile $file): ?array
+    {
+        $finder = new ExecutableFinder();
+        $qpdf = $finder->find('qpdf');
+        $prlimit = $finder->find('prlimit');
+        if (PHP_OS_FAMILY !== 'Linux' || !$qpdf || !$prlimit) return null;
+        $count = new Process([$prlimit, '--as=536870912', '--cpu=5', '--', $qpdf, '--show-npages', $file->getRealPath()]);
+        $count->setTimeout(8);
+        $count->run();
+        $output = trim($count->getOutput());
+        if (!$count->isSuccessful() || !ctype_digit($output) || (int) $output > 20000 || (int) $output <= self::MAX_PAGES) return null;
+        $first = max(self::MAX_PAGES + 1, (int) $output - self::MAX_PAGES + 1);
+        return ['path' => $this->createRange($file, $first, (int) $output), 'first' => $first];
+    }
+
+    private function createRange(UploadedFile $file, int $first, int $last): string
+    {
         $limit = PdfExtractorService::maxAutomaticBytes();
         if ($limit < 1 || $file->getSize() > EncryptedFileStream::MAX_BYTES) {
             throw new RuntimeException('Document is outside the metadata sampling limits.');
@@ -33,7 +54,7 @@ class PdfMetadataSampler
                 $prlimit, '--as=536870912', '--cpu=30', '--fsize='.$limit, '--',
                 $gs, '-q', '-dSAFER', '-dBATCH', '-dNOPAUSE', '-dPDFSTOPONERROR',
                 '-sDEVICE=pdfwrite', '-dCompatibilityLevel=1.5', '-dPDFSETTINGS=/ebook',
-                '-dFirstPage=1', '-dLastPage='.self::MAX_PAGES, '-dAutoRotatePages=/None',
+                '-dFirstPage='.$first, '-dLastPage='.$last, '-dAutoRotatePages=/None',
                 '-dDownsampleColorImages=true', '-dColorImageResolution=150',
                 '-dDownsampleGrayImages=true', '-dGrayImageResolution=150',
                 '-dDownsampleMonoImages=true', '-dMonoImageResolution=200',

@@ -1,5 +1,91 @@
 # AcadeX implementation progress
 
+## 2026-11-08 - Upload layout, required choices and full-PDF keywords
+
+Implemented locally: Step 2 puts adviser/keywords beneath year/program/category
+and gives the abstract a full row. Step 3 pairs IMRAD/resources and references/
+summary for all three roles, stacking on mobile. Both publication and copyright
+now require explicit choices; new-submission API validation enforces both.
+
+Full-document text now feeds frequency-first keyword ranking, including a
+maintained research/capstone vocabulary alongside computing terms. Retain 15
+unique source-matched tags without padding. Metadata fields still use their
+front/CV windows. Large originals use isolated Ghostscript text output; unreadable
+pages use native OCR within the shared deadline, with explicit incomplete-reading
+notes. No existing document or record is reprocessed automatically.
+
+Final verification: **171 guarded-disposable-MySQL tests / 1,566 assertions
+passed**. Frontend **58 tests passed**; final production build (**851 modules**)
+and quiet lint passed. Synthetic Chrome
+checks passed desktop/mobile row geometry, required-choice blocking, valid payloads
+and no overflow for Admin, Faculty and Student. Browser APIs were intercepted;
+real database persistence/approval guards were tested separately. Final PHP syntax
+and Git whitespace checks passed. Gracefully reloaded the verified owned local
+queue after an empty/zero-failed check; replacement PID **25028** is running, the
+private process receipt is updated, and pending/failed job counts remain zero.
+No jobs were discarded. No migration, application-data rewrite or production
+access. Actual client-PDF accuracy and Linux-specific process limits remain
+separate acceptance. See [the implementation record](ui/2026-11-08-upload-layout-full-pdf-keywords.md).
+
+## 2026-11-08 - Technical keywords and adviser editing (verified locally)
+
+Implemented a maintained source-matched computing dictionary and 15-keyword
+automatic cap. Removed arbitrary frequent-word acceptance and filtered explicit
+keyword labels through the same technical dictionary. Shared KeywordInput limits
+and normalization now run before both create/update validation; expanded comma
+lists and case-insensitive duplicates are validated before persistence.
+
+Upload review and the shared Admin/Faculty/Student edit modal now use one tag
+editor with comma entry, individual editing/removal and a visible maximum error.
+Added the existing AdviserField to editing and changed its shared placeholder to
+exactly Enter Manually here. Untouched adviser and keyword fields are omitted
+from edits, preserving legacy values and unavailable historical assignments.
+No existing record rewrite, schema change or production access.
+
+Final full guarded-MySQL suite passed: **164 tests / 1,452 assertions**. Frontend
+**58 tests passed**; lint **0 errors / 32 existing warnings**; production build
+passed (**851 modules**). Synthetic Chrome upload/edit checks passed for all three
+roles, including comma paste, individual tag edits/removal, 15-limit Save/Next
+validation, exact placeholder, saved/empty/unmatched adviser names, Faculty
+selection and refresh/mobile behavior. Browser APIs were intercepted; actual
+MySQL persistence/permissions and Faculty dashboard reassignment were verified
+separately by the guarded integration tests. Actual client PDFs/production remain
+unverified. See [the implementation record](ui/2026-11-08-technical-keywords-adviser-edit.md).
+Local queue was empty with zero failed jobs before its graceful reload. Replaced
+the owned local worker with PID 11836 and updated its private process receipt;
+the running replacement uses the current extraction classes. No queued jobs were
+discarded or original documents/configuration/application records rewritten.
+
+## 2026-11-08 - Modular extraction rules (verified locally)
+
+Read the attached deterministic extraction specification and split metadata into
+independent services under app/Services/Extraction. PdfExtractorService now owns
+validation, bounded reads and native traditional OCR only. Shared cleaned pages
+retain page numbers, original text and optional positions; per-field failures
+return sanitized manual-review warnings. Added named-CV contact parsing from up
+to 12 tail pages, conservative spacing repairs, source-based keyword ranking,
+fixed BSIT for new submissions and stronger exact normalized Faculty matching.
+The review UI keeps BSIT read-only and protects explicit manual edits/clears.
+No schema change, application-data rewrite or production access.
+
+Final backend verification: **154 tests / 1,346 assertions passed** in the guarded
+disposable MySQL schema. Frontend 55 tests passed; lint has 0 errors and the existing
+32 warnings; production build passed (849 modules). Fixed an old large-file test
+fixture whose actual size differed from its declared upload size. Individual
+extraction regressions, wrapped labels/dates and formatted Roman page numbers pass.
+A final margin regression also verifies removing unfamiliar first-page repeated
+headers without losing legitimate titles reused in later headers.
+Synthetic browser checks passed across all three upload roles. A generated
+three-page image-only PDF passed actual native Ghostscript/Tesseract extraction.
+The 150-page synthetic text pipeline averaged about 37 ms across three runs;
+this does not establish real-document/production latency.
+
+Gracefully restarted the owned local queue worker after an empty-queue/zero-failed
+check; final replacement PID 6028 is running and its private process receipt is updated.
+Original PDFs, private configuration and application records were not rewritten.
+Actual client PDF quality and Linux large-file sampler execution are unverified.
+See [the service and verification record](ui/2026-11-08-modular-pdf-extraction.md).
+
 ## 2026-11-08 — Local upload submission schema repair (verified locally)
 
 Student POST /api/v1/student/capstones returned 503. Redacted local log inspection

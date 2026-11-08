@@ -74,8 +74,8 @@ class ExtractUploadMetadataJob implements ShouldQueue, ShouldBeUnique
             try {
                 $result = $extractor->extractPathWithSource($temp);
                 $metadata = $result['metadata'];
-                $notes = [];
-                if (!array_filter($metadata)) {
+                $notes = $result['notes'] ?? [];
+                if (!array_filter(array_diff_key($metadata, ['program' => true]))) {
                     $notes[] = 'Automatic extraction found no usable metadata. The file is stored and can be reviewed manually.';
                 }
                 $this->markCompleted($upload, $metadata, $result['scope'], $notes);

@@ -52,16 +52,12 @@ if (in_array($argv[1] ?? '', ['--migrate', '--fresh', '--inspect', '--http-check
         exit(0);
     }
     if ($argv[1] === '--ocr-check') {
-        config(['acadex.ocr_service_url' => 'http://127.0.0.1:18882']);
         $file = realpath($base.'/../.local/remediation-test/synthetic-scan.pdf');
         if (!$file) throw new RuntimeException('The synthetic OCR probe must create its fixture first.');
         $service = app(App\Services\PdfExtractorService::class);
-        $method = new ReflectionMethod($service, 'extractPagesViaPaddleOcr');
-        $pages = $method->invoke($service, $file);
-        if (!str_contains(strtoupper(implode(' ', $pages)), 'SYNTHETIC')) throw new RuntimeException('Laravel/Python OCR connector failed.');
         $metadata = $service->extract(new Illuminate\Http\UploadedFile($file, 'synthetic-scan.pdf', 'application/pdf', null, true));
         if (!str_contains(strtoupper($metadata['title'] ?? ''), 'SYNTHETIC')) throw new RuntimeException('Scanned PDF metadata extraction failed.');
-        echo 'Live Laravel to private Uvicorn scanned-PDF connector and metadata: PASSED'.PHP_EOL;
+        echo 'Traditional native OCR and scanned-PDF metadata: PASSED'.PHP_EOL;
         exit(0);
     }
     $path = $app->getCachedConfigPath();

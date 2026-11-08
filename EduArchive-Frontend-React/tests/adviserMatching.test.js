@@ -8,6 +8,14 @@ test('one name match automatically selects Faculty regardless of capitalization 
     assert.equal(matchAdviser(' ALEX \t EXAMPLE ', faculty).id, 1);
 });
 
+test('normalization handles titles, credentials and surname order while retaining distinct initials', () => {
+    const accounts = [{ id: 1, name: 'Maria L. Santos' }, { id: 2, name: 'Maria M. Santos' }];
+    assert.equal(matchAdviser('Dr. MARIA L SANTOS, MIT', accounts).id, 1);
+    assert.equal(matchAdviser('Santos, Maria L.', accounts).id, 1);
+    assert.equal(matchAdviser('Maria Santos', accounts).id, null);
+    assert.equal(matchAdviser('Maria L Santos', [...accounts, { id: 3, name: 'Prof. Maria L. Santos' }]).id, null);
+});
+
 test('duplicate names wait for an explicit matching choice and name edits discard stale selections', () => {
     assert.equal(matchAdviser('Jamie Sample', faculty).id, null);
     assert.equal(matchAdviser('Jamie Sample', faculty).matches.length, 2);

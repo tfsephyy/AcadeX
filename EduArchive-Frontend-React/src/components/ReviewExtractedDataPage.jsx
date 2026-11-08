@@ -2,22 +2,19 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
     HiArrowLeft, HiArrowRight, HiOutlineDocumentText,
-    HiOutlinePlus, HiOutlineX, HiOutlineUserGroup, HiOutlineInformationCircle, HiCheck,
+    HiOutlineUserGroup, HiOutlineInformationCircle, HiCheck,
     HiOutlineRefresh, HiOutlineClock,
 } from 'react-icons/hi';
 import CategoryCombobox from './CategoryCombobox';
 import AdviserField from './AdviserField';
+import KeywordInput from './KeywordInput';
+import { keywordError } from '../utils/keywords';
 import { useNotification } from './useNotification';
 import { getExtractionNotice } from './extractionNotice';
 import api from '../api/axios';
 import { getApiErrorMessage } from '../api/errors';
 import { useCapstoneUpload } from './useCapstoneUpload';
-
-const splitKeywordInput = (raw) => String(raw || '')
-    .split(',')
-    .map(value => value.trim().toLowerCase())
-    .filter(Boolean)
-    .filter((value, index, list) => list.indexOf(value) === index);
+import { mergeMetadataReview } from '../utils/metadataReview';
 
 export default function ReviewExtractedDataPage({ nextPath, backPath }) {
     const navigate = useNavigate();
@@ -26,6 +23,7 @@ export default function ReviewExtractedDataPage({ nextPath, backPath }) {
     const { manager: uploadManager } = useCapstoneUpload();
     const [checkingTitle, setCheckingTitle] = useState(false);
     const [titleError, setTitleError] = useState('');
+    const [keywordInputError, setKeywordInputError] = useState('');
 
     const state = location.state || {};
     const { pdfInfo } = state;
@@ -41,14 +39,13 @@ export default function ReviewExtractedDataPage({ nextPath, backPath }) {
         title:    initialExtracted.title    || '',
         year:     initialExtracted.year     || '',
         author:   initialExtracted.author   || '',
-        program:  initialExtracted.program  || '',
+        program: 'BSIT',
         category: initialExtracted.category || '',
         abstract: initialExtracted.abstract || '',
         keywords: initialExtracted.keywords || [],
         adviser_name: initialExtracted.adviser_name || '',
         adviser_id: initialExtracted.adviser_id || null,
     });
-    const [newKeyword, setNewKeyword] = useState('');
     const [processingStatus, setProcessingStatus] = useState(initialStatus);
     const [processingError, setProcessingError] = useState(state.processingError || '');
     const [extractionStatus, setExtractionStatus] = useState(state.extractionStatus || initialStatus);
@@ -58,7 +55,11 @@ export default function ReviewExtractedDataPage({ nextPath, backPath }) {
     const [pollExpired, setPollExpired] = useState(false);
     const [retryable, setRetryable] = useState(Boolean(state.retryable));
     const pollTimer = useRef(null);
-    const adviserEdited = useRef(false);
+    const editedFields = useRef(new Set(state.editedFields || []));
+    const editField = (field, value) => {
+        editedFields.current.add(field);
+        setForm(prev => ({ ...prev, [field]: value }));
+    };
 
     const isStillProcessing = ['queued', 'processing'].includes(processingStatus);
     const processing = isStillProcessing && !pollExpired;
@@ -77,18 +78,10 @@ export default function ReviewExtractedDataPage({ nextPath, backPath }) {
 
     const mergeExtracted = useCallback((data) => {
         if (!data || typeof data !== 'object') return;
-        setForm(prev => ({
-            ...prev,
-            title: prev.title.trim() ? prev.title : (data.title || ''),
-            year: prev.year ? prev.year : (data.year || ''),
-            author: prev.author.trim() ? prev.author : (data.author || ''),
-            program: prev.program || data.program || '',
-            abstract: prev.abstract.trim() ? prev.abstract : (data.abstract || ''),
-            keywords: prev.keywords.length ? prev.keywords : (Array.isArray(data.keywords) ? data.keywords : []),
-            adviser_name: adviserEdited.current || prev.adviser_name.trim() ? prev.adviser_name : (data.adviser_name || ''),
-        }));
+        setForm(prev => mergeMetadataReview(prev, data, editedFields.current));
         setAuthorDetails(prev => {
-            if (prev.length > 0) return prev;
+            if (editedFields.current.has('author') || editedFields.current.has('author_details')) return prev;
+            if (prev.some(row => row.email || row.contact)) return prev;
             if (Array.isArray(data.author_details) && data.author_details.length > 0) return data.author_details;
             return parseAuthorsFromString(data.author || '');
         });
@@ -183,7 +176,7 @@ export default function ReviewExtractedDataPage({ nextPath, backPath }) {
 
     // Keep authorDetails rows in sync when the author field changes
     const handleAuthorFieldChange = (newAuthorStr) => {
-        setForm(prev => ({ ...prev, author: newAuthorStr }));
+        editField('author', newAuthorStr);
         const newNames = (newAuthorStr || '').split(',').map(s => s.trim()).filter(s => s.length > 1);
         setAuthorDetails(prev => {
             const updated = newNames.map(name => {
@@ -195,25 +188,8 @@ export default function ReviewExtractedDataPage({ nextPath, backPath }) {
     };
 
     const updateAuthorDetail = (index, field, value) => {
+        editedFields.current.add('author_details');
         setAuthorDetails(prev => prev.map((row, i) => i === index ? { ...row, [field]: value } : row));
-    };
-
-    const addKeyword = () => {
-        const incoming = splitKeywordInput(newKeyword);
-        if (incoming.length === 0) return;
-        setForm(prev => {
-            const existing = new Set(prev.keywords.map(kw => String(kw).toLowerCase()));
-            const merged = [...prev.keywords];
-            incoming.forEach(kw => {
-                if (!existing.has(kw)) { existing.add(kw); merged.push(kw); }
-            });
-            return { ...prev, keywords: merged };
-        });
-        setNewKeyword('');
-    };
-
-    const removeKeyword = (idx) => {
-        setForm(prev => ({ ...prev, keywords: prev.keywords.filter((_, i) => i !== idx) }));
     };
 
     const handleBack = () => {
@@ -232,6 +208,8 @@ export default function ReviewExtractedDataPage({ nextPath, backPath }) {
         if (processing) { notify.info?.('Please wait for document processing to finish, or retry if it failed.'); return; }
         if (!form.title.trim()) { notify.error('Title is required.'); return; }
         if (!form.author.trim()) { notify.error('Author is required.'); return; }
+        if (keywordInputError) { notify.error(keywordInputError); return; }
+        if (keywordError(form.keywords)) { notify.error(keywordError(form.keywords)); return; }
 
         // Check for duplicate title before proceeding
         setCheckingTitle(true);
@@ -253,7 +231,8 @@ export default function ReviewExtractedDataPage({ nextPath, backPath }) {
         const reviewed = { ...form, author_details: authorDetails };
                 // Keep this history entry's draft so Back from Additional Info restores
         // the user's corrections instead of reinitializing from OCR suggestions.
-        navigate(location.pathname, { replace: true, state: { ...location.state, extracted: reviewed } });
+        navigate(location.pathname, { replace: true, state: { ...location.state, extracted: reviewed,
+            editedFields: [...editedFields.current], processingStatus, extractionStatus, extractionScope, notes } });
         navigate(nextPath, { state: { form: reviewed, pdfInfo } });
     };
 
@@ -376,7 +355,7 @@ export default function ReviewExtractedDataPage({ nextPath, backPath }) {
                                 Title <span className="text-red-400">*</span>
                             </label>
                             <input id="metadata-title" type="text" value={form.title}
-                                onChange={(e) => { setForm(prev => ({ ...prev, title: e.target.value })); setTitleError(''); }}
+                                onChange={(e) => { editField('title', e.target.value); setTitleError(''); }}
                                 disabled={processing}
                                 className={inputCls} placeholder="Capstone title..."
                                 style={titleError ? { borderColor: '#ef4444' } : {}} />
@@ -397,27 +376,17 @@ export default function ReviewExtractedDataPage({ nextPath, backPath }) {
                     </div>
 
                     {/* ── Row 2: Year + Program + Category ─── */}
-                    <AdviserField name={form.adviser_name} selectedId={form.adviser_id} disabled={processing} inputClassName={inputCls}
-                        onChange={(adviser_name, adviser_id) => { adviserEdited.current = true; setForm(prev => ({ ...prev, adviser_name, adviser_id })); }} />
-
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
                         <div className="rounded-2xl border p-5" style={{ background: 'var(--color-surface)', borderColor: 'var(--color-border)' }}>
                             <label htmlFor="metadata-year" className="block text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--color-text-muted)' }}>Year</label>
                             <input id="metadata-year" type="number" value={form.year}
-                                onChange={(e) => setForm(prev => ({ ...prev, year: e.target.value }))}
+                                onChange={(e) => editField('year', e.target.value)}
                                 disabled={processing}
                                 className={inputCls} min="2000" max="2099" placeholder="2024" />
                         </div>
                         <div className="rounded-2xl border p-5" style={{ background: 'var(--color-surface)', borderColor: 'var(--color-border)' }}>
                             <label htmlFor="metadata-program" className="block text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--color-text-muted)' }}>Program</label>
-                            <select id="metadata-program" value={form.program}
-                                onChange={(e) => setForm(prev => ({ ...prev, program: e.target.value }))}
-                                disabled={processing}
-                                className={inputCls} style={{ background: 'var(--input-bg)', color: 'var(--input-text)' }}>
-                                <option value="" style={{ background: 'var(--select-option-bg)' }}>Select program</option>
-                                <option value="BSIT" style={{ background: 'var(--select-option-bg)' }}>BSIT</option>
-                                <option value="BSCpE" style={{ background: 'var(--select-option-bg)' }}>BSCpE</option>
-                            </select>
+                            <input id="metadata-program" value="BSIT" readOnly className={inputCls} />
                         </div>
                         <div className="rounded-2xl border p-5" style={{ background: 'var(--color-surface)', borderColor: 'var(--color-border)' }}>
                             <label htmlFor="metadata-category" className="block text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--color-text-muted)' }}>Category</label>
@@ -428,51 +397,26 @@ export default function ReviewExtractedDataPage({ nextPath, backPath }) {
                         </div>
                     </div>
 
-                    {/* ── Row 3: Abstract + Keywords ───────── */}
+                    {/* Adviser and keywords */}
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-                        <div className="rounded-2xl border p-5" style={{ background: 'var(--color-surface)', borderColor: 'var(--color-border)' }}>
-                            <label htmlFor="metadata-abstract" className="block text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--color-text-muted)' }}>Abstract</label>
-                            <textarea id="metadata-abstract" value={form.abstract}
-                                onChange={(e) => setForm(prev => ({ ...prev, abstract: e.target.value }))}
-                                disabled={processing}
-                                rows={7}
-                                className={inputCls + ' resize-y'}
-                                placeholder="Capstone abstract..." />
-                        </div>
-
+                        <AdviserField name={form.adviser_name} selectedId={form.adviser_id} disabled={processing} inputClassName={inputCls}
+                            onChange={(adviser_name, adviser_id) => { editedFields.current.add('adviser_name'); setForm(prev => ({ ...prev, adviser_name, adviser_id })); }} />
                         <div className="rounded-2xl border p-5" style={{ background: 'var(--color-surface)', borderColor: 'var(--color-border)' }}>
                             <label className="block text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: 'var(--color-text-muted)' }}>Keywords</label>
-                            <div className="flex flex-wrap gap-2 mb-3 min-h-[32px]">
-                                {form.keywords.map((kw, idx) => (
-                                    <span key={idx} className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-full border"
-                                        style={{ background: 'rgba(91,190,99,0.12)', color: 'var(--color-primary)', borderColor: 'var(--color-border-strong)' }}>
-                                        {kw}
-                                        <button aria-label={`Remove keyword ${kw}`} onClick={() => removeKeyword(idx)} disabled={processing} className="ml-0.5 hover:text-red-400 transition-colors disabled:opacity-40">
-                                            <HiOutlineX className="w-3 h-3" />
-                                        </button>
-                                    </span>
-                                ))}
-                                {form.keywords.length === 0 && (
-                                    <span className="text-xs italic" style={{ color: 'var(--color-text-faint)' }}>No keywords yet</span>
-                                )}
-                            </div>
-                            <div className="flex gap-2">
-                                <input aria-label="Add keywords" type="text" value={newKeyword}
-                                    onChange={(e) => setNewKeyword(e.target.value)}
-                                    onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addKeyword())}
-                                    disabled={processing}
-                                    placeholder="Add keywords, separated by commas…"
-                                    className={inputCls + ' flex-1 min-w-0'} />
-                                <button onClick={addKeyword} disabled={processing}
-                                    className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium rounded-lg border transition-colors disabled:opacity-40"
-                                    style={{ background: 'rgba(91,190,99,0.12)', color: 'var(--color-primary)', borderColor: 'var(--color-border-strong)' }}>
-                                    <HiOutlinePlus className="w-4 h-4" /> Add
-                                </button>
-                            </div>
-                            <p className="text-xs mt-2" style={{ color: 'var(--color-text-muted)' }}>
-                                Separate entries with commas. Duplicates are removed automatically; click a keyword to remove it.
-                            </p>
+                            <KeywordInput keywords={form.keywords} onChange={values => editField('keywords', values)}
+                                disabled={processing} inputClassName={inputCls} onValidationChange={setKeywordInputError} validationError={keywordInputError} />
                         </div>
+                    </div>
+
+                    {/* Full-width abstract */}
+                    <div className="rounded-2xl border p-5" style={{ background: 'var(--color-surface)', borderColor: 'var(--color-border)' }}>
+                        <label htmlFor="metadata-abstract" className="block text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--color-text-muted)' }}>Abstract</label>
+                        <textarea id="metadata-abstract" value={form.abstract}
+                            onChange={(e) => editField('abstract', e.target.value)}
+                            disabled={processing}
+                            rows={7}
+                            className={inputCls + ' resize-y'}
+                            placeholder="Capstone abstract..." />
                     </div>
 
                     {/* ── Row 4: Author Contact Details Table ── */}

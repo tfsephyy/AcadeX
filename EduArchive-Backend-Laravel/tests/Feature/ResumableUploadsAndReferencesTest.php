@@ -74,7 +74,8 @@ class ResumableUploadsAndReferencesTest extends SecurityTestCase
         $base = $this->begin($bytes);
         $this->chunk($base, 0, $bytes)->assertOk();
         $reference = $this->postJson($base.'/complete')->assertOk()->json('data.pdf_path');
-        $payload = ['title' => 'Synthetic saved reference', 'author' => 'Synthetic Author', 'pdf_path' => $reference,
+        $payload = ['publication_status' => 'unpublished', 'copyright_status' => 'unprotected',
+            'title' => 'Synthetic saved reference', 'author' => 'Synthetic Author', 'pdf_path' => $reference,
             'references' => [$target->id, $target->id]];
         $record = $this->postJson('/api/v1/admin/capstones', $payload)->assertCreated()->json('data');
         $this->postJson('/api/v1/admin/capstones', $payload)->assertOk()->assertJsonPath('data.id', $record['id']);

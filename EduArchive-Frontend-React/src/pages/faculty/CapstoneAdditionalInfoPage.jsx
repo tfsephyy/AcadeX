@@ -48,19 +48,22 @@ const COPYRIGHT_OPTIONS = [
 ];
 
 /* ─── Reusable section card ──────────────────────────────────── */
-function SectionCard({ icon: Icon, title, subtitle, children, accent = 'var(--color-primary)' }) {
+function SectionCard({ icon: Icon, title, subtitle, children, required = false, error = '', id, accent = 'var(--color-primary)' }) {
     return (
-        <div className="rounded-2xl border" style={{ background: 'var(--color-surface)', borderColor: 'var(--color-border)' }}>
+        <div id={id} className="min-w-0 rounded-2xl border" style={{ background: 'var(--color-surface)', borderColor: 'var(--color-border)' }}>
             <div className="px-5 py-3.5 border-b flex items-center gap-3 rounded-t-2xl" style={{ background: 'var(--color-bg-tertiary)', borderColor: 'var(--color-border)' }}>
                 <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: `${accent}22` }}>
                     <Icon className="w-4 h-4" style={{ color: accent }} />
                 </div>
                 <div>
-                    <h3 className="text-sm font-semibold" style={{ color: 'var(--color-text)' }}>{title}</h3>
+                    <h3 className="text-sm font-semibold" style={{ color: 'var(--color-text)' }}>{title}{required && <span className="text-red-400"> *</span>}</h3>
                     {subtitle && <p className="text-xs mt-0.5" style={{ color: 'var(--color-text-muted)' }}>{subtitle}</p>}
                 </div>
             </div>
-            <div className="p-5">{children}</div>
+            <div className="p-5" role={required ? "group" : undefined} aria-label={required ? title : undefined} aria-describedby={error ? `${id}-error` : undefined}>
+                {children}
+                {error && <p id={`${id}-error`} role="alert" className="mt-3 text-sm text-red-500">{error}</p>}
+            </div>
         </div>
     );
 }
@@ -79,8 +82,9 @@ export default function CapstoneAdditionalInfoPage() {
         if (!initialForm || !pdfInfo) navigate('/faculty/capstone-library', { replace: true });
     }, []);
 
-    const [publicationStatus, setPublicationStatus] = useState('unpublished');
+    const [publicationStatus, setPublicationStatus] = useState('');
     const [copyrightStatus, setCopyrightStatus] = useState('');
+    const [selectionErrors, setSelectionErrors] = useState({});
     const [saving, setSaving] = useState(false);
 
     // IMRAD
@@ -169,6 +173,15 @@ export default function CapstoneAdditionalInfoPage() {
     const handleSave = async () => {
         if (!initialForm?.title?.trim()) { notify.error('Title is required.'); return; }
         if (!initialForm?.author?.trim()) { notify.error('Author is required.'); return; }
+        const errors = {};
+        if (!publicationStatus) errors.publication_status = 'Choose a visitor access and publication option.';
+        if (!copyrightStatus) errors.copyright_status = 'Choose a copyright status.';
+        setSelectionErrors(errors);
+        if (Object.keys(errors).length) {
+            notify.error(errors.publication_status || errors.copyright_status);
+            document.getElementById(!publicationStatus ? 'publication-status' : 'copyright-status')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            return;
+        }
         setSaving(true);
         try {
             await storeFacultyCapstone({
@@ -176,7 +189,7 @@ export default function CapstoneAdditionalInfoPage() {
                 pdf_path: pdfInfo.pdf_path,
                 pdf_original_name: pdfInfo.pdf_original_name,
                 publication_status: publicationStatus,
-                copyright_status: copyrightStatus || null,
+                copyright_status: copyrightStatus,
                 imrad_path: imradInfo?.file_path || null,
                 imrad_original_name: imradInfo?.file_original_name || null,
                 references: references.map(r => r.id),
@@ -247,13 +260,13 @@ export default function CapstoneAdditionalInfoPage() {
                     </div>
 
                     {/* ── Publication Status ── */}
-                    <SectionCard icon={HiOutlineGlobeAlt} title="Visitor Access & External Publication" subtitle="Approved capstones enter the internal library for students and faculty. Choose whether authenticated visitor accounts can also access the full document." accent="#16a34a">
+                    <SectionCard icon={HiOutlineGlobeAlt} id="publication-status" required error={selectionErrors.publication_status} title="Visitor Access & External Publication" subtitle="Approved capstones enter the internal library for students and faculty. Choose whether authenticated visitor accounts can also access the full document." accent="#16a34a">
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                             {STATUS_OPTIONS.map((opt) => {
                                 const isSelected = publicationStatus === opt.value;
                                 const Icon = opt.icon;
                                 return (
-                                    <button key={opt.value} onClick={() => setPublicationStatus(opt.value)}
+                                    <button type="button" aria-pressed={isSelected} key={opt.value} onClick={() => { setPublicationStatus(opt.value); setSelectionErrors(prev => ({ ...prev, publication_status: '' })); }}
                                         className="relative text-left p-4 rounded-xl border-2 transition-all"
                                         style={{ background: isSelected ? opt.bg : 'var(--color-bg-secondary)', borderColor: isSelected ? opt.border : 'var(--color-border)' }}>
                                         {isSelected && (
@@ -271,12 +284,12 @@ export default function CapstoneAdditionalInfoPage() {
                     </SectionCard>
 
                     {/* ── Copyright Status ── */}
-                    <SectionCard icon={HiOutlineShieldCheck} title="Copyright Status" subtitle="Indicate the copyright protection status of this capstone" accent="#7c3aed">
+                    <SectionCard icon={HiOutlineShieldCheck} id="copyright-status" required error={selectionErrors.copyright_status} title="Copyright Status" subtitle="Indicate the copyright protection status of this capstone" accent="#7c3aed">
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                             {COPYRIGHT_OPTIONS.map((opt) => {
                                 const isSelected = copyrightStatus === opt.value;
                                 return (
-                                    <button key={opt.value} onClick={() => setCopyrightStatus(isSelected ? '' : opt.value)}
+                                    <button type="button" aria-pressed={isSelected} key={opt.value} onClick={() => { setCopyrightStatus(opt.value); setSelectionErrors(prev => ({ ...prev, copyright_status: '' })); }}
                                         className="relative text-left p-4 rounded-xl border-2 transition-all"
                                         style={{ background: isSelected ? opt.bg : 'var(--color-bg-secondary)', borderColor: isSelected ? opt.border : 'var(--color-border)' }}>
                                         {isSelected && (
@@ -293,8 +306,8 @@ export default function CapstoneAdditionalInfoPage() {
                         </div>
                     </SectionCard>
 
-                    {/* ── IMRAD File ── */}
-                    <SectionCard icon={HiOutlineDocumentDuplicate} title="IMRAD File" subtitle="Upload the PDF file of the capstone IMRAD (optional)" accent="#0891b2">
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                        <SectionCard icon={HiOutlineDocumentDuplicate} title="IMRAD File" subtitle="Upload the PDF file of the capstone IMRAD (optional)" accent="#0891b2">
                         {imradInfo ? (
                             <div className="flex items-center gap-3 p-3 rounded-lg border" style={{ background: 'rgba(8,145,178,0.08)', borderColor: 'rgba(8,145,178,0.3)' }}>
                                 <HiOutlineDocumentDuplicate className="w-5 h-5 flex-shrink-0" style={{ color: '#0891b2' }} />
@@ -331,11 +344,6 @@ export default function CapstoneAdditionalInfoPage() {
                         )}
                         <input ref={imradFileRef} type="file" accept=".pdf" onChange={(e) => handleImradSelect(e.target.files[0])} className="hidden" />
                     </SectionCard>
-
-                    {/* ── Resources + References ─────── */}
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-
-                        {/* Resources */}
                         <SectionCard icon={HiOutlineLink} title="Additional Resources" subtitle="Attach supplementary files" accent="#2563eb">
                             {resources.length > 0 && (
                                 <div className="mb-3 space-y-2">
@@ -384,8 +392,9 @@ export default function CapstoneAdditionalInfoPage() {
                                 </button>
                             </div>
                         </SectionCard>
+                    </div>
 
-                        {/* References */}
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
                         <SectionCard icon={HiOutlineBookOpen} title="References" subtitle="Cite other capstones used as references" accent="#7c3aed">
                             {references.length > 0 && (
                                 <div className="mb-3 space-y-2 max-h-40 overflow-y-auto admin-scroll pr-0.5">
@@ -441,19 +450,16 @@ export default function CapstoneAdditionalInfoPage() {
                                 {refDropdownOpen && <div className="fixed inset-0 z-20" onClick={() => setRefDropdownOpen(false)} />}
                             </div>
                         </SectionCard>
-                    </div>
-
-                    {/* ── Submission Summary ──────── */}
-                    <div className="rounded-2xl border p-5" style={{ background: 'var(--color-surface)', borderColor: 'var(--color-border)' }}>
+                        <div className="rounded-2xl border p-5" style={{ background: 'var(--color-surface)', borderColor: 'var(--color-border)' }}>
                         <p className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: 'var(--color-text-muted)' }}>Submission Summary</p>
                         <div className="space-y-2.5">
                             <div className="flex items-center justify-between">
                                 <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>Status</span>
-                                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold border"
+                                {currentStatus ? <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold border"
                                     style={{ background: currentStatus.bg, color: currentStatus.accent, borderColor: currentStatus.border }}>
                                     <span className="w-1.5 h-1.5 rounded-full" style={{ background: currentStatus.accent }} />
                                     {currentStatus.label}
-                                </span>
+                                </span> : <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>Not selected</span>}
                             </div>
                             <div className="flex items-center justify-between">
                                 <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>Copyright</span>
@@ -475,6 +481,7 @@ export default function CapstoneAdditionalInfoPage() {
                                 <span className="text-xs font-semibold" style={{ color: 'var(--color-text)' }}>{references.length} capstone{references.length !== 1 ? 's' : ''}</span>
                             </div>
                         </div>
+                    </div>
                     </div>
                 </div>
             </div>

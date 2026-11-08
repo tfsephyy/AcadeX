@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { getExtractionNotice } from '../src/components/extractionNotice.js'
 
 test('empty, failed and skipped extraction never claim metadata was filled', () => {
-  for (const state of [{ extracted: {} }, { extracted: { title: 'Untitled', author: 'Unknown Author' } }, { extractionStatus: 'unavailable', extracted: {} }, { skipped: true, extracted: {} }]) {
+  for (const state of [{ extracted: {} }, { extracted: { program: 'BSIT' } }, { extracted: { title: 'Untitled', author: 'Unknown Author' } }, { extractionStatus: 'unavailable', extracted: {} }, { skipped: true, extracted: {} }]) {
     const message = getExtractionNotice(state)
     assert.match(message, /enter|fill/i)
     assert.doesNotMatch(message, /auto-extracted|suggestions filled/i)

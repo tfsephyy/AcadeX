@@ -12,6 +12,7 @@ class BoundedMetadataExtractionTest extends TestCase
 {
     public function test_text_metadata_stops_after_front_matter_and_retains_source_fields(): void
     {
+        $this->mock(\App\Services\BoundedPdfOcr::class)->shouldNotReceive('extract');
         $path = tempnam(sys_get_temp_dir(), 'acadex-frontmatter-');
         try {
             MetadataPdfFixture::write($path, 0, 150, 'Alex Example');
@@ -30,14 +31,14 @@ class BoundedMetadataExtractionTest extends TestCase
         } finally { unlink($path); }
     }
 
-    public function test_abstract_wording_is_not_rewritten_and_unlisted_keywords_stay_empty(): void
+    public function test_abstract_wording_is_preserved_and_keywords_use_only_source_terms(): void
     {
         $body = 'This study records of3.48 and theimprove ments exactly as printed in the PDF. It describes a web application without declaring keywords.';
         $extractor = new class($body) extends PdfExtractorService {
             public function __construct(private string $body) {}
             protected function extractRawPages(string $path): array
             {
-                return ["Header one\nHeader two\nHeader three\nABSTRACT\n".$this->body."\nCHAPTER I"];
+                return ["ABSTRACT\n".$this->body."\nCHAPTER I"];
             }
         };
         $path = tempnam(sys_get_temp_dir(), 'acadex-wording-');
@@ -45,7 +46,7 @@ class BoundedMetadataExtractionTest extends TestCase
             file_put_contents($path, '%PDF-1.4 synthetic source');
             $data = $extractor->extractFromPath($path);
             self::assertSame($body, $data['abstract']);
-            self::assertSame([], $data['keywords']);
+            self::assertSame(['web application'], $data['keywords']);
         } finally { unlink($path); }
     }
 
@@ -69,11 +70,11 @@ class BoundedMetadataExtractionTest extends TestCase
         };
         $path = tempnam(sys_get_temp_dir(), 'acadex-no-inference-');
         try {
-            file_put_contents($path, '%PDF synthetic');
+            file_put_contents($path, '%PDF-1.4 synthetic');
             $result = $extractor->extractPathWithSource($path);
             self::assertStringEndsWith(trim($body), trim($result['source']));
             self::assertNull($result['metadata']['abstract']);
-            self::assertSame([], $result['metadata']['keywords']);
+            foreach ($result['metadata']['keywords'] as $keyword) self::assertStringContainsString($keyword, mb_strtolower($result['source']));
         } finally { unlink($path); }
     }
 
@@ -101,6 +102,10 @@ class BoundedMetadataExtractionTest extends TestCase
         $this->app->instance(PdfMetadataSampler::class, $sampler);
         // Empty original cannot produce metadata. Only the valid bounded sample can.
         $source = UploadedFile::fake()->create('large.pdf', 100 * 1024, 'application/pdf');
+        $handle = fopen($source->getRealPath(), 'r+b');
+        fwrite($handle, '%PDF-1.4');
+        ftruncate($handle, 100 * 1024 * 1024);
+        fclose($handle);
         try {
             $data = (new PdfExtractorService())->extract($source);
             self::assertSame('SYNTHETIC CAMPUS ARCHIVE SYSTEM', $data['title']);
@@ -108,7 +113,8 @@ class BoundedMetadataExtractionTest extends TestCase
             self::assertSame(2026, $data['year']);
             self::assertSame('BSIT', $data['program']);
             self::assertStringContainsString('synthetic document archive', $data['abstract']);
-            self::assertContains('education', $data['keywords']);
+            self::assertContains('document management', $data['keywords']);
+            self::assertNotContains('education', $data['keywords']);
             self::assertSame(1, $sampler->calls);
             self::assertFileDoesNotExist($sample);
         } finally { if (is_file($sample)) unlink($sample); }

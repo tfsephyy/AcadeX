@@ -16,6 +16,84 @@ underlying release. This does not claim that every feature flow was replayed
 against production accounts or documents. See the [staged upload release record](handoff/STAGED_UPLOAD_QUOTA_FIX_2026-11-07.md)
 and the [November 7 production release record](handoff/PRODUCTION_RELEASE_2026-11-07.md).
 
+## November 8, 2026 upload review layout and full-PDF keywords
+
+Status: implemented and verified locally; no deployment. The current user request supersedes the computing-only
+keyword scope below: scan the whole PDF and rank frequent technical, research and
+capstone terms. Keep the existing 15-tag limit and manual editing; no generated
+filler. Retain bounded processing with visible warnings when coverage is incomplete.
+
+- Step 2: year/program/category, then adviser/keywords side by side, then a
+  full-width abstract. Stack paired fields on small screens.
+- Step 3 in all three upload roles: require explicit copyright and visitor-access/
+  publication selections, with server validation for new submissions. Pair IMRAD
+  with additional resources, and references with submission summary on desktop.
+- Preserve prior work, approval/access policy, original files and existing records.
+  No migration or production deployment is requested.
+
+Verification: 171 guarded disposable-MySQL tests / 1,566 assertions, 58 frontend
+tests, build and quiet lint passed. Synthetic Chrome verified all three roles on
+desktop/mobile. See [the implementation record](ui/2026-11-08-upload-layout-full-pdf-keywords.md).
+
+## November 8, 2026 technical keywords and existing-capstone editing
+
+Current attached implementation request; supersedes the earlier ten-keyword
+limit and arbitrary-frequency/explicit-list keyword acceptance.
+
+- Automatic suggestions use only literal source matches from a maintained
+  computing dictionary, ranked by frequency/title/abstract relevance, with no AI
+  and at most 15 unique terms. Explicit labels must also pass that dictionary.
+  Exclude repeated general words and never pad to the limit.
+- Upload and edit share comma-separated multiple entry, case-insensitive
+  deduplication, individual tag editing/removal and visible validation at 15.
+  Normalize before server validation so embedded comma lists cannot bypass the
+  maximum or cause a valid multi-term input to fail the per-term length limit.
+- Adviser placeholder is exactly `Enter Manually here` in upload and edit.
+  Existing-capstone edits display the saved text or an empty field when missing;
+  retain normalized Faculty matching, explicit duplicate selection and eligibility.
+- Save deliberate adviser changes to text/account separately; unknown names stay
+  unlinked. No account creation or role/approval permission changes.
+- Omit untouched adviser/keyword fields during edits. Never re-extract or truncate
+  old records automatically. Legacy lists above 15 remain intact for unrelated
+  edits; intentionally changed keyword lists must satisfy the new maximum.
+- Verify persistence/refresh and reassignment in the guarded disposable MySQL DB,
+  plus synthetic browser coverage of all three role-specific upload/edit panels.
+  No application-data migration or production deployment is requested.
+
+## November 8, 2026 modular deterministic metadata rules
+
+Current implementation request from the attached extraction specification. This
+supersedes the earlier explicit-keywords-only/12-front-pages-only metadata rules:
+
+- Keep PDF validation/I/O in PdfExtractorService; share cleaned, numbered pages
+  with optional coordinates through MetadataPipeline and independent title,
+  author, year, adviser, abstract, keyword and contact services.
+- Remove repeated margins and numerical/Roman page numbers with structural and
+  positional evidence; never discard the first three lines blindly. Preserve
+  meaningful title content and the first-page publication date.
+- Bound metadata to 12 front pages and check up to 12 tail pages for named CV
+  profiles. Large originals require bounded private samples; missing tools or
+  unreadable/missing profiles require manual review, never guessed contacts.
+- Use native traditional Tesseract only for scanned metadata; no Paddle/model
+  API or generative/corrective AI. Retain conservative explicit spacing repairs,
+  source-only frequency/technical-vocabulary keywords (maximum ten), and raw
+  extracted text internally for comparison without exposing it in upload APIs.
+- Preserve title wording/capitalization; stop at introductory project statements.
+  Separate author lines; read the first-page publication date; extract the adviser
+  directly above Adviser inside APPROVAL SHEET; stop executive summaries at
+  contents/acknowledgment/chapter headings.
+- Normalize Faculty names by case, spaces, punctuation, common honorifics,
+  credentials and explicit surname-first ordering. Keep distinct initials and
+  existing Faculty eligibility; duplicate normalized matches need explicit choice.
+- New uploads always save BSIT server-side and show it read-only during review.
+  Retain existing records without a bulk program rewrite. Keep structured author
+  contacts and existing personal-information permissions.
+- Field failures produce sanitized manual-review notes while other fields and
+  upload processing continue. Late results must preserve manual edits, including
+  deliberate clearing of values and contacts/keywords.
+
+Implementation and verification are local; production deployment is not requested.
+
 ## Global constraints
 
 - Preserve existing roles, approvals, authorization boundaries, encrypted documents, and production data.

@@ -23,14 +23,14 @@ export default function AdviserField({ name, selectedId, onChange, disabled = fa
             <label htmlFor="metadata-adviser" className="block text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--color-text-muted)' }}>Adviser name</label>
             <input id="metadata-adviser" type="text" value={name || ''} maxLength={255} disabled={disabled}
                 onChange={event => onChange(event.target.value, null)} className={inputClassName}
-                placeholder="Name above Adviser on the approval sheet" aria-describedby="adviser-match-status" />
+                placeholder="Enter Manually here" aria-describedby="adviser-match-status" />
             <p id="adviser-match-status" role="status" className="text-xs mt-2" style={{ color: 'var(--color-text-secondary)' }}>
                 {status === 'loading' ? 'Loading Faculty accounts…' : status === 'failed'
                     ? 'Faculty matching is unavailable. Your name will be checked again when saved.'
                     : linked ? `Assigned Faculty: ${linked.name} (@${linked.username})`
                         : matches.length > 1 ? 'Multiple Faculty accounts match. Select the correct account below, or leave unassigned.'
                             : name?.trim() ? 'No available Faculty account matches. The adviser name will be saved without an assignment.'
-                                : 'Review the extracted name or enter it manually. Matching ignores capitalization and extra spaces.'}
+                                : 'Review the extracted name, enter it manually, or choose a Faculty account.'}
             </p>
             {status === 'failed' && <button type="button" onClick={() => { setStatus('loading'); setAttempt(value => value + 1); }} className="text-xs underline mt-2">Retry Faculty matching</button>}
             {matches.length > 1 && (
@@ -40,6 +40,19 @@ export default function AdviserField({ name, selectedId, onChange, disabled = fa
                         onChange={event => onChange(name, event.target.value ? Number(event.target.value) : null)}>
                         <option value="">Leave Faculty assignment empty</option>
                         {matches.map(account => <option key={account.id} value={account.id}>{account.name} — @{account.username}{account.faculty_program ? ` · ${account.faculty_program}` : ''}</option>)}
+                    </select>
+                </div>
+            )}
+            {status === 'ready' && faculty.length > 0 && (
+                <div className="mt-3">
+                    <label htmlFor="metadata-faculty-picker" className="block text-xs font-semibold mb-2">Choose an existing Faculty adviser</label>
+                    <select id="metadata-faculty-picker" value="" disabled={disabled} className={inputClassName}
+                        onChange={event => {
+                            const account = faculty.find(item => String(item.id) === event.target.value);
+                            if (account) onChange(account.name, account.id);
+                        }}>
+                        <option value="">Select Faculty to use their name</option>
+                        {faculty.map(account => <option key={account.id} value={account.id}>{account.name} — @{account.username}</option>)}
                     </select>
                 </div>
             )}

@@ -37,6 +37,7 @@ class CapstoneApprovalWorkflowTest extends SecurityTestCase
             'author' => 'Synthetic Author',
             'year' => 2026,
             'pdf_path' => $upload['pdf_path'],
+            'publication_status' => 'unpublished', 'copyright_status' => 'unprotected',
             'pdf_original_name' => $upload['pdf_original_name'],
         ])->assertCreated()->json('data');
 
@@ -141,14 +142,14 @@ class CapstoneApprovalWorkflowTest extends SecurityTestCase
         $this->postJson('/api/v1/admin/capstones/'.$record->id.'/publish')->assertStatus(400);
     }
 
-    public function test_admin_and_faculty_uploads_default_to_unpublished_and_do_not_expose_full_documents_to_visitors(): void
+    public function test_admin_and_faculty_internal_only_uploads_do_not_expose_full_documents_to_visitors(): void
     {
         $admin = $this->user('admin');
         $faculty = $this->user('faculty');
         $visitor = $this->user('visitor');
         $student = $this->user('student');
 
-        // Admin upload without specifying publication_status
+        // Admin explicitly chooses internal-only publication.
         $this->asUser($admin);
         $adminUpload = $this->post('/api/v1/admin/capstones/upload', [
             'pdf' => UploadedFile::fake()->createWithContent('admin.pdf', $this->syntheticPdf()),
@@ -160,6 +161,7 @@ class CapstoneApprovalWorkflowTest extends SecurityTestCase
             'author' => 'Admin Author',
             'year' => 2026,
             'pdf_path' => $adminUpload['pdf_path'],
+            'publication_status' => 'unpublished', 'copyright_status' => 'unprotected',
             'pdf_original_name' => $adminUpload['pdf_original_name'],
         ])->assertCreated()->json('data');
 
@@ -167,7 +169,7 @@ class CapstoneApprovalWorkflowTest extends SecurityTestCase
         self::assertSame('approved', $storedAdmin->approval_status);
         self::assertSame('unpublished', $storedAdmin->publication_status);
 
-        // Faculty upload without specifying publication_status
+        // Faculty explicitly chooses internal-only publication.
         $this->asUser($faculty);
         $facultyUpload = $this->post('/api/v1/faculty/capstones/upload', [
             'pdf' => UploadedFile::fake()->createWithContent('faculty.pdf', $this->syntheticPdf()),
@@ -179,6 +181,7 @@ class CapstoneApprovalWorkflowTest extends SecurityTestCase
             'author' => 'Faculty Author',
             'year' => 2026,
             'pdf_path' => $facultyUpload['pdf_path'],
+            'publication_status' => 'unpublished', 'copyright_status' => 'unprotected',
             'pdf_original_name' => $facultyUpload['pdf_original_name'],
         ])->assertCreated()->json('data');
 

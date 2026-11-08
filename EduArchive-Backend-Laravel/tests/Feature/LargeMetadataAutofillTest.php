@@ -59,10 +59,12 @@ class LargeMetadataAutofillTest extends SecurityTestCase
         } finally { @unlink($source); @unlink($template); }
     }
 
-    public function test_sampler_failure_preserves_the_staged_original_and_reports_unavailable(): void
+    public function test_unavailable_readers_preserve_the_staged_original_and_report_unavailable(): void
     {
         Queue::fake([ExtractUploadMetadataJob::class]);
         $this->mock(\App\Services\PdfPreviewService::class)->shouldNotReceive('prepare');
+        $this->mock(\App\Services\Extraction\FullPdfTextReader::class)->shouldReceive('read')
+            ->andReturn(['pages' => [], 'complete' => false]);
         $source = tempnam(sys_get_temp_dir(), 'acadex-large-meta-');
         MetadataPdfFixture::write($source, 21 * 1048576);
         config(['acadex.min_free_storage_bytes' => 0]);

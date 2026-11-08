@@ -14,6 +14,10 @@ import {
 import { useNotification } from '../../components/useNotification';
 import { LoadingOverlay } from '../../components/Loading';
 import CategoryCombobox from '../../components/CategoryCombobox';
+import AdviserField from '../AdviserField';
+import KeywordInput from '../KeywordInput';
+import { keywordError } from '../../utils/keywords';
+import { getApiErrorMessage } from '../../api/errors';
 
 /* ─── Constants ─────────────────────────────────────────────── */
 const STATUS_OPTIONS = [
@@ -71,9 +75,11 @@ export default function EditCapstoneModal({ capstone, onClose, onSuccess, update
 
     /* ── Step 2 state ── */
     const [form, setForm] = useState({
-        title: '', year: '', author: '', program: '', category: '', abstract: '', keywords: [],
+        title: '', year: '', author: '', program: '', category: '', abstract: '', keywords: [], adviser_name: '', adviser_id: null,
     });
-    const [newKeyword, setNewKeyword] = useState('');
+    const [keywordsEdited, setKeywordsEdited] = useState(false);
+    const [adviserEdited, setAdviserEdited] = useState(false);
+    const [keywordInputError, setKeywordInputError] = useState('');
 
     /* ── Author details state ── */
     const [authorDetails, setAuthorDetails] = useState([]);
@@ -116,7 +122,12 @@ export default function EditCapstoneModal({ capstone, onClose, onSuccess, update
             category: capstone.category || '',
             abstract: capstone.abstract || '',
             keywords: capstone.keywords?.map(k => k.name || k) || [],
+            adviser_name: capstone.adviser_name || '',
+            adviser_id: capstone.adviser_id || null,
         });
+        setKeywordsEdited(false);
+        setAdviserEdited(false);
+        setKeywordInputError('');
         setPublicationStatus(capstone.publication_status || 'unpublished');
         setCopyrightStatus(capstone.copyright_status || '');
         setImradInfo(capstone.imrad_available ? { file_path: capstone.imrad_reference, file_original_name: capstone.imrad_original_name } : null);
@@ -201,9 +212,11 @@ export default function EditCapstoneModal({ capstone, onClose, onSuccess, update
     const handleSave = async () => {
         if (!form.title.trim()) { notify.error('Title is required.'); return; }
         if (!form.author.trim()) { notify.error('Author is required.'); return; }
+        if (keywordInputError) { notify.error(keywordInputError); return; }
+        if (keywordsEdited && keywordError(form.keywords)) { notify.error(keywordError(form.keywords)); return; }
         setSaving(true);
         try {
-            const res = await actualUpdate(capstone.id, {
+            const payload = {
                 ...form,
                 author_details:      authorDetails.length > 0 ? authorDetails : null,
                 publication_status:  publicationStatus,
@@ -212,11 +225,16 @@ export default function EditCapstoneModal({ capstone, onClose, onSuccess, update
                 imrad_original_name: imradInfo?.file_original_name || null,
                 references:          references.map(r => r.id),
                 resources:           resources.map(r => ({ name: r.name, file_path: r.file_reference || r.file_path, file_original_name: r.file_original_name })),
-            });
+            };
+            // Preserve legacy keyword rows and unavailable historical assignments
+            // when the uploader edits other fields only.
+            if (!keywordsEdited) delete payload.keywords;
+            if (!adviserEdited) { delete payload.adviser_name; delete payload.adviser_id; }
+            const res = await actualUpdate(capstone.id, payload);
             notify.success('Capstone updated successfully!');
             onSuccess(res.data.data);
         } catch (err) {
-            notify.error(err.response?.data?.message || 'Failed to update capstone.');
+            notify.error(getApiErrorMessage(err, 'Failed to update capstone.'));
         } finally { setSaving(false); }
     };
 
@@ -283,6 +301,12 @@ export default function EditCapstoneModal({ capstone, onClose, onSuccess, update
                                     className={inputCls} placeholder="Author name(s)…" />
                             </div>
 
+                            <AdviserField name={form.adviser_name} selectedId={form.adviser_id} disabled={saving} inputClassName={inputCls}
+                                onChange={(adviser_name, adviser_id) => {
+                                    setAdviserEdited(true);
+                                    setForm(previous => ({ ...previous, adviser_name, adviser_id }));
+                                }} />
+
                             {/* Year / Program / Category */}
                             <div className="grid grid-cols-3 gap-3">
                                 <div>
@@ -318,41 +342,9 @@ export default function EditCapstoneModal({ capstone, onClose, onSuccess, update
                             {/* Keywords */}
                             <div>
                                 <SectionLabel>Keywords</SectionLabel>
-                                <div className="flex gap-2 mb-2">
-                                    <input type="text" value={newKeyword}
-                                        onChange={e => setNewKeyword(e.target.value)}
-                                        onKeyDown={e => {
-                                            if (e.key === 'Enter') {
-                                                e.preventDefault();
-                                                if (newKeyword.trim() && !form.keywords.includes(newKeyword.trim())) {
-                                                    setForm(p => ({ ...p, keywords: [...p.keywords, newKeyword.trim()] }));
-                                                    setNewKeyword('');
-                                                }
-                                            }
-                                        }}
-                                        placeholder="Add keyword and press Enter"
-                                        className={inputCls + ' flex-1'} />
-                                    <button onClick={() => {
-                                        if (newKeyword.trim() && !form.keywords.includes(newKeyword.trim())) {
-                                            setForm(p => ({ ...p, keywords: [...p.keywords, newKeyword.trim()] }));
-                                            setNewKeyword('');
-                                        }
-                                    }}
-                                        className="px-4 py-2 text-white text-sm font-medium rounded-lg transition-colors"
-                                        style={{ background: 'var(--color-primary)' }}>
-                                        Add
-                                    </button>
-                                </div>
-                                <div className="flex flex-wrap gap-2">
-                                    {form.keywords.map(kw => (
-                                        <span key={kw} className="inline-flex items-center gap-1.5 px-3 py-1 text-sm rounded-full"
-                                            style={{ background: 'rgba(27,94,32,0.12)', color: 'var(--color-primary)' }}>
-                                            {kw}
-                                            <button onClick={() => setForm(p => ({ ...p, keywords: p.keywords.filter(k => k !== kw) }))}
-                                                className="leading-none opacity-70 hover:opacity-100">×</button>
-                                        </span>
-                                    ))}
-                                </div>
+                                <KeywordInput keywords={form.keywords} disabled={saving} inputClassName={inputCls}
+                                    onValidationChange={setKeywordInputError} validationError={keywordInputError}
+                                    onChange={keywords => { setKeywordsEdited(true); setForm(previous => ({ ...previous, keywords })); }} />
                             </div>
 
                             {/* Authors & Contact Info */}

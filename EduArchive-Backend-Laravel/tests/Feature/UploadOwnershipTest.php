@@ -32,7 +32,8 @@ class UploadOwnershipTest extends SecurityTestCase
 
     private function payload(string $reference): array
     {
-        return ['title' => 'Synthetic '.bin2hex(random_bytes(5)), 'author' => 'Synthetic', 'pdf_path' => $reference];
+        return ['publication_status' => 'unpublished', 'copyright_status' => 'unprotected',
+            'title' => 'Synthetic '.bin2hex(random_bytes(5)), 'author' => 'Synthetic', 'pdf_path' => $reference];
     }
 
     public function test_owned_upload_round_trip_rejects_stolen_reused_and_arbitrary_paths(): void

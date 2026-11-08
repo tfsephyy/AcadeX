@@ -8,7 +8,8 @@ export function getExtractionNotice({ extractionStatus, extractionScope, extract
   if (skipped || extractionStatus === 'skipped') {
     return 'Automatic extraction was skipped. Enter the document details before proceeding.'
   }
-  const hasSuggestions = Object.values(extracted).some(value => {
+  const hasSuggestions = Object.entries(extracted).some(([field, value]) => {
+    if (field === 'program') return false
     if (Array.isArray(value)) return value.length > 0
     if (value === null || value === undefined) return false
     const text = String(value).trim()
@@ -18,7 +19,7 @@ export function getExtractionNotice({ extractionStatus, extractionScope, extract
     return 'Automatic processing finished without usable metadata. Please fill in the document details.'
   }
   if (extractionScope === 'first_12_pages') {
-    return 'Suggestions were extracted from the first 12 pages of your PDF. Review them and fill in any missing details.'
+    return 'Metadata uses the first 12 pages; see the processing notes for CV contact coverage. Review all suggestions and missing details.'
   }
   return 'Metadata was extracted from your PDF. Please review and correct it before proceeding.'
 }

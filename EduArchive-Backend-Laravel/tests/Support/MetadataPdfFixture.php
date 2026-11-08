@@ -5,7 +5,7 @@ namespace Tests\Support;
 /** Synthetic PDF with known metadata and an optional unused large stream. */
 final class MetadataPdfFixture
 {
-    public static function write(string $path, int $paddingBytes = 0, int $pageCount = 2, ?string $adviserName = null): void
+    public static function write(string $path, int $paddingBytes = 0, int $pageCount = 2, ?string $adviserName = null, array $pageOverrides = []): void
     {
         $headers = ['Republic of the Philippines', 'Mindoro State University', 'Bongabong Oriental Mindoro'];
         $title = array_merge($headers, ['SYNTHETIC CAMPUS ARCHIVE SYSTEM',
@@ -28,9 +28,9 @@ final class MetadataPdfFixture
             '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>'];
         for ($i = 0; $i < $pageCount; $i++) {
             $objects[] = '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R >> >> /Contents '.(5+2*$i).' 0 R >>';
-            $objects[] = $content($i === 0 ? $title : ($i === 1 ? $abstract
+            $objects[] = $content($pageOverrides[$i + 1] ?? ($i === 0 ? $title : ($i === 1 ? $abstract
                 : ($i === 2 && $adviserName !== null ? array_merge($headers, ['APPROVAL SHEET', 'Approved for synthetic verification.', $adviserName, 'Adviser'])
-                    : ['Synthetic page '.($i+1)])));
+                    : ['Synthetic page '.($i+1)]))));
         }
         $output = fopen($path, 'wb');
         try {

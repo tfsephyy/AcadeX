@@ -13,21 +13,21 @@ class BoundedPdfOcr
     public const HEIGHT = 2340;
     private const TOTAL_SECONDS = 90;
 
-    public static function renderCommand(string $binary, string $pdf, string $output, int $maxPages = self::MAX_PAGES): array
+    public static function renderCommand(string $binary, string $pdf, string $output, int $maxPages = self::MAX_PAGES, int $firstPage = 1): array
     {
         return [$binary, '-q', '-dNOPAUSE', '-dBATCH', '-dSAFER', '-sDEVICE=pnggray',
             '-r200', '-g'.self::WIDTH.'x'.self::HEIGHT, '-dFIXEDMEDIA',
-            '-dTextAlphaBits=4', '-dGraphicsAlphaBits=4', '-dFirstPage=1',
-            '-dLastPage='.max(1, min(self::MAX_PAGES, $maxPages)), '-dMaxBitmap=10000000', '-dBufferSpace=10000000',
+            '-dTextAlphaBits=4', '-dGraphicsAlphaBits=4', '-dFirstPage='.max(1, $firstPage),
+            '-dLastPage='.(max(1, $firstPage) + max(1, min(self::MAX_PAGES, $maxPages)) - 1), '-dMaxBitmap=10000000', '-dBufferSpace=10000000',
             '-sOutputFile='.$output, '-f', $pdf];
     }
 
-    public function extract(string $ghostscript, string $tesseract, string $pdf, int $psm = 6, int $maxPages = self::MAX_PAGES): array
+    public function extract(string $ghostscript, string $tesseract, string $pdf, int $psm = 6, int $maxPages = self::MAX_PAGES, int $firstPage = 1, float $seconds = self::TOTAL_SECONDS): array
     {
         $directory = PrivateTemp::directory();
-        $deadline = microtime(true) + self::TOTAL_SECONDS;
+        $deadline = microtime(true) + max(0, min(self::TOTAL_SECONDS, $seconds));
         try {
-            if (!$this->run(self::renderCommand($ghostscript, $pdf, $directory.'/page_%04d.png', $maxPages),
+            if (!$this->run(self::renderCommand($ghostscript, $pdf, $directory.'/page_%04d.png', $maxPages, $firstPage),
                 min(45, $deadline - microtime(true)), $directory)) {
                 return [''];
             }

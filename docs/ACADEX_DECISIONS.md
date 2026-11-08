@@ -418,3 +418,85 @@ Back up and verify SQL, original row values, private env/APP_KEY and storage
 before applying only the pending additive adviser-name migration. Keep the
 source field and its data contract; do not silently drop adviser text to hide
 the schema error. Production migration/deployment remains separately scoped.
+
+## D-026 - Modular source-based metadata services (2026-11-08)
+
+The user's attached specification supersedes D-024's explicit-keywords-only and
+front-pages-only contact behavior. PdfExtractorService handles PDF I/O and a
+shared 90-second native Tesseract budget. MetadataPipeline invokes independently
+testable TitleExtractor, AuthorExtractor, YearExtractor, AdviserExtractor,
+AbstractExtractor, KeywordExtractor and ContactExtractor. HeaderFooterCleaner
+runs first for every field, preserving page boundaries, coordinates when
+available, and private original text. No metadata Paddle/model API remains.
+
+Read at most 12 front and 12 tail pages from text PDFs. Large originals retain
+the existing Linux resource-limited sampling boundary; an optional qpdf-counted
+tail sample adds CV coverage without handing the large original to Smalot.
+Unavailable tools, contacts outside that window and ambiguous profiles remain
+manual-review cases. Repeated positional margins and page-number patterns replace
+blind top-line trimming. Sparse tail text alone must not trigger OCR on otherwise
+readable text PDFs. Native OCR front/tail work shares one deadline.
+
+Source vocabulary/frequency ranking may suggest up to ten literal keywords;
+explicit keyword lists take priority. Only known spacing artifacts are repaired;
+technical wording and capitalization remain. Independent failures log field and
+exception class without contents and do not discard other values. Raw text is
+available within the private result only, never persisted in upload status APIs.
+
+New submissions save fixed BSIT, ignoring client program overrides. Existing
+records keep their saved programs. Faculty matching removes explicit honorifics,
+credentials and punctuation and supports comma surname-first ordering; retain
+initials and never use fuzzy similarity to choose an account. Duplicate normalized
+names require explicit selection. UI account selection replaces the display name
+with that account's name before the existing server-side eligibility recheck.
+Edited-field tracking protects deliberate clearing as well as nonempty corrections.
+No migration or production deployment is part of this implementation.
+
+## D-027 - Technical-only automatic keywords and explicit edit fields (2026-11-08)
+
+The new attachment supersedes D-026's ten-keyword limit and acceptance of arbitrary
+frequent words/labelled terms. Rank literal computing vocabulary matches only,
+including technical phrases, using frequency and title/abstract/label weights;
+cap at 15 and never fill missing slots with general words. Maintain the dictionary
+separately from extraction logic. Manual tags remain editable, including novel
+technologies absent from the conservative automatic dictionary. No AI is used.
+
+Normalize comma-separated strings/array entries and deduplicate before validating
+both create and update. Enforce 15 unique items and the existing per-term length
+at the server; do not silently truncate requests. Reuse one React tag editor for
+both upload review and the shared role-specific edit modal. Preserve existing
+tags if an addition fails and prevent proceeding with an unresolved input error.
+
+Use the existing Faculty matching service in editing and share the exact adviser
+placeholder Enter Manually here. Send adviser/keywords only after explicit edits;
+this avoids clearing historical assignments or rewriting legacy keyword rows
+while changing an unrelated field. Existing over-limit lists are grandfathered
+only when untouched. Deliberate keyword updates must meet 15, and deliberate
+adviser changes revalidate current Faculty eligibility. Preserve role and student
+approval/publication rules, existing original documents and schema. No bulk
+re-extraction or data rewrite, migration, account creation or deployment.
+
+## D-028 - Full-PDF keyword frequency and required upload choices (2026-11-08)
+
+The later layout/keyword request supersedes D-027's computing-only dictionary
+and sampled-page keyword scope. Count source-matched computing and research/
+capstone terms across all PDF pages. Frequency is primary; title/abstract/label
+relevance and phrase specificity break ties. Preserve the existing 15-tag maximum,
+manual editing, source-only wording and untouched historical records.
+
+Read all keyword text in the existing small-file parser pass (30-second page loop,
+8 MiB text and 20,000-page ceilings). Large originals use native Ghostscript
+txtwrite in a separate process, never the in-process PHP parser. Limit this pass
+to 45 seconds, 8 MiB text and 20,000 files/pages; Linux additionally requires
+prlimit (512 MiB address space, 40 CPU seconds, 8 MiB per output file). Windows
+uses wall-time/output limits without the Linux address-space enforcement. Keep
+private output files temporary. Front-matter metadata and CV windows remain.
+Native OCR of unreadable middle pages reuses recognized pages and the existing
+90-second deadline; incomplete reading must show a review note, never claim whole
+PDF coverage. No AI, new external service, migration or automatic backfill.
+
+Require explicit publication and copyright selections for new submissions in all
+three upload roles, on the client and server. Leave update validation compatible
+with older records. A choice never bypasses approval or changes document access.
+Paired form cards stack on small screens. This is a local source/runtime update;
+production requires a separately requested release.

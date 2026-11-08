@@ -11,12 +11,42 @@ use Tests\SecurityTestCase;
 
 class AdviserSubmissionTest extends SecurityTestCase
 {
+    public function test_all_upload_roles_save_fixed_bsit_and_structured_contacts_without_changing_old_records(): void
+    {
+        foreach (['student', 'faculty', 'admin'] as $role) {
+            $owner = $this->user($role);
+            $legacy = $this->capstone($owner, ['program' => 'BSCpE']);
+            $this->asUser($owner);
+            $contacts = [['name' => 'Synthetic Author', 'email' => 'author@example.invalid', 'contact' => '09123456789']];
+            $this->postJson('/api/v1/'.$role.'/capstones', $this->payload($owner, ['program' => 'BSCpE', 'author_details' => $contacts]))
+                ->assertCreated()->assertJsonPath('data.program', 'BSIT')->assertJsonPath('data.author_details', $contacts);
+            self::assertSame('BSCpE', $legacy->fresh()->program);
+        }
+    }
+
+    public function test_normalized_credentials_match_without_guessing_between_similar_or_duplicate_names(): void
+    {
+        $faculty = $this->user('faculty');
+        $faculty->update(['name' => 'Maria L. Santos']);
+        $similar = $this->user('faculty');
+        $similar->update(['name' => 'Maria M. Santos']);
+        $owner = $this->user('student');
+        $this->asUser($owner);
+        $this->postJson('/api/v1/student/capstones', $this->payload($owner, ['adviser_name' => 'Dr. MARIA L SANTOS, MIT']))
+            ->assertCreated()->assertJsonPath('data.adviser_id', $faculty->id)->assertJsonPath('data.adviser_name', 'Dr. MARIA L SANTOS, MIT');
+        $duplicate = $this->user('faculty');
+        $duplicate->update(['name' => 'Santos, Maria L.']);
+        $this->postJson('/api/v1/student/capstones', $this->payload($owner, ['adviser_name' => 'Dr. Maria L. Santos']))
+            ->assertCreated()->assertJsonPath('data.adviser_id', null);
+    }
+
     private function payload(User $owner, array $extra = []): array
     {
         Queue::fake();
         $path = 'capstones/'.bin2hex(random_bytes(8)).'.enc';
         app(PdfEncryptorService::class)->encryptRawAndStore($path, '%PDF-1.4 synthetic approval document');
-        return $extra + ['title' => 'Synthetic adviser '.bin2hex(random_bytes(6)), 'author' => 'Synthetic Author',
+        return $extra + ['publication_status' => 'unpublished', 'copyright_status' => 'unprotected',
+            'title' => 'Synthetic adviser '.bin2hex(random_bytes(6)), 'author' => 'Synthetic Author',
             'pdf_path' => app(DocumentUploads::class)->stage($owner, 'pdf', $path), 'pdf_original_name' => 'synthetic.pdf'];
     }
 

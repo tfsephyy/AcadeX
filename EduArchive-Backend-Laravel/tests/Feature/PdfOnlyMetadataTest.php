@@ -11,6 +11,34 @@ use Tests\Support\MetadataPdfFixture;
 
 class PdfOnlyMetadataTest extends SecurityTestCase
 {
+    public function test_cv_contacts_from_tail_pages_are_saved_for_review_without_raw_source_or_external_calls(): void
+    {
+        Queue::fake();
+        Http::preventStrayRequests();
+        Http::fake();
+        config(['acadex.min_free_storage_bytes' => 0]);
+        $path = tempnam(sys_get_temp_dir(), 'acadex-cv-tail-');
+        try {
+            MetadataPdfFixture::write($path, 0, 80, 'Alex Example', [
+                79 => ['CURRICULUM VITAE', 'Alex Example', 'Email: alex@example.invalid', 'Contact: 0912-345-6789'],
+                80 => ['CURRICULUM VITAE', 'Jamie Sample', 'Email: jamie@example.invalid', 'Contact: +639987654321'],
+            ]);
+            $this->asUser($this->user('student'));
+            $upload = $this->post('/api/v1/student/capstones/upload', [
+                'pdf' => new UploadedFile($path, 'synthetic-cv.pdf', 'application/pdf', null, true),
+            ], ['Accept' => 'application/json'])->assertOk()->json('data');
+            $this->app->call([new ExtractUploadMetadataJob($upload['upload_id']), 'handle']);
+            $data = $this->getJson('/api/v1/uploads/'.$upload['upload_id'].'/status')->assertOk()
+                ->assertJsonPath('data.extracted.author_details.0.email', 'alex@example.invalid')
+                ->assertJsonPath('data.extracted.author_details.0.contact', '09123456789')
+                ->assertJsonPath('data.extracted.author_details.1.email', 'jamie@example.invalid')
+                ->assertJsonPath('data.extracted.author_details.1.contact', '+639987654321')->json('data');
+            self::assertArrayNotHasKey('source', $data);
+            self::assertArrayNotHasKey('raw_source', $data);
+            Http::assertNothingSent();
+        } finally { unlink($path); }
+    }
+
     public function test_queued_metadata_uses_pdf_fields_without_model_calls_or_viewing_preview_work(): void
     {
         Queue::fake();
@@ -35,7 +63,7 @@ class PdfOnlyMetadataTest extends SecurityTestCase
                 ->assertJsonPath('data.extracted.adviser_name', 'Alex Example')
                 ->assertJsonPath('data.extracted.author', 'Alex Example, Jamie Sample')
                 ->assertJsonPath('data.extracted.year', 2026)
-                ->assertJsonPath('data.extracted.keywords', ['archive', 'document management', 'education']);
+                ->assertJsonPath('data.extracted.keywords', ['document management', 'research', 'capstone project', 'capstone']);
             Http::assertNothingSent();
             $this->app->call([$job, 'handle']); // Repeated queue delivery is harmless.
             Http::assertNothingSent();
