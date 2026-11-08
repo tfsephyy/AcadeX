@@ -500,3 +500,9 @@ three upload roles, on the client and server. Leave update validation compatible
 with older records. A choice never bypasses approval or changes document access.
 Paired form cards stack on small screens. This is a local source/runtime update;
 production requires a separately requested release.
+
+Publication checkpoint (November 8): the client requested pushing the new source.
+Retain the existing tracking branch `release/ui-refinement`; publish the reviewed
+source/tests/handoff together without rewriting history or merging to main.
+Implementation commit `1402d74` was pushed and verified against GitHub. This
+publication does not change the serving production release.

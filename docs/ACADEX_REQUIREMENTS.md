@@ -34,6 +34,8 @@ filler. Retain bounded processing with visible warnings when coverage is incompl
 Verification: 171 guarded disposable-MySQL tests / 1,566 assertions, 58 frontend
 tests, build and quiet lint passed. Synthetic Chrome verified all three roles on
 desktop/mobile. See [the implementation record](ui/2026-11-08-upload-layout-full-pdf-keywords.md).
+Source published to the client's `release/ui-refinement` branch as `1402d74`;
+the remote commit was verified on November 8. Production deployment remains separate.
 
 ## November 8, 2026 technical keywords and existing-capstone editing
 

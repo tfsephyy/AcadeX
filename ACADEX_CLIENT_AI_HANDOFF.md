@@ -2,6 +2,14 @@
 
 Prepared: **October 19, 2026, Asia/Manila**.
 
+**November 8, 2026 source publication:** the reviewed modular extraction,
+keyword/adviser editing and upload-layout changes are committed as `1402d74`
+and pushed to the client's `release/ui-refinement` branch at
+`https://github.com/tfsephyy/AcadeX.git`. Fresh remote-ref verification matched
+the full local commit. Private configuration/storage, `.local` and dependencies
+were excluded. This is source publication only; no merge to main or production
+deployment occurred. See the latest progress entry for verification boundaries.
+
 **November 8, 2026 upload layout and full-PDF keywords - local:** Step 2 now
 pairs adviser/keywords below year/program/category and gives abstract a full row.
 All three Step 3 role pages require explicit publication and copyright choices,

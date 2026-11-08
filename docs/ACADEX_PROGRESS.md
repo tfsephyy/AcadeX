@@ -1,5 +1,19 @@
 # AcadeX implementation progress
 
+## 2026-11-08 - Source published to the client's GitHub repository
+
+Committed the 61 reviewed staged source/test/documentation files as
+`1402d74946f67e2e15869ef64c74890c3c3fbd08` (Refine capstone uploads and modular
+PDF metadata extraction) and pushed to `origin/release/ui-refinement` at
+`https://github.com/tfsephyy/AcadeX.git`. Fresh `git ls-remote` matched the local
+commit. The staged-path and secret-pattern review found no private/generated
+files or flagged secrets. Existing `.local`, env/testing credentials, private
+storage, keys and dependencies remain excluded. Working tree was clean after
+the code push. This follow-up documentation records that verified publication.
+The preceding 171 backend / 58 frontend tests and build/lint/browser checks
+remain the local implementation evidence; no code changed during publication.
+No merge to main, migration or production deployment occurred.
+
 ## 2026-11-08 - Upload layout, required choices and full-PDF keywords
 
 Implemented locally: Step 2 puts adviser/keywords beneath year/program/category
