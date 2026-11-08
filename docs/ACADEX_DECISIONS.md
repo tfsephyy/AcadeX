@@ -350,3 +350,71 @@ providers, or incur provider usage until keys are added through the client's
 private environment channel. Rebuild Laravel's configuration cache after such a
 change. Preserve the existing Google identity configuration in
 `config/services.php`.
+
+## D-022 — Upload years, student visibility choices and adviser text (2026-11-08)
+
+Admin upload-year charts use `created_at`, not the academic metadata `year`.
+Return six consecutive calendar years through the current year, including zero
+counts, oldest first. Include archived/pending records as the Uploaded total does;
+the approved endpoint separately restricts to approved, unarchived records.
+
+Student publication selections are persisted behind the existing approval gate.
+Pending/rejected records never gain library/visitor access through the selection.
+Approval permits the selected access tier; default remains unpublished. This
+supersedes forced-unpublished submission behavior in the earlier access contract.
+Existing student edits still reset the record to pending/unpublished. Flexible
+registration IDs supersede D-015's MBC-specific format requirement; required,
+unique and maximum-length validation and verification/approval gates remain.
+
+Store editable adviser text separately from the Faculty foreign key. Compare
+lowercase names with collapsed whitespace and use the existing approved,
+unarchived, available Faculty pool. Duplicate names never choose an arbitrary
+account; expose username/program to distinguish eligible matches. Revalidate
+matching on save, preserving text even without a match. Extract only beneath an
+APPROVAL SHEET heading on the same bounded raw/OCR page, leaving missing data
+editable instead of guessing from acknowledgments or a table of contents.
+
+The nullable adviser-name column is additive; rollback retains collected data.
+Application/production migration and deployment are outside this implementation
+request. Verification must use the guarded schema-restricted disposable DB.
+
+## D-023 — Explicit local development origins for Vite's fallback port (2026-11-08)
+
+Vite can serve a second local instance on 5174 while 5173 is occupied. Under
+APP_ENV=local, add exactly http://localhost:5173 and http://localhost:5174 to
+the configured CORS frontend origin and add both host:port entries to Sanctum.
+Do not enable wildcard credentialed origins or add development origins in
+production/staging/testing. Preserve FRONTEND_URL for links and production
+configuration; do not rewrite the private environment to chase a second dev port.
+Clear the local config cache so the running request-per-process PHP API sees the
+change. The standard launcher retains its existing strict 5173 port behavior.
+
+## D-024 — PDF-only metadata and bounded upload-review work (2026-11-08)
+
+The user requests direct extraction without generated text. Remove the optional
+metadata model service and its config, superseding D-004/R6's Ollama enrichment.
+Keep only PDF text/OCR recognition plus whitespace/line-wrap normalization;
+remove word/digit guesses, abstract rewrites, inferred technology keywords and
+unlabelled abstract fallback. Missing fields stay blank and editable.
+
+Bound metadata to the first 12 pages across the PHP text reader, native OCR and
+Paddle request. This reduces front-matter work and leaves later author-contact
+appendices to manual entry; preserve full documents and separate indexing.
+Readable title/abstract pages must not fall into OCR solely because remaining
+front matter is sparse. Ignore known margins/scanner stamps in that decision.
+
+Viewing-preview preparation runs after final submission with indexing instead
+of before Step 2 extraction. Queue restoration is an authorized local runtime
+repair; do not mutate existing documents or clear jobs to make latency disappear.
+The local worker uses one-second idle polling and a recorded executable/PID/start
+identity. Production and live Paddle behavior require separate deployment checks.
+
+## D-025 — Repair the active local schema for upload submission (2026-11-08)
+
+The later user request to fix upload 503s authorizes the routine local schema
+repair necessary for the already implemented adviser-name field. Fresh runtime
+identity is loopback EduArchiveDB, superseding historical workstation names.
+Back up and verify SQL, original row values, private env/APP_KEY and storage
+before applying only the pending additive adviser-name migration. Keep the
+source field and its data contract; do not silently drop adviser text to hide
+the schema error. Production migration/deployment remains separately scoped.

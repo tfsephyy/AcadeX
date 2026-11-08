@@ -31,3 +31,12 @@ test('switching from Visitor to Faculty requires an ID while student academic re
   const errors = academicRegistrationErrors({ ...faculty, role: 'student' })
   assert(errors.year && errors.section)
 })
+
+test('ID examples are guidance; alternative formats pass and whitespace is still required', () => {
+  for (const role of ['student', 'faculty']) {
+    for (const id_number of ['2026/0123', 'EMP-A 42', '987654', 'MBC2026-12345']) {
+      assert.deepEqual(personalRegistrationErrors({ ...faculty, role, id_number }), {})
+    }
+    assert(personalRegistrationErrors({ ...faculty, role, id_number: '   ' }).id_number)
+  }
+})

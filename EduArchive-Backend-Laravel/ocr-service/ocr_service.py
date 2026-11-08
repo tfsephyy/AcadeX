@@ -294,9 +294,9 @@ def extract_text_from_image(raw: bytes) -> dict[str, Any]:
     return {"type": "image", "text": text}
 
 
-def extract_text_from_pdf(raw: bytes) -> dict[str, Any]:
+def extract_text_from_pdf(raw: bytes, max_pages: int = MAX_PDF_PAGES) -> dict[str, Any]:
     """
-    Extract text from every page of a PDF document.
+    Extract text from PDF pages, optionally bounded to front matter for metadata.
 
     Strategy per page:
       1. Try PyMuPDF embedded text first (instant, perfectly accurate).
@@ -331,10 +331,12 @@ def extract_text_from_pdf(raw: bytes) -> dict[str, Any]:
                 f"PDF has {total} pages, exceeding the {MAX_PDF_PAGES}-page limit."
             )
 
+        if not 1 <= max_pages <= MAX_PDF_PAGES:
+            raise ValueError("Requested page limit is outside the OCR safety budget.")
         pages_out  = []
         full_parts = []
 
-        for idx in range(total):
+        for idx in range(min(total, max_pages)):
             page = doc.load_page(idx)
             page_num = idx + 1
 

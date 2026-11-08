@@ -164,6 +164,9 @@ h1, h2, h3, p, dd, td { overflow-wrap: break-word; }
 .sidebar-toggle { display: none; }
 .workspace-sidebar :focus-visible { outline-color: var(--panel-nav-hover-text); outline-offset: 1px; }
 @media (min-width: 1024px) {
+  .app-shell:has(.workspace-sidebar.is-collapsed) .my-uploads-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
   .workspace-sidebar { position: relative; inset: auto; transform: none; visibility: visible; max-width: none; }
   .workspace-sidebar.is-collapsed { width: 72px; }
   .sidebar-close, .sidebar-backdrop { display: none; }

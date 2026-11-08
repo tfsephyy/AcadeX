@@ -1,5 +1,141 @@
 # AcadeX implementation progress
 
+## 2026-11-08 — Local upload submission schema repair (verified locally)
+
+Student POST /api/v1/student/capstones returned 503. Redacted local log inspection
+confirmed SQLSTATE 42S22 / missing adviser_name. Fresh runtime and private-env
+identity checks agree on loopback EduArchiveDB (five users, ten capstones), not
+the historical ASUS acadex_local target. Exactly one migration is pending:
+2026_11_08_000001_add_capstone_adviser_name. The earlier feature task tested this
+only in the disposable schema; current user request authorizes repairing the
+active local upload workflow. Creating/verifying a fresh private SQL/env/storage
+backup before applying that one additive migration. No production action.
+
+Completed: created and verified private recovery set
+`.local/adviser-schema-backup-20261108-072705` (SQL dump completion/hash,
+environment/APP_KEY hash, all 118 storage-file copies/hashes and original row
+snapshot). Applied only the reviewed adviser-name migration to the verified
+local EduArchiveDB. Fresh inspection shows adviser_name present, no pending
+migrations, five users and ten capstones. Two preservation checks passed for
+872 original application rows/values, environment/APP_KEY and all 118 original
+files. Runtime operational tables (sessions/cache/jobs/migrations) are excluded
+from row-equality claims. No production connection or migration occurred.
+
+Focused guarded-disposable regression passed: **14 tests / 142 assertions** for
+adviser submissions, approvals, upload ownership and sanitized failure messages.
+The local queue worker remains active. The reported POST failed before the
+staged PDF was claimed, so retrying the retained submission can reuse that file
+while its existing reference remains valid. No synthetic submission was made
+against the application DB; the user's own retry remains actual-flow acceptance.
+No code fallback or validation/approval bypass was added. No commit or push.
+This supersedes earlier local adviser-migration-pending entries below.
+
+## 2026-11-08 — PDF-only extraction and worker recovery (done locally)
+
+Found the local queue receipt pointing to a stopped process; one metadata job
+was waiting. The configured metadata model URL was absent, so AI was not an
+observed local latency cause. The code still called optional model enrichment
+and prepared a full viewing preview before metadata extraction. Removed the
+model service/call/config and deterministic wording rewrites/inferred keywords;
+bounded metadata text and native/Paddle OCR to 12 pages. Viewing previews now
+belong to post-submission indexing. Existing adviser extraction/matching remains.
+
+New tests exposed and corrected abstract termination at the word "keywords" in
+body text and a location header leaking into a synthetic title. An overbroad
+cleanup edit was caught and corrected during source review before acceptance;
+the original author/year parsers were restored.
+
+Focused extraction/recovery checks passed: 18 tests / 207 assertions. Full guarded
+disposable-MySQL suite passed: **138 tests / 1,203 assertions**. Eight lightweight
+Python tests (text selection, allocation safety, bounded PDF loop with synthetic
+page objects) passed; Python syntax passed. Actual Paddle model/scan integration
+is not verified in this workstation's missing OCR virtual environment.
+
+Restored an owned hidden local queue worker and updated its process receipt;
+launcher/worker poll every second. Local configuration cache cleared. The waiting
+job drained; diagnostic counts show no pending/failed jobs and the same four
+completed staged uploads. No account/capstone/document fixture was created in the
+application DB; synthetic database tests use the separate restricted schema.
+No private env/APP_KEY change, schema migration or production action occurred.
+Final verification supersedes the checkpoint above: **140 backend tests / 1,218
+assertions passed**, including a real database-worker extraction of a synthetic
+150-page PDF with the actual parser, completed review metadata/adviser fields,
+no model requests and no preview preparation. Eight lightweight Python tests,
+PHP/Python syntax and whitespace checks passed. No frontend code changed here.
+
+The benchmark uncovered readable front matter being averaged below the OCR
+threshold among sparse pages. Corrected the detector and added a test prohibiting
+OCR for that real text-PDF fixture. The final three-run benchmark averaged
+17.10 ms bounded versus 64.18 ms all-page text reading; the earlier unintended
+OCR fallback took approximately 11 seconds. These are synthetic parser timings,
+not full-upload or real scanned-document acceptance.
+
+Gracefully restarted/replaced the owned local worker to load final code; its
+receipt is current and read-only diagnostics show no pending/failed jobs. The
+Paddle service/venv is absent locally, so live model/scan quality remains
+unverified. No production deployment, migration, commit or push occurred.
+See [the extraction repair record](ui/2026-11-08-pdf-only-extraction.md).
+
+## 2026-11-08 — Local Vite 5174 CORS repair (verified)
+
+Observed two local Vite servers on 5173/5174 and the API on 8000. The private
+environment configured only frontend 5173, so the single-origin CORS response
+sent 5173 even for the user's 5174 page. Added explicit localhost 5173/5174 CORS
+origins and matching Sanctum stateful domains only when APP_ENV=local; configured
+production/staging origins stay unchanged. No wildcard origins were introduced.
+Cleared the local Laravel configuration cache; no service restart was required.
+
+Verification: 22 focused guarded-disposable tests / 122 assertions passed
+(CORS config, CSRF, authentication and production checks), changed PHP syntax
+and whitespace checks passed. Live OPTIONS for user/CSRF/login from both ports
+returned 204 with the exact requesting origin and credentials=true; an untrusted
+origin received no CORS allowance. Fresh Chrome opened localhost:5174/login,
+rendered the form, read CSRF 200 and anonymous user 401 without CORS/network
+failures. This normal local page check can create/update an anonymous session;
+no account login or document/record mutation was performed.
+
+Private env files, APP_KEY, existing feature work and documents are retained.
+No migration, production action, commit or push occurred. The earlier new
+adviser-name migration remains applied only in the disposable test schema.
+
+## 2026-11-08 — Dashboard, registration and adviser follow-up (done locally)
+
+Initial Git worktree was clean. Implemented calendar upload-year aggregation with
+zero-filled years, approval filter correction, navigation-aware My Uploads grids,
+Faculty desktop arrangement/two-line trends, flexible registration ID validation,
+student publication selection behind the review gate, and shared editable adviser
+extraction/matching. Added an additive nullable `capstones.adviser_name` migration;
+server resolves eligible matches again on submission/edit. At that first checkpoint,
+local tests and browser verification were pending. No application database migration or production action
+has been performed for this task.
+
+Earlier checkpoint: new focused backend checks passed (21 tests / 243 assertions), 53
+frontend tests and quiet lint passed, and the production build passed (848 modules)
+with a process-only same-origin API setting. The first full backend run found one
+existing edit-workflow expectation failure: student edits must still reset to
+unpublished. Restored that edit rule while preserving the newly requested Step 3
+submission choice. Full rerun and browser acceptance were pending at that checkpoint.
+Admin grid browser checks passed at desktop/tablet/mobile; the chart probe later
+needed the installed Recharts version's separate tick-label layer selector.
+
+Final local verification: **132 backend tests / 1,160 assertions**, **53 frontend
+tests**, quiet lint, final production build (**848 modules**), changed/new PHP
+syntax and Git whitespace checks passed. The final browser probe passed Admin,
+Faculty and Student My Uploads grids at desktop/tablet/mobile and live sidebar
+toggles; Faculty card/chart/ranking placement; every Admin year/count tooltip,
+including zeroes, and chart API failure/retry; editable adviser matching/duplicate
+selection; and all three student publication-selection payloads. Browser requests
+were intercepted with synthetic responses; no application DB mutation occurred.
+Actual synthetic text-PDF parsing and deterministic OCR-page lines passed adviser
+extraction tests; arbitrary scanned-PDF quality remains unverified.
+
+The adviser-name migration has run only in the guarded disposable MySQL schema.
+Existing local application and production databases, environment/APP_KEY and
+private documents remain outside this task's writes. The code needs the forward
+migration before adoption on an existing target, after a verified coherent backup.
+No deployment, commit or push occurred. See
+[the complete implementation/evidence record](ui/2026-11-08-dashboard-registration-adviser.md).
+
 ## 2026-11-08 — AI Capstone Research Assistant production release
 
 Deployed the chatbot controller/service, Groq-primary/Gemini-fallback

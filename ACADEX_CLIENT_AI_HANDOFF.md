@@ -2,6 +2,41 @@
 
 Prepared: **October 19, 2026, Asia/Manila**.
 
+**November 8, 2026 local upload-503 schema repair:** the active loopback
+`EduArchiveDB` lacked `capstones.adviser_name`. After a fresh verified private
+SQL/env/storage backup, applied only the additive adviser-name migration.
+No local migrations remain pending. Verified preservation of 872 original
+application rows, original env/APP_KEY and all 118 stored files; five users and
+ten capstones remain. Fourteen focused disposable-schema tests passed. This
+supersedes older local adviser-migration-pending notes below; production was
+not accessed or deployed. See the latest progress entry for recovery details.
+
+**November 8, 2026 PDF-only extraction repair — local:** removed generative
+metadata enrichment and wording/keyword inference. Metadata text/OCR work is
+bounded to 12 front-matter pages, readable front matter avoids unnecessary OCR,
+and viewing-preview work moved after final submission. Restored the stopped
+local queue worker and verified its queue drained. No migration or production
+deployment occurred. See [the repair record](docs/ui/2026-11-08-pdf-only-extraction.md)
+and latest progress entry. This supersedes older descriptions of optional
+Ollama metadata enrichment; a later release including Python changes must also
+update/restart its separately managed OCR service.
+
+**November 8, 2026 local CORS repair:** local development now explicitly accepts
+localhost frontend ports 5173 and 5174 for CORS and Sanctum, only under
+`APP_ENV=local`. The standard launcher still uses strict port 5173. The running
+API on 8000 and Chrome login page on 5174 passed user/CSRF/preflight checks after
+clearing local config cache. Private env files were retained; production config
+was not changed or deployed. See the latest progress entry for verification.
+
+**November 8, 2026 dashboard/adviser follow-up — local source update:** the
+dashboard, My Uploads grid, registration IDs, student publication choice and
+approval-sheet adviser updates are documented in
+[the implementation record](docs/ui/2026-11-08-dashboard-registration-adviser.md).
+The additive `2026_11_08_000001_add_capstone_adviser_name` migration has run only
+in the guarded disposable test schema. Apply it to an application target only
+after a verified coherent backup; retain the existing APP_KEY and storage. This
+task has not deployed or migrated the existing local application database.
+
 **November 8, 2026 AI Capstone Research Assistant release — current:** the backend at `/srv/acadex-staging/releases/acadex-20261108-ai-research-86c2487/EduArchive-Backend-Laravel` and frontend at `/srv/acadex-staging/frontend-releases/acadex-20261108-ai-research-86c2487/dist` are serving. The release packages the working-tree chatbot controller/service and production frontend build on base commit `86c2487`. All production migrations are `Ran`; `migrate --force` reported nothing pending. Apache/PHP-FPM were gracefully reloaded; queue and scheduler use the current backend path. HTTPS root and entry assets returned 200, anonymous JSON user access returned 401, and database connectivity was confirmed. The shared production environment has no Groq/Gemini API keys, so the deterministic local assistant fallback is active until keys are added privately. See the [production release record](docs/handoff/PRODUCTION_RELEASE_2026-11-08_AI_CAPSTONE.md).
 
 **Previous November 8 staged upload quota fix:** [Staged upload quota fix and lifecycle management](docs/handoff/STAGED_UPLOAD_QUOTA_FIX_2026-11-07.md) shipped from code commit `6fa3fac` on `fix/staged-upload-quota-leak` to backend release `/srv/acadex-staging/releases/acadex-20261108-6fa3fac` and frontend `/srv/acadex-staging/frontend-releases/acadex-20261108-6fa3fac/dist`. Expired uploads no longer consume quota; the hourly prune command, owner discard endpoint, failed-finalization reservation release, and 1 GiB pending quota are active. No migration was added. The existing scheduler and queue run from the new backend release; a one-time prune removed 20 expired staged uploads. Production root returned 200 and an anonymous upload-status request returned 401; the live page rendered in Chrome. Local verification passed (112 backend tests / 1,021 assertions, 50 frontend tests, lint 0 errors / 32 warnings, production build 846 modules). Recovery set: `/var/backups/acadex/staged-upload-fix-20261107T160717Z-retry1`.

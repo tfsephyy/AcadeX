@@ -2,18 +2,16 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
     HiOutlineAcademicCap,
-    HiOutlineBookOpen,
     HiOutlineClipboardCheck,
     HiOutlineClock,
     HiOutlineDocumentAdd,
     HiOutlineEye,
 } from 'react-icons/hi';
 import {
-    Bar,
-    BarChart,
     CartesianGrid,
     Line,
     LineChart,
+    Legend,
     ResponsiveContainer,
     Tooltip,
     XAxis,
@@ -59,7 +57,8 @@ export default function FacultyDashboard() {
                 <p className="text-sm text-gray-500 mt-1">Numbers below are limited to capstones where you are the assigned adviser.</p>
             </div>
 
-            <section aria-label="Assigned capstone statistics" className="grid grid-cols-2 xl:grid-cols-4 gap-3">
+            <div className="grid grid-cols-1 lg:grid-cols-[minmax(210px,1fr)_minmax(0,3fr)] gap-6">
+            <section aria-label="Assigned capstone statistics" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-3">
                 {stats.map(card => (
                     <div key={card.label} className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
                         <div className="flex items-center justify-between gap-3">
@@ -75,24 +74,26 @@ export default function FacultyDashboard() {
                 ))}
             </section>
 
-            <section aria-label="Six month adviser activity trends" className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+            <section aria-label="Six month adviser activity trends" className="min-w-0 bg-white rounded-xl shadow-sm border border-gray-100 p-5 flex flex-col">
                 <h2 className="text-sm font-semibold text-gray-700">Assigned upload and view trends</h2>
                 <p className="text-xs text-gray-400 mt-0.5">Last 6 months · only your assigned submissions</p>
-                <div className="h-64 mt-4">
+                <div className="h-64 lg:min-h-80 lg:flex-1 mt-4">
                     <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={trends}>
+                        <LineChart data={trends}>
                             <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
                             <XAxis dataKey="label" tick={{ fontSize: 12 }} />
                             <YAxis tick={{ fontSize: 12 }} allowDecimals={false} />
+                            <Legend wrapperStyle={{ fontSize: 12 }} />
                             <Tooltip contentStyle={{ borderRadius: '8px', fontSize: '12px', border: '1px solid #e5e7eb' }} />
-                            <Bar dataKey="uploads" fill="#22c55e" radius={[6, 6, 0, 0]} name="Assigned uploads" />
+                            <Line type="monotone" dataKey="uploads" stroke="#22c55e" strokeWidth={2} name="Assigned uploads" />
                             <Line type="monotone" dataKey="views" stroke="#3b82f6" strokeWidth={2} name="Assigned views" />
-                        </BarChart>
+                        </LineChart>
                     </ResponsiveContainer>
                 </div>
             </section>
+            </div>
 
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <section className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
                     <h2 className="text-sm font-semibold text-gray-700">Most-viewed assigned capstones</h2>
                     {!(assigned.most_viewed || []).length ? (

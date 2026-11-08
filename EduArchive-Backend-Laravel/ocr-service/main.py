@@ -11,12 +11,12 @@ import os
 import asyncio
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, File, HTTPException, UploadFile, status
+from fastapi import FastAPI, File, Form, HTTPException, UploadFile, status
 from fastapi.responses import JSONResponse
 from starlette.concurrency import run_in_threadpool
 
 from ocr_service import _get_ocr, extract_text_from_image, extract_text_from_pdf
-from validators import MAX_FILE_SIZE_BYTES, validate_file
+from validators import MAX_FILE_SIZE_BYTES, MAX_PDF_PAGES, validate_file
 
 # ── Logging ───────────────────────────────────────────────────────────────────
 logging.basicConfig(
@@ -77,7 +77,7 @@ async def health():
     summary="Extract text from an image or PDF",
     status_code=status.HTTP_200_OK,
 )
-async def run_ocr(file: UploadFile = File(...)):
+async def run_ocr(file: UploadFile = File(...), max_pages: int = Form(default=MAX_PDF_PAGES, ge=1, le=MAX_PDF_PAGES)):
     """
     Upload a JPG, JPEG, PNG, or PDF file and receive extracted text as JSON.
 
@@ -124,8 +124,10 @@ async def run_ocr(file: UploadFile = File(...)):
     ext = os.path.splitext(filename)[1].lower()
     try:
         async with processing_lock:
-            extractor = extract_text_from_pdf if ext == ".pdf" else extract_text_from_image
-            result = await run_in_threadpool(extractor, content)
+            if ext == ".pdf":
+                result = await run_in_threadpool(extract_text_from_pdf, content, max_pages=max_pages)
+            else:
+                result = await run_in_threadpool(extract_text_from_image, content)
 
     except ValueError as exc:
         # e.g. PDF page-count limit exceeded

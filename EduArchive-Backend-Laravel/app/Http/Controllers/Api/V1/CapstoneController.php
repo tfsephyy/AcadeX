@@ -616,6 +616,12 @@ class CapstoneController extends Controller
         });
     }
 
+    public function uploadAdvisers(): JsonResponse
+    {
+        return $this->successResponse(app(\App\Services\AdviserMatching::class)->eligible()
+            ->orderBy('name')->orderBy('id')->get(['id', 'name', 'username', 'faculty_program']), 'Available Faculty advisers.');
+    }
+
     private function storeNew(Request $request): JsonResponse
     {
         // Accept either a comma-separated string or an array from the client.
@@ -643,6 +649,7 @@ class CapstoneController extends Controller
             'imrad_path'         => 'nullable|string',
             'imrad_original_name' => 'nullable|string',
             'adviser_id'         => 'nullable|exists:users,id',
+            'adviser_name'       => 'nullable|string|max:255',
             'references'         => 'nullable|array',
             'references.*'       => 'integer|exists:capstones,id',
             'resources'          => 'nullable|array',
@@ -659,7 +666,7 @@ class CapstoneController extends Controller
         // - Admin/Faculty: Auto-approved (approval_status='approved')
         //   publication_status is set from request (admin/faculty control it)
         // - Student: Requires approval (approval_status='pending')
-        //   publication_status stays 'unpublished' until admin explicitly publishes
+        //   publication_status records the student's choice behind the approval gate
         // NOTE: approval_status and publication_status are SEPARATE concerns:
         //   approval_status = review gate (pending/approved/rejected)
         //   publication_status = external publication flag; it controls the
@@ -669,10 +676,9 @@ class CapstoneController extends Controller
 
         $status = $isStudent ? 'pending' : 'approved';
         $approvalStatus = $isStudent ? 'pending' : 'approved';
-        // Students always start unpublished; admin/faculty uploads also default to unpublished
-        // unless visitor full-document release is explicitly chosen. An explicit null normalizes to unpublished.
+        // Selections never bypass approval. Null defaults to internal only.
         $rawPub = $request->input('publication_status');
-        $publicationStatus = $isStudent ? 'unpublished' : ($rawPub ?: 'unpublished');
+        $publicationStatus = $rawPub ?: 'unpublished';
 
         $capstone = DB::transaction(function () use ($request, $user, $status, $approvalStatus, $publicationStatus) {
         $uploads = app(\App\Services\DocumentUploads::class);
@@ -685,11 +691,7 @@ class CapstoneController extends Controller
         foreach ($request->input('references', []) as $id) {
             if (!Capstone::find($id)) abort(403, 'Referenced capstone unavailable.');
         }
-        if ($request->adviser_id && !User::whereKey($request->adviser_id)->where('is_approved', true)
-            ->where('is_archived', false)->where('adviser_available', true)
-            ->whereHas('role', fn ($q) => $q->where('name', 'faculty'))->exists()) {
-            throw \Illuminate\Validation\ValidationException::withMessages(['adviser_id' => 'Select an active, available faculty adviser.']);
-        }
+        $adviser = app(\App\Services\AdviserMatching::class)->resolve($request->input('adviser_name'), $request->input('adviser_id'));
         $pdfPath = $uploads->resolve($user, $request->pdf_path, 'pdf');
         $paths = array_merge([$pdfPath, $imradPath], array_column($resources, 'file_path'));
         if (count(array_filter($paths)) !== count(array_unique(array_filter($paths)))) {
@@ -712,7 +714,8 @@ class CapstoneController extends Controller
             'copyright_status'   => $request->copyright_status,
             'imrad_path'         => $imradPath,
             'imrad_original_name' => $request->imrad_original_name,
-            'adviser_id'         => $request->adviser_id,
+            'adviser_id'         => $adviser['adviser_id'],
+            'adviser_name'       => $adviser['adviser_name'],
         ]);
 
         // Normalize keyword input on the server as well as in the UI: split
@@ -900,7 +903,7 @@ class CapstoneController extends Controller
                 ],
                 'adviser' => [
                     'id' => $capstone->adviser?->id,
-                    'name' => $capstone->adviser?->name ?? 'Not Assigned',
+                    'name' => $capstone->adviser_name ?: ($capstone->adviser?->name ?? 'Not Assigned'),
                 ],
             ];
         });
@@ -1623,6 +1626,7 @@ class CapstoneController extends Controller
             'imrad_path'          => 'nullable|string',
             'imrad_original_name' => 'nullable|string',
             'adviser_id'          => 'nullable|exists:users,id',
+            'adviser_name'        => 'nullable|string|max:255',
             'references'          => 'nullable|array',
             'references.*'        => 'integer|exists:capstones,id',
             'resources'           => 'nullable|array',
@@ -1647,11 +1651,8 @@ class CapstoneController extends Controller
         foreach ($request->input('references', []) as $id) {
             if (!Capstone::find($id)) abort(403, 'Referenced capstone unavailable.');
         }
-        if ($request->adviser_id && !User::whereKey($request->adviser_id)->where('is_approved', true)
-            ->where('is_archived', false)->where('adviser_available', true)
-            ->whereHas('role', fn ($q) => $q->where('name', 'faculty'))->exists()) {
-            throw \Illuminate\Validation\ValidationException::withMessages(['adviser_id' => 'Select an active, available faculty adviser.']);
-        }
+        $adviser = ($request->exists('adviser_name') || $request->exists('adviser_id'))
+            ? app(\App\Services\AdviserMatching::class)->resolve($request->input('adviser_name'), $request->input('adviser_id')) : [];
         $paths = array_merge([$imradPath], array_column($resources, 'file_path'));
         if (count(array_filter($paths)) !== count(array_unique(array_filter($paths)))) {
             throw \Illuminate\Validation\ValidationException::withMessages(['documents' => 'Duplicate upload references.']);
@@ -1660,8 +1661,9 @@ class CapstoneController extends Controller
 
         $updateData = $request->only([
             'title', 'year', 'author', 'author_details', 'program', 'category', 'abstract',
-            'publication_status', 'copyright_status', 'imrad_path', 'imrad_original_name', 'adviser_id',
+            'publication_status', 'copyright_status', 'imrad_path', 'imrad_original_name',
         ]);
+        $updateData = array_merge($updateData, $adviser);
 
         // publication_status is already in $updateData — no need to sync is_published
 

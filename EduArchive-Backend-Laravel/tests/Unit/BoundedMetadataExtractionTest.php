@@ -10,6 +10,73 @@ use Tests\TestCase;
 
 class BoundedMetadataExtractionTest extends TestCase
 {
+    public function test_text_metadata_stops_after_front_matter_and_retains_source_fields(): void
+    {
+        $path = tempnam(sys_get_temp_dir(), 'acadex-frontmatter-');
+        try {
+            MetadataPdfFixture::write($path, 0, 150, 'Alex Example');
+            $extractor = new class extends PdfExtractorService {
+                protected function extractPagesViaOcr(string $path): array
+                {
+                    throw new \RuntimeException('Readable PDF must not invoke OCR for sparse remaining pages.');
+                }
+            };
+            $result = $extractor->extractPathWithSource($path);
+            self::assertSame('first_12_pages', $result['scope']);
+            self::assertStringContainsString('Synthetic page 12', $result['source']);
+            self::assertStringNotContainsString('Synthetic page 13', $result['source']);
+            self::assertSame('Alex Example', $result['metadata']['adviser_name']);
+            self::assertSame('SYNTHETIC CAMPUS ARCHIVE SYSTEM', $result['metadata']['title']);
+        } finally { unlink($path); }
+    }
+
+    public function test_abstract_wording_is_not_rewritten_and_unlisted_keywords_stay_empty(): void
+    {
+        $body = 'This study records of3.48 and theimprove ments exactly as printed in the PDF. It describes a web application without declaring keywords.';
+        $extractor = new class($body) extends PdfExtractorService {
+            public function __construct(private string $body) {}
+            protected function extractRawPages(string $path): array
+            {
+                return ["Header one\nHeader two\nHeader three\nABSTRACT\n".$this->body."\nCHAPTER I"];
+            }
+        };
+        $path = tempnam(sys_get_temp_dir(), 'acadex-wording-');
+        try {
+            file_put_contents($path, '%PDF-1.4 synthetic source');
+            $data = $extractor->extractFromPath($path);
+            self::assertSame($body, $data['abstract']);
+            self::assertSame([], $data['keywords']);
+        } finally { unlink($path); }
+    }
+
+    public function test_native_metadata_ocr_caps_pages_without_weakening_the_existing_safety_limit(): void
+    {
+        $args = \App\Services\BoundedPdfOcr::renderCommand('gs', 'synthetic.pdf', 'page.png', 12);
+        self::assertContains('-dLastPage=12', $args);
+        self::assertContains('-dLastPage=30', \App\Services\BoundedPdfOcr::renderCommand('gs', 'synthetic.pdf', 'page.png', 999));
+    }
+
+    public function test_ocr_wording_is_preserved_and_missing_abstract_is_not_inferred_from_body_text(): void
+    {
+        $body = 'This study preserves data such as syst0m and a1pha without replacing letters or adding summaries. '.str_repeat('Synthetic document body text. ', 5);
+        $extractor = new class($body) extends PdfExtractorService {
+            public function __construct(private string $body) {}
+            protected function extractRawPages(string $path): array { return ['CamScanner']; }
+            protected function extractPagesViaOcr(string $path): array
+            {
+                return ["Header one\nHeader two\nHeader three\n".$this->body];
+            }
+        };
+        $path = tempnam(sys_get_temp_dir(), 'acadex-no-inference-');
+        try {
+            file_put_contents($path, '%PDF synthetic');
+            $result = $extractor->extractPathWithSource($path);
+            self::assertStringEndsWith(trim($body), trim($result['source']));
+            self::assertNull($result['metadata']['abstract']);
+            self::assertSame([], $result['metadata']['keywords']);
+        } finally { unlink($path); }
+    }
+
     public function test_watermark_only_results_do_not_become_fake_title_or_author_suggestions(): void
     {
         $extractor = new class extends PdfExtractorService {

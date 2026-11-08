@@ -24,8 +24,8 @@ class GoogleRegisterRequest extends FormRequest
             'name'       => ['required', 'string', 'max:255'],
             'username'   => ['required', 'string', 'max:100', 'unique:users,username'],
             'id_number'  => $isVisitor
-                ? ['nullable', 'string', 'unique:users,id_number', 'regex:/^MBC\d{4}-\d{5}$/']
-                : ['required', 'string', 'unique:users,id_number', 'regex:/^MBC\d{4}-\d{5}$/'],
+                ? ['nullable', 'string', 'max:255', 'unique:users,id_number']
+                : ['required', 'string', 'max:255', 'unique:users,id_number'],
             'role' => ['required', 'string', 'in:student,faculty,visitor'],
         ];
 
@@ -45,7 +45,6 @@ class GoogleRegisterRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'id_number.regex' => 'The ID number must follow the format MBC2023-00148.',
             'role.in' => 'Role must be student, faculty, or visitor.',
         ];
     }

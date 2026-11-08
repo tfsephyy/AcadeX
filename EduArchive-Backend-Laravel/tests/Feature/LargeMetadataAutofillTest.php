@@ -16,7 +16,7 @@ class LargeMetadataAutofillTest extends SecurityTestCase
     public function test_all_uploader_roles_receive_metadata_from_a_large_pdf_sample(): void
     {
         Queue::fake([ExtractUploadMetadataJob::class]);
-        $this->mock(\App\Services\PdfPreviewService::class)->shouldReceive('prepare')->times(3)->andReturn(false);
+        $this->mock(\App\Services\PdfPreviewService::class)->shouldNotReceive('prepare');
         $source = tempnam(sys_get_temp_dir(), 'acadex-large-meta-');
         $template = tempnam(sys_get_temp_dir(), 'acadex-small-meta-');
         MetadataPdfFixture::write($source, 21 * 1048576, 15);
@@ -62,7 +62,7 @@ class LargeMetadataAutofillTest extends SecurityTestCase
     public function test_sampler_failure_preserves_the_staged_original_and_reports_unavailable(): void
     {
         Queue::fake([ExtractUploadMetadataJob::class]);
-        $this->mock(\App\Services\PdfPreviewService::class)->shouldReceive('prepare')->once()->andReturn(false);
+        $this->mock(\App\Services\PdfPreviewService::class)->shouldNotReceive('prepare');
         $source = tempnam(sys_get_temp_dir(), 'acadex-large-meta-');
         MetadataPdfFixture::write($source, 21 * 1048576);
         config(['acadex.min_free_storage_bytes' => 0]);

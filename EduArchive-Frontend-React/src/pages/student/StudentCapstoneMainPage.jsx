@@ -278,7 +278,7 @@ export default function StudentCapstoneMainPage() {
                             <InfoField label="Year" value={capstone.year || '—'} />
                             <InfoField label="Program" value={capstone.program || '—'} />
                             <InfoField label="Category" value={capstone.category || '—'} />
-                            <InfoField label="Adviser" value={capstone.adviser?.name || '—'} />
+                            <InfoField label="Adviser" value={capstone.adviser_name || capstone.adviser?.name || '—'} />
                             <InfoField label="Uploaded By" value={capstone.uploader?.name || '—'} />
                             <InfoField label="Date Uploaded" value={uploadedDate} />
                         </div>

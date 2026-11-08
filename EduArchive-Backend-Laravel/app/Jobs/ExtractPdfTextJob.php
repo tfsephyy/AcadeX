@@ -49,6 +49,9 @@ class ExtractPdfTextJob implements ShouldQueue
             } else {
                 Log::warning("ExtractPdfTextJob: No text extracted for capstone {$this->capstoneId}");
             }
+            // Optional viewing optimization belongs after submission, never
+            // ahead of the metadata needed by the upload review screen.
+            app(\App\Services\PdfPreviewService::class)->prepare($capstone->pdf_path);
         } catch (\Throwable $e) {
             Log::error("ExtractPdfTextJob failed for capstone {$this->capstoneId}: {$e->getMessage()}");
             throw $e; // Re-throw to trigger retry

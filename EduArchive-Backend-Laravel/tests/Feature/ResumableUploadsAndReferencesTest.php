@@ -166,12 +166,12 @@ class ResumableUploadsAndReferencesTest extends SecurityTestCase
         // Real after-commit queue delivery cannot be observed inside the base
         // class's always-rolled-back outer transaction.
         DB::commit();
-        $this->mock(\App\Services\PdfPreviewService::class)->shouldReceive('prepare')->once()->andReturn(false);
+        $this->mock(\App\Services\PdfPreviewService::class)->shouldNotReceive('prepare');
         $this->mock(\App\Services\PdfExtractorService::class)->shouldReceive('extractPathWithSource')->once()->andReturn([
             'metadata' => ['title' => 'Synthetic recovered extraction', 'author' => 'Synthetic Author'],
             'source' => 'Synthetic recovered extraction by Synthetic Author', 'scope' => 'full_document',
         ]);
-        config(['queue.default' => 'database', 'acadex.ollama_url' => null]);
+        config(['queue.default' => 'database']);
         try {
             $bytes = "%PDF-1.4\n%%EOF";
             $base = $this->begin($bytes);

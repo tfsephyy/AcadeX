@@ -16,7 +16,7 @@ class PdfExtractorService
     public static function emptyMetadata(): array
     {
         return ['title' => null, 'year' => null, 'author' => null, 'author_details' => [],
-            'program' => null, 'abstract' => null, 'keywords' => []];
+            'program' => null, 'abstract' => null, 'keywords' => [], 'adviser_name' => null];
     }
     /**
      * Number of lines to trim from the top (header zone ~1.25 cm).
@@ -34,7 +34,7 @@ class PdfExtractorService
      * Additional header/footer text patterns to strip after line trimming.
      */
     protected array $stripPatterns = [
-        '/Bongabong,?\s*Oriental\s+Mindoro\s*\d*\s*Philippines?/i',
+        '/^[\t ]*Bongabong,?[\t ]+Oriental[\t ]+Mindoro(?:[\t ]+\d+)?(?:[\t ]+Philippines?)?[\t ]*$/mi',
         '/Mindoro\s+State\s+University/i',
         '/Republic\s+of\s+the\s+Philippines/i',
         '/^\s*\d{1,3}\s*$/m', // standalone page numbers (1-3 digits)
@@ -130,13 +130,21 @@ class PdfExtractorService
         $rawPages = $this->extractRawPages($filePath);
         $rawFirstPage = $rawPages[0] ?? '';
 
-        // Detect scanned PDF: if average chars/page is too low, run OCR
-        $totalChars = array_sum(array_map('mb_strlen', $rawPages));
+        // Sparse separator/contents pages must not force OCR when the title or
+        // abstract already has readable text. Exclude scanner stamps and known
+        // margins before measuring so watermark-only scans still invoke OCR.
+        $pageLengths = array_map(function (string $page): int {
+            $page = $this->stripPatternNoise($page);
+            $page = preg_replace('/^.*(?:CamScanner|Scanned with|Adobe Scan|Microsoft Lens).*$/mi', '', $page);
+            return mb_strlen(trim($page));
+        }, $rawPages);
+        $totalChars = array_sum($pageLengths);
         $pageCount  = max(1, count($rawPages));
         $avgChars   = $totalChars / $pageCount;
         $isOcr      = false;
 
-        if ($avgChars < self::OCR_THRESHOLD) {
+        $readableFrontMatter = $totalChars >= 240 && max($pageLengths ?: [0]) >= 160;
+        if ($avgChars < self::OCR_THRESHOLD && !$readableFrontMatter) {
             Log::info("PdfExtractorService: sparse text ({$avgChars} chars/page avg) — attempting OCR on [{$filePath}]");
             $ocrPages = $this->extractPagesViaOcr($filePath);
 
@@ -150,8 +158,7 @@ class PdfExtractorService
             }
         }
 
-        // OCR normalisation: fix broken words, spaced capitals, and common
-        // character-substitution artifacts BEFORE any regex runs.
+        // Preserve OCR wording; normalize whitespace without guessing characters.
         if ($isOcr) {
             $rawPages     = array_map([$this, 'normalizeOcrText'], $rawPages);
             $rawFirstPage = $rawPages[0] ?? '';
@@ -169,9 +176,6 @@ class PdfExtractorService
         $fullText      = implode("\n", $pages);
 
         $abstract = $this->extractAbstract($fullText);
-        if ($abstract) {
-            $abstract = $this->autoCorrectText($abstract);
-        }
 
         $authorField   = $this->extractAuthor($firstPageText, $fullText);
         if ($authorField === 'Unknown Author') $authorField = '';
@@ -184,19 +188,48 @@ class PdfExtractorService
                 'year'           => $this->extractYear($rawFirstPage),
                 'author'         => $authorField !== '' ? $authorField : null,
                 'author_details' => $authorDetails,
+                'adviser_name'   => $this->extractAdviserName($rawPages),
                 'program'        => $this->extractProgram($fullText),
                 'abstract'       => $abstract,
                 'keywords'       => $this->extractKeywords($fullText),
             ],
             'source' => $fullText,
-            'scope' => 'full_document',
+            'scope' => count($rawPages) >= PdfMetadataSampler::MAX_PAGES ? 'first_12_pages' : 'full_document',
         ];
     }
 
-    /**
-     * Collapse whitespace and rejoin words split by a hyphenated line break.
-     * Applied to text-layer and OCR output alike.
-     */
+    /** Extract an adviser signature only within the approval-sheet page. */
+    public function extractAdviserName(array $pages): ?string
+    {
+        // Raw page lines retain the heading even when header cleanup removes it.
+        foreach ($pages as $page) {
+            $page = preg_replace('/^([\t ]*)APPROVAL[\t ]*\R[\t ]*SHEET[\t ]*$/imu', '$1APPROVAL SHEET', $page);
+            $lines = preg_split('/\R/u', $page);
+            $inApproval = false;
+            foreach ($lines as $index => $line) {
+                $line = AdviserMatching::displayName($line);
+                if (preg_match('/^APPROVAL\s+SHEET\s*[:.]?$/iu', $line)) {
+                    $inApproval = true;
+                    continue;
+                }
+                if (!$inApproval || !preg_match('/^(?:(?:Capstone|Project|Thesis|Research)\s+)?Adviser\s*[:.]?$/iu', $line)) continue;
+                // Skip empty lines and signature rules, never unrelated text.
+                for ($previous = $index - 1; $previous >= 0; $previous--) {
+                    $name = AdviserMatching::displayName($lines[$previous]);
+                    if ($name === '' || preg_match('/^[_\-–—.\s]+$/u', $name)) continue;
+                    if (mb_strlen($name) <= 255 && preg_match('/^\p{L}[\p{L}\p{M}\s.,\x{2019}\x{0027}()\-]+$/u', $name)
+                        && count(preg_split('/\s+/u', $name)) >= 2
+                        && !preg_match('/^approval\s+sheet$|^(?:submitted|approved)\b|^(?:panelist|chairperson|dean|adviser)$/iu', $name)) {
+                        return $name;
+                    }
+                    break;
+                }
+            }
+        }
+        return null;
+    }
+
+    /** Collapse whitespace and rejoin words split by a hyphenated line break. */
     protected function normalizeWhitespace(string $text): string
     {
         $text = str_replace(["\r\n", "\r"], "\n", $text);
@@ -253,7 +286,7 @@ class PdfExtractorService
             $pdf    = $parser->parseFile($filePath);
             $pages  = [];
 
-            foreach ($pdf->getPages() as $page) {
+            foreach (array_slice($pdf->getPages(), 0, PdfMetadataSampler::MAX_PAGES) as $page) {
                 $pages[] = $page->getText();
             }
 
@@ -316,6 +349,8 @@ class PdfExtractorService
 
             // Build multipart body manually (no Guzzle dependency needed)
             $body  = "--{$boundary}\r\n";
+            $body .= "Content-Disposition: form-data; name=\"max_pages\"\r\n\r\n" . PdfMetadataSampler::MAX_PAGES . "\r\n";
+            $body .= "--{$boundary}\r\n";
             $body .= "Content-Disposition: form-data; name=\"file\"; filename=\"{$fileName}\"\r\n";
             $body .= "Content-Type: application/pdf\r\n\r\n";
             $body .= $fileContent . "\r\n";
@@ -359,7 +394,7 @@ class PdfExtractorService
 
             // Map {page: N, text: "..."} → 0-indexed string array
             $pages = [];
-            foreach ($json['pages'] ?? [] as $pageObj) {
+            foreach (array_slice($json['pages'] ?? [], 0, PdfMetadataSampler::MAX_PAGES) as $pageObj) {
                 $pages[] = (string) ($pageObj['text'] ?? '');
             }
 
@@ -390,7 +425,7 @@ class PdfExtractorService
     {
         $gs = $this->findBinary(self::GS_PATHS, 'Ghostscript');
         $tess = $this->findBinary(self::TESS_PATHS, 'Tesseract');
-        return $gs && $tess ? app(BoundedPdfOcr::class)->extract($gs, $tess, $filePath) : [''];
+        return $gs && $tess ? app(BoundedPdfOcr::class)->extract($gs, $tess, $filePath, 6, PdfMetadataSampler::MAX_PAGES) : [''];
     }
 
     /**
@@ -501,61 +536,10 @@ class PdfExtractorService
     //  OCR TEXT NORMALISATION
     // ─────────────────────────────────────────────────────────────────────────
 
-    /**
-     * Fix the most common OCR artifacts before any regex-based extraction runs.
-     *
-     * Fixes applied:
-     *  1. Hyphenated line-break re-join  ("infor-\nmation" → "information")
-     *  2. Spaced capital headings        ("E X E C U T I V E" → "EXECUTIVE")
-     *  3. Broken single-letter prefix    ("P repared" → "Prepared")
-     *  4. Digit→letter in word context   (0→o, 1→l)
-     *  5. Collapse runs of 3+ blank lines to 2
-     *  6. Collapse multiple spaces (preserve newlines)
-     *  7. Key phrase normalisation so section anchors are always found
-     */
+    /** Preserve recognized wording; only normalize whitespace and line wrapping. */
     protected function normalizeOcrText(string $text): string
     {
-        // 1. Re-join hyphenated line-breaks
-        $text = preg_replace('/([a-zA-Z])-\n([a-zA-Z])/', '$1$2', $text);
-
-        // 2. Spaced capital letters in headings ("E X E C U T I V E S U M M A R Y" → "EXECUTIVE SUMMARY")
-        $text = preg_replace_callback('/\b([A-Z])(?:\s+([A-Z])){3,}\b/', function ($m) {
-            return preg_replace('/\s+/', '', $m[0]);
-        }, $text);
-
-        // 3. Broken single-cap prefix ("P repared" → "Prepared")
-        $text = preg_replace('/\b([A-Z])\s+([a-z]{2,})\b/', '$1$2', $text);
-
-        // 4. Common digit→letter substitutions inside words
-        $text = preg_replace('/([a-zA-Z])0([a-zA-Z])/', '${1}o${2}', $text);
-        $text = preg_replace('/([a-zA-Z])1([a-zA-Z])/', '${1}l${2}', $text);
-
-        // 5. Collapse 3+ blank lines to 2
-        $text = preg_replace('/\n{3,}/', "\n\n", $text);
-
-        // 6. Collapse multiple spaces
-        $text = preg_replace('/[ \t]{2,}/', ' ', $text);
-
-        // 7. Key phrase normalisation — ensures section anchors are always found
-        $fixes = [
-            '/exec\s*utive\s*summ?\s*ary/i'          => 'EXECUTIVE SUMMARY',
-            '/table\s*of\s*cont\s*ents/i'             => 'TABLE OF CONTENTS',
-            '/prep\s*ared\s*by/i'                     => 'Prepared by',
-            '/subm\s*itted\s*by/i'                    => 'Submitted by',
-            '/key\s*words?/i'                          => 'Keywords',
-            '/acknowledg\s*[em]+ent/i'                => 'ACKNOWLEDGMENT',
-            '/\bA\s+Cap\s*stone\s+Project/i'          => 'A Capstone Project',
-            '/Presented\s+to\s+the\s+Fac\s*ulty/i'   => 'Presented to the Faculty',
-            '/In\s+Partial\s+Ful\s*fill\s*ment/i'     => 'In Partial Fulfillment',
-            '/B\s*S\s*I\s*T\b/'                       => 'BSIT',
-            '/B\s*S\s*C\s*p\s*E\b/'                   => 'BSCpE',
-            '/Bachelor\s+of\s+Sci\s*ence\s+in\s+Info\s*rmation\s+Tech/i' => 'Bachelor of Science in Information Technology',
-        ];
-        foreach ($fixes as $pattern => $replacement) {
-            $text = preg_replace($pattern, $replacement, $text);
-        }
-
-        return $text;
+        return $this->normalizeWhitespace($text);
     }
 
 
@@ -782,34 +766,26 @@ class PdfExtractorService
                . '|ACKNOWLEDGEMENTS?'
                . '|CHAPTER\s+[I1V]'
                . '|LIST\s+OF'
-               . '|KEYWORDS?';
+               . '|KEYWORDS?[\t ]*:';
 
         // ── Strategy 1: EXECUTIVE SUMMARY … end marker ────────────────────
         // `[^\n]*\n` skips any trailing text on the heading line so we only
         // capture content starting on the following line.
-        if (preg_match('/EXECUTIVE\s+SUMMARY[^\n]*\n(.*?)(?=' . $endRe . ')/is', $text, $m)) {
+        if (preg_match('/^\s*EXECUTIVE\s+SUMMARY[^\n]*\n(.*?)(?=^[\t ]*(?:' . $endRe . ')|\z)/ims', $text, $m)) {
             $a = $this->cleanAbstractText($m[1]);
             if (strlen($a) > 50) return substr($a, 0, 5000);
         }
 
         // ── Strategy 2: ABSTRACT … end marker ─────────────────────────────
-        if (preg_match('/\bABSTRACT\b[^\n]*\n(.*?)(?=' . $endRe . ')/is', $text, $m)) {
+        if (preg_match('/^\s*ABSTRACT\b[^\n]*\n(.*?)(?=^[\t ]*(?:' . $endRe . ')|\z)/ims', $text, $m)) {
             $a = $this->cleanAbstractText($m[1]);
             if (strlen($a) > 50) return substr($a, 0, 5000);
         }
 
         // ── Strategy 3: SUMMARY alone … end marker ────────────────────────
-        if (preg_match('/\bSUMMARY\b[^\n]*\n(.*?)(?=' . $endRe . ')/is', $text, $m)) {
+        if (preg_match('/^\s*SUMMARY\b[^\n]*\n(.*?)(?=^[\t ]*(?:' . $endRe . ')|\z)/ims', $text, $m)) {
             $a = $this->cleanAbstractText($m[1]);
             if (strlen($a) > 50) return substr($a, 0, 5000);
-        }
-
-        // ── Strategy 4: first long paragraph starting with a study phrase ──
-        if (preg_match('/(?:^|\n)((?:The\s+study|This\s+study|This\s+research'
-            . '|This\s+capstone|This\s+project|The\s+research|The\s+project'
-            . '|The\s+proponents?)[^\n]{80,}(?:\n[^\n]+){2,15})/i', $text, $m)) {
-            $a = $this->cleanAbstractText($m[1]);
-            if (strlen($a) > 80) return substr($a, 0, 5000);
         }
 
         return null;
@@ -861,283 +837,7 @@ class PdfExtractorService
     }
 
     // ──────────────────────────────────────────────────────────
-    //  ABSTRACT AUTO-CORRECTION
-    // ──────────────────────────────────────────────────────────
-
-    /**
-     * Auto-correct common PDF extraction artifacts in abstract text.
-     *
-     * Pass A – soft line-break mid-word rejoiner
-     *   PDFs often break a word across a line without a hyphen. The parser
-     *   concatenates both halves with a space ("caps tone", "solutio n",
-     *   "sec ured"). We detect these by looking for a lowercase fragment
-     *   preceded by a space where the combined string looks like one word.
-     *
-     * Pass B – space-before-hyphen compound fixer
-     *   "time -consuming" → "time-consuming",  "A Cloud -Based" → "A Cloud-Based"
-     *
-     * Pass C – missing-space injection
-     *   "Registrar'sOffice" → "Registrar's Office"  (lowercase → uppercase boundary)
-     *   "aCloud"            → "a Cloud"              (article + uppercase word)
-     *
-     * Pass D – digit ↔ letter boundary spaces
-     *   "of3.48" → "of 3.48",  "3.48it" → "3.48 it"
-     *
-     * Pass E – common spaced-letter OCR artifacts ("t h e" → "the", etc.)
-     *
-     * Paragraph breaks (\n\n) are preserved throughout all passes.
-     */
-    protected function autoCorrectText(string $text): string
-    {
-        // Protect paragraph breaks from being clobbered by single-line regexes.
-        $paraSentinel = '§§PARA§§';
-        $text = preg_replace('/\n\n+/', $paraSentinel, $text);
-
-        // ── Pass A: rejoin mid-word line-break splits ─────────────────────────
-        // Pattern: a run of ≥2 lowercase letters, then a space, then 1-4
-        // lowercase letters that are NOT a standalone common word.
-        // "caps tone" → "capstone",  "solutio n" → "solution"
-        $commonWords = [
-            'a','an','as','at','be','by','do','go','he','if','in','is','it',
-            'me','my','no','of','on','or','so','to','up','us','we','and','are',
-            'but','can','did','due','for','had','has','her','him','his','how',
-            'its','let','may','not','now','old','our','out','own','say','see',
-            'she','the','too','two','use','was','who','why','yet','you',
-            'been','also','back','both','come','each','even','from','give',
-            'have','here','into','just','know','like','make','many','more',
-            'much','must','need','next','only','open','over','same','some',
-            'such','than','that','them','then','they','this','time','used',
-            'very','want','well','were','what','when','will','with','your',
-        ];
-        $text = preg_replace_callback(
-            '/([a-z]{2,})\s+([a-z]{1,4})(?=[\s,\.;:\-]|$)/u',
-            function ($m) use ($commonWords) {
-                $fragment = $m[2];
-                // Don't rejoin if the trailing part is itself a common word
-                if (in_array($fragment, $commonWords, true)) {
-                    return $m[0];
-                }
-                // Rejoin only if the combined word has a vowel (avoids garbled joins)
-                $combined = $m[1] . $fragment;
-                if (preg_match('/[aeiou]/i', $combined) && strlen($combined) >= 4) {
-                    return $combined;
-                }
-                return $m[0];
-            },
-            $text
-        );
-
-        // ── Pass B: space before hyphen in compounds ──────────────────────────
-        // "time -consuming" → "time-consuming"
-        $text = preg_replace('/([a-zA-Z])\s+-\s*([a-zA-Z])/', '$1-$2', $text);
-
-        // ── Pass C: missing space at lowercase→uppercase word boundary ────────
-        // "Registrar'sOffice" → "Registrar's Office"
-        // "aCloud"            → "a Cloud"
-        // Only insert when the uppercase letter starts a ≥3-char sequence
-        // (avoids splitting acronyms like "OCR", "PSA").
-        $text = preg_replace_callback(
-            '/([a-z\']{2,})([A-Z][a-z]{2,})/',
-            function ($m) {
-                return $m[1] . ' ' . $m[2];
-            },
-            $text
-        );
-
-        // ── Pass D: digit ↔ letter boundary spaces ───────────────────────────
-        // "of3.48" → "of 3.48",  "3.48it" → "3.48 it"
-        $text = preg_replace('/([a-zA-Z])(\d)/', '$1 $2', $text);
-        $text = preg_replace('/(\d)([a-zA-Z])/', '$1 $2', $text);
-
-        // ── Pass E: common OCR spaced-letter artifacts ────────────────────────
-        $commonBrokenWords = [
-            '/\bt h e\b/i'      => 'the',
-            '/\bt o\b/i'        => 'to',
-            '/\bo f\b/i'        => 'of',
-            '/\bi n\b/i'        => 'in',
-            '/\bi t\b/i'        => 'it',
-            '/\bi s\b/i'        => 'is',
-            '/\ba n d\b/i'      => 'and',
-            '/\bf o r\b/i'      => 'for',
-            '/\bw i t h\b/i'    => 'with',
-            '/\bt h a t\b/i'    => 'that',
-            '/\bt h i s\b/i'    => 'this',
-            '/\bw h i c h\b/i'  => 'which',
-            '/\bf r o m\b/i'    => 'from',
-            '/\bh a v e\b/i'    => 'have',
-            '/\bw e r e\b/i'    => 'were',
-            '/\bb e e n\b/i'    => 'been',
-            '/\bt h e i r\b/i'  => 'their',
-            '/\ba r e\b/i'      => 'are',
-            '/\bw a s\b/i'      => 'was',
-            '/\bn o t\b/i'      => 'not',
-            '/\bb u t\b/i'      => 'but',
-            '/\ba l s o\b/i'    => 'also',
-            '/\bm o r e\b/i'    => 'more',
-            '/\bs u c h\b/i'    => 'such',
-            '/\bw h e n\b/i'    => 'when',
-            '/\bs o m e\b/i'    => 'some',
-            '/\bt h e n\b/i'    => 'then',
-            '/\bt h a n\b/i'    => 'than',
-            '/\bo t h e r\b/i'  => 'other',
-            '/\ba b o u t\b/i'  => 'about',
-            '/\bc a n\b/i'      => 'can',
-            '/\bw i l l\b/i'    => 'will',
-            '/\be a c h\b/i'    => 'each',
-            '/\bm a k e\b/i'    => 'make',
-            '/\bl i k e\b/i'    => 'like',
-            '/\bu s e d\b/i'    => 'used',
-            '/\bu s e r\b/i'    => 'user',
-            '/\bu s e r s\b/i'  => 'users',
-            '/\bs y s t e m\b/i' => 'system',
-            '/\bp r o j e c t\b/i' => 'project',
-            '/\bd a t a\b/i'    => 'data',
-            '/\bs t u d y\b/i'  => 'study',
-            '/\br e s e a r c h\b/i' => 'research',
-        ];
-        foreach ($commonBrokenWords as $pattern => $replacement) {
-            $text = preg_replace($pattern, $replacement, $text);
-        }
-
-        // ── Punctuation cleanup ───────────────────────────────────────────────
-        // Multiple spaces → single space (within a paragraph line only)
-        $text = preg_replace('/[ \t]{2,}/', ' ', $text);
-
-        // Space before punctuation ("word ." → "word.")
-        $text = preg_replace('/\s+([.,;:!?])/', '$1', $text);
-
-        // Missing space after sentence-ending punctuation before next word
-        $text = preg_replace('/([.!?])([A-Z][a-z])/', '$1 $2', $text);
-
-        // Fix double periods / commas
-        $text = preg_replace('/\.{2,}/', '.', $text);
-        $text = preg_replace('/,{2,}/', ',', $text);
-
-        // Capitalize first letter after sentence-ending punctuation + space
-        $text = preg_replace_callback('/([.!?])\s+([a-z])/', function ($m) {
-            return $m[1] . ' ' . strtoupper($m[2]);
-        }, $text);
-
-        // Restore paragraph breaks
-        $text = str_replace($paraSentinel, "\n\n", $text);
-
-        // Ensure first character is capitalized
-        return ucfirst(trim($text));
-    }
-
-    /**
-     * Simple heuristic to check if a string looks like a valid English word.
-     * Uses common word patterns and minimum length checks.
-     */
-    protected function isLikelyWord(string $word): bool
-    {
-        $word = strtolower($word);
-
-        // Very common English words
-        $commonWords = [
-            'the',
-            'and',
-            'for',
-            'are',
-            'but',
-            'not',
-            'you',
-            'all',
-            'can',
-            'had',
-            'her',
-            'was',
-            'one',
-            'our',
-            'out',
-            'has',
-            'his',
-            'how',
-            'its',
-            'may',
-            'new',
-            'now',
-            'old',
-            'see',
-            'way',
-            'who',
-            'did',
-            'get',
-            'let',
-            'say',
-            'she',
-            'too',
-            'use',
-            'with',
-            'this',
-            'that',
-            'from',
-            'have',
-            'been',
-            'were',
-            'they',
-            'will',
-            'each',
-            'make',
-            'like',
-            'into',
-            'over',
-            'such',
-            'than',
-            'them',
-            'then',
-            'some',
-            'when',
-            'what',
-            'also',
-            'more',
-            'about',
-            'which',
-            'their',
-            'other',
-            'there',
-            'these',
-            'could',
-            'would',
-            'should',
-            'through',
-            'system',
-            'project',
-            'data',
-            'study',
-            'research',
-            'capstone',
-            'university',
-            'information',
-            'technology',
-            'development',
-            'application',
-            'user',
-            'users',
-            'used',
-            'using',
-            'based',
-            'results',
-        ];
-
-        if (in_array($word, $commonWords)) {
-            return true;
-        }
-
-        // Check word doesn't have unusual consonant clusters
-        if (strlen($word) >= 3 && strlen($word) <= 15) {
-            // Reject if too many consecutive consonants (5+)
-            if (preg_match('/[bcdfghjklmnpqrstvwxyz]{5,}/i', $word)) {
-                return false;
-            }
-            return true;
-        }
-
-        return false;
-    }
-
-    // ──────────────────────────────────────────────────────────
-    //  KEYWORDS
+    //  EXPLICIT PDF KEYWORDS
     // ──────────────────────────────────────────────────────────
 
     /**
@@ -1169,8 +869,6 @@ class PdfExtractorService
             }
         }
 
-        // ── Tech-term scanning ─────────────────────────────────────────────
-        $keywords = array_merge($keywords, $this->extractTechTerms($text));
 
         // Deduplicate, strip noise, limit to 15
         $seen  = [];
@@ -1184,83 +882,6 @@ class PdfExtractorService
         }
         return array_slice(array_values($clean), 0, 15);
     }
-
-    /**
-     * Extract technology-related terms.
-     */
-    protected function extractTechTerms(string $text): array
-    {
-        $techPatterns = [
-            'machine learning',
-            'deep learning',
-            'artificial intelligence',
-            'neural network',
-            'web application',
-            'mobile application',
-            'database',
-            'API',
-            'REST',
-            'PHP',
-            'Laravel',
-            'React',
-            'Vue',
-            'Angular',
-            'Node.js',
-            'Python',
-            'Java',
-            'JavaScript',
-            'TypeScript',
-            'C#',
-            'Flutter',
-            'Kotlin',
-            'MySQL',
-            'MongoDB',
-            'PostgreSQL',
-            'Firebase',
-            'IoT',
-            'blockchain',
-            'cloud computing',
-            'data mining',
-            'image processing',
-            'natural language processing',
-            'NLP',
-            'computer vision',
-            'automation',
-            'robotics',
-            'QR code',
-            'barcode',
-            'RFID',
-            'GPS',
-            'e-commerce',
-            'e-learning',
-            'management system',
-            'information system',
-            'decision support',
-            'expert system',
-            'Android',
-            'iOS',
-            'Arduino',
-            'Raspberry Pi',
-            'PDF',
-            'data extraction',
-            'web scraping',
-            'repository',
-        ];
-
-        $found = [];
-        $lowerText = strtolower($text);
-        foreach ($techPatterns as $term) {
-            if (str_contains($lowerText, strtolower($term))) {
-                $found[] = strtolower($term);
-            }
-        }
-
-        return $found;
-    }
-
-    // ──────────────────────────────────────────────────────────
-    //  AUTHOR DETAILS — Email & Contact from CV / Appendix N
-    // ──────────────────────────────────────────────────────────
 
     /**
      * Extract per-author contact details (email + phone) from the PDF.

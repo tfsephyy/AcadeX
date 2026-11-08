@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { HiOutlineAcademicCap, HiOutlineUserGroup, HiOutlineDocumentAdd, HiOutlineEye, HiOutlineBookOpen, HiOutlineGlobe, HiOutlineShieldCheck, HiOutlineShare } from 'react-icons/hi';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend, LineChart, Line } from 'recharts';
+import { BarChart, Bar, LabelList, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend, LineChart, Line } from 'recharts';
 import {
     getDashboardStats, getUploadedByYear, getStudentsPerYear,
     getRecentApproved, getMostViewed, getMostCited,
@@ -45,6 +45,7 @@ function MetricBar({ value, max, color }) {
 export default function AdminDashboard() {
     const [stats, setStats] = useState(null);
     const [uploadedByYear, setUploadedByYear] = useState([]);
+    const [uploadYearError, setUploadYearError] = useState(false);
     const [studentsPerYear, setStudentsPerYear] = useState([]);
     const [recentApproved, setRecentApproved] = useState([]);
     const [mostViewed, setMostViewed] = useState([]);
@@ -77,6 +78,7 @@ export default function AdminDashboard() {
 
             setStats(get(0, {}));
             setUploadedByYear(get(1, []) || []);
+            setUploadYearError(results[1].status === 'rejected');
             setStudentsPerYear(get(2, []) || []);
             setRecentApproved(get(3, []) || []);
             setMostViewed(get(4, []) || []);
@@ -140,18 +142,24 @@ export default function AdminDashboard() {
 
                 {/* Bar Graph */}
                 <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
-                    <h3 className="text-sm font-semibold text-gray-700 mb-4">Uploaded Capstones by Year</h3>
-                    <div className="h-64">
+                    <h3 className="text-sm font-semibold text-gray-700">Capstones by Upload Year</h3>
+                    <p className="text-xs text-gray-500 mt-1 mb-4">Last 6 calendar years · all records, including archived submissions</p>
+                    {uploadYearError ? <div role="alert" className="h-64 flex flex-col items-center justify-center gap-3 text-sm text-gray-500">
+                        <p>Upload counts could not be loaded.</p>
+                        <button type="button" onClick={fetchData} className="text-green-700 underline">Retry upload counts</button>
+                    </div> : <div className="h-64">
                         <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={[...uploadedByYear].reverse()}>
+                            <BarChart data={uploadedByYear} margin={{ top: 20, right: 5, bottom: 5, left: 0 }}>
                                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
-                                <XAxis dataKey="year" tick={{ fontSize: 12 }} />
+                                <XAxis dataKey="year" tick={{ fontSize: 12 }} interval={0} />
                                 <YAxis tick={{ fontSize: 12 }} allowDecimals={false} />
-                                <Tooltip contentStyle={{ borderRadius: '8px', fontSize: '12px', border: '1px solid #e5e7eb' }} />
-                                <Bar dataKey="count" fill="#8BC34A" radius={[6, 6, 0, 0]} name="Capstones" />
+                                <Tooltip cursor={false} labelFormatter={year => `Uploaded in ${year}`} contentStyle={{ borderRadius: '8px', fontSize: '12px', border: '1px solid #e5e7eb' }} />
+                                <Bar dataKey="count" fill="#8BC34A" radius={[6, 6, 0, 0]} name="Uploaded capstones">
+                                    <LabelList dataKey="count" position="top" fill="var(--color-text-secondary)" fontSize={11} />
+                                </Bar>
                             </BarChart>
                         </ResponsiveContainer>
-                    </div>
+                    </div>}
                 </div>
 
                 {/* Doughnut */}

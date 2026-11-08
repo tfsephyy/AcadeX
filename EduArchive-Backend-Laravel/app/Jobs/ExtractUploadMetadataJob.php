@@ -3,7 +3,6 @@
 namespace App\Jobs;
 
 use App\Models\DocumentUpload;
-use App\Services\MetadataAssistantService;
 use App\Services\PdfEncryptorService;
 use App\Services\PdfExtractorService;
 use App\Services\UploadProcessingNotifier;
@@ -39,7 +38,6 @@ class ExtractUploadMetadataJob implements ShouldQueue, ShouldBeUnique
 
     public function handle(
         PdfExtractorService $extractor,
-        MetadataAssistantService $assistant,
         PdfEncryptorService $encryptor,
         UploadProcessingNotifier $notifier,
     ): void {
@@ -73,11 +71,9 @@ class ExtractUploadMetadataJob implements ShouldQueue, ShouldBeUnique
                 throw new \RuntimeException('The stored document could not be opened for extraction.');
             }
 
-            app(\App\Services\PdfPreviewService::class)->prepare($upload->path, $temp);
-
             try {
                 $result = $extractor->extractPathWithSource($temp);
-                $metadata = $assistant->enrich($result['metadata'], $result['source']);
+                $metadata = $result['metadata'];
                 $notes = [];
                 if (!array_filter($metadata)) {
                     $notes[] = 'Automatic extraction found no usable metadata. The file is stored and can be reviewed manually.';

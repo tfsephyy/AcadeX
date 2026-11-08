@@ -50,7 +50,7 @@ if (-not $apiAddress.IsAbsoluteUri -or $apiAddress.Scheme -ne 'http' -or -not $a
 $apiPort = $apiAddress.Port
 $router = Join-Path $backend 'vendor\laravel\framework\src\Illuminate\Foundation\resources\server.php'
 Start-OwnedService 'api' $php @('-d', 'upload_max_filesize=128M', '-d', 'post_max_size=140M', '-d', 'memory_limit=512M', '-S', "127.0.0.1:$apiPort", ('"' + $router + '"')) (Join-Path $backend 'public') $apiPort
-Start-OwnedService 'queue' $php @('-d', 'memory_limit=512M', ('"' + (Join-Path $backend 'artisan') + '"'), 'queue:work', '--sleep=3', '--tries=3', '--timeout=600') $backend
+Start-OwnedService 'queue' $php @('-d', 'memory_limit=512M', ('"' + (Join-Path $backend 'artisan') + '"'), 'queue:work', '--sleep=1', '--tries=3', '--timeout=600') $backend
 Start-OwnedService 'scheduler' $php @(('"' + (Join-Path $backend 'artisan') + '"'), 'schedule:work') $backend
 Start-OwnedService 'frontend' $node @(('"' + (Join-Path $frontend 'node_modules\vite\bin\vite.js') + '"'), '--host', 'localhost', '--port', '5173', '--strictPort') $frontend 5173
 if (-not $WithoutOcr) {

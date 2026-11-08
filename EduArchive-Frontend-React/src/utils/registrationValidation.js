@@ -1,13 +1,12 @@
 const personalFields = ['name', 'username', 'id_number']
 const academicFields = ['role', 'email', 'program', 'year', 'section']
-const idPattern = /^MBC\d{4}-\d{5}$/
 
 export function personalRegistrationErrors(form) {
   const errors = {}
   if (!form.name.trim()) errors.name = ['Enter your full name.']
   if (!form.username.trim()) errors.username = ['Enter a username.']
-  if (form.role !== 'visitor' && !idPattern.test(form.id_number.trim())) {
-    errors.id_number = ['Enter an ID number in the format MBC2023-00148.']
+  if (form.role !== 'visitor' && !form.id_number.trim()) {
+    errors.id_number = ['Enter your ID number.']
   }
   return errors
 }

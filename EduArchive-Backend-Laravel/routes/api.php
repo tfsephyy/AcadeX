@@ -75,6 +75,7 @@ Route::prefix('v1')->group(function () {
             Route::delete('/{transfer}', [\App\Http\Controllers\Api\V1\UploadTransferController::class, 'cancel'])->whereUuid('transfer');
         });
 
+        Route::get('/uploads/advisers', [CapstoneController::class, 'uploadAdvisers'])->middleware('role:admin,faculty,student');
         Route::get('/uploads/{upload}/status',  [CapstoneController::class, 'uploadStatus'])->whereUuid('upload');
         Route::post('/uploads/{upload}/retry',  [CapstoneController::class, 'retryUpload'])->whereUuid('upload');
         Route::delete('/uploads/{upload}',      [CapstoneController::class, 'discardUpload'])->whereUuid('upload');

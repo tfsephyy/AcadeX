@@ -29,6 +29,64 @@ and the [November 7 production release record](handoff/PRODUCTION_RELEASE_2026-1
   See the November 7 ASUS local setup entry in the progress log; it is separate
   from production deployment and does not certify outstanding feature acceptance.
 
+## November 8, 2026 dashboard, registration and adviser follow-up
+
+Status: implemented and locally verified; no deployment requested. See
+[the implementation record](ui/2026-11-08-dashboard-registration-adviser.md).
+
+- Admin upload-year bars count `created_at` calendar years, show the last six years
+  in ascending order with integer counts and zero-filled gaps, and describe their
+  scope (all records, including archived records). Approved-year counts must filter
+  approved, unarchived records.
+- My Uploads cards across Admin, Faculty and Student use three desktop columns
+  with expanded navigation and four with collapsed navigation; retain mobile layout.
+- Manual and Google registration accept different ID formats, retain the placeholder
+  example, required checks for non-visitors, size limits and uniqueness.
+- Faculty summary cards form one desktop column beside a two-series line graph;
+  Most Viewed and Most Cited share the next desktop row and stack on small screens.
+- Students can choose Library Visibility & Publication in Step 3. Persist the choice
+  while preserving pending review, adviser/admin approval and visitor restrictions.
+  This supersedes the earlier forced-unpublished-on-submission rule.
+- Shared Step 2 extracts the name immediately above Adviser on the APPROVAL SHEET,
+  permits manual correction and matches Faculty accounts ignoring case/whitespace.
+  Match only approved, unarchived, available Faculty under the existing assignment
+  rule. One match links automatically; none retains text without a link; multiple
+  matches offer account selection. Preserve the name and optional account separately.
+- New additive adviser-name migration is verified only in the disposable database
+  until a separately authorized backed-up application migration/deployment.
+
+**November 8 local repair update:** the user's later upload-503 repair request
+authorized applying the adviser-name migration to the verified local EduArchiveDB
+after a fresh SQL/env/storage backup. Applied and preservation-verified locally;
+no migrations remain pending there. Production remains outside this repair.
+
+## November 8, 2026 local CORS repair
+
+Status: implemented and verified on the running local API and in Chrome.
+Allow the user's localhost:5174 frontend alongside 5173 for credentialed local
+API requests and session-domain configuration. Keep production/staging restricted
+to the configured frontend origin. Preserve private env files and existing work.
+Live preflight and browser user/CSRF checks passed; 22 focused backend tests passed.
+
+## November 8, 2026 PDF-only extraction and local worker recovery
+
+Status: implemented and locally verified; worker restored. Final checks: 140
+backend tests / 1,218 assertions and eight lightweight Python tests passed.
+See [the extraction repair record](ui/2026-11-08-pdf-only-extraction.md).
+This request supersedes R6/D-004's optional metadata AI enrichment.
+
+- Remove model-based metadata generation entirely, including its service/config.
+- Preserve words read from PDF text/OCR; no dictionary-based abstract rewriting,
+  inferred keyword labels, or invented values. Missing fields stay blank/editable.
+- Bound metadata text reading and native/Paddle OCR to first 12 pages. Keep the
+  original file, 128 MiB upload limit and existing OCR safety limits intact.
+- Move optional viewing-preview preparation after final submission so it cannot
+  delay Step 2. Retain the existing encrypted viewing fallback.
+- Restore the stopped local database queue worker and verify pending extraction
+  drains. Preserve existing private config, application key, records and documents.
+- Verify extraction and authorization against the guarded disposable DB; local
+  queue diagnostics/recovery are separate from synthetic tests and deployment.
+
 ## R1 — Capstone loading and document viewer (priority: high)
 
 **Problem observed by the client:** opening an uploaded capstone can stay on

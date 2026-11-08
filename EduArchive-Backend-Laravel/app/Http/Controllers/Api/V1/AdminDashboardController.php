@@ -34,15 +34,11 @@ class AdminDashboardController extends Controller
     }
 
     /**
-     * Get uploaded capstones by year (bar chart) - 6 most recent years.
+     * Calendar upload years, including empty years, for all repository records.
      */
     public function uploadedByYear(): JsonResponse
     {
-        $data = Capstone::select('year', DB::raw('COUNT(*) as count'))
-            ->groupBy('year')
-            ->orderByDesc('year')
-            ->limit(6)
-            ->get();
+        $data = $this->uploadYearSeries();
 
         return $this->successResponse($data, 'Uploaded capstones by year.');
     }
@@ -52,13 +48,27 @@ class AdminDashboardController extends Controller
      */
     public function approvedByYear(): JsonResponse
     {
-        $data = Capstone::select('year', DB::raw('COUNT(*) as count'))
-            ->groupBy('year')
-            ->orderByDesc('year')
-            ->limit(6)
-            ->get();
+        $data = $this->uploadYearSeries(true);
 
         return $this->successResponse($data, 'Approved capstones by year.');
+    }
+
+    private function uploadYearSeries(bool $approvedOnly = false): array
+    {
+        $end = now()->startOfYear()->addYear();
+        $start = $end->copy()->subYears(6);
+        // `year` is academic metadata, not the date the record was uploaded.
+        // Include archived/pending records just like the Uploaded summary total.
+        $query = Capstone::where('created_at', '>=', $start)->where('created_at', '<', $end);
+        if ($approvedOnly) $query->where('approval_status', 'approved')->where('is_archived', false);
+        $counts = $query->selectRaw('YEAR(created_at) as upload_year, COUNT(*) as total')
+            ->groupByRaw('YEAR(created_at)')->pluck('total', 'upload_year');
+
+        $series = [];
+        for ($year = $start->year; $year < $end->year; $year++) {
+            $series[] = ['year' => $year, 'count' => (int) ($counts[$year] ?? 0)];
+        }
+        return $series;
     }
 
     /**

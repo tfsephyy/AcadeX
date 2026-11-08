@@ -99,6 +99,7 @@ class Capstone extends Model
         'imrad_path',
         'imrad_original_name',
         'adviser_id',
+        'adviser_name',
         'uploaded_by',
         'approved_by',
         'approved_at',

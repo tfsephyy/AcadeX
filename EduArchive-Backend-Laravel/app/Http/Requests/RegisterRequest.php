@@ -22,8 +22,8 @@ class RegisterRequest extends FormRequest
             'username'  => ['required', 'string', 'max:100', 'unique:users,username'],
             'email'     => ['required', 'string', 'email', 'max:255', 'unique:users,email'],
             'id_number' => $isVisitor
-                ? ['nullable', 'string', 'unique:users,id_number', 'regex:/^MBC\d{4}-\d{5}$/']
-                : ['required', 'string', 'unique:users,id_number', 'regex:/^MBC\d{4}-\d{5}$/'],
+                ? ['nullable', 'string', 'max:255', 'unique:users,id_number']
+                : ['required', 'string', 'max:255', 'unique:users,id_number'],
             'role' => ['required', 'string', 'in:student,faculty,visitor'],
             'password' => [
                 'required',
@@ -54,7 +54,6 @@ class RegisterRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'id_number.regex'  => 'The ID number must follow the format MBC2023-00148.',
             'password.regex'   => 'Password must include uppercase, lowercase, and a number.',
             'role.in'          => 'Role must be student, faculty, or visitor.',
         ];

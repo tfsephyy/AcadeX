@@ -1,5 +1,14 @@
 # AcadeX document access policy
 
+**November 8, 2026 submission-choice amendment:** students may choose the
+publication tier during Step 3. Store that choice on the pending submission;
+approval by the assigned Faculty adviser or an administrator is still required
+before any library or visitor access. Approval activates the selected tier under
+the existing visitor rules. An omitted choice defaults to unpublished. Students
+cannot approve their own work or call the publish endpoint; later student edits
+retain the existing reset to pending/unpublished. This supersedes the earlier
+forced-unpublished-on-submission rule, not the approval or document boundaries.
+
 Implementation policy approved by the project owner on October 13, 2026, amended October 19, 2026 after the client clarified approval and visitor requirements. This is the acceptance contract for the remediation; it does not authorize public deployment.
 
 **October 19 amendment:** `approval_status` controls the approved platform library. `publication_status` is the separate external-publication flag used for visitor full-document access. Authenticated visitor accounts may now see approved, unarchived records that have an IMRAD document even when they are unpublished or not copyright-cleared, but only the IMRAD/metadata; the complete PDF remains restricted. Copyright classification or an IMRAD never bypasses approval. These rules supersede the October 13 visitor row and the statement that IMRAD never grants any visitor access.

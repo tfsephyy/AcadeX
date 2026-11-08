@@ -23,16 +23,6 @@ return [
     'upload_queue' => env('ACADEX_UPLOAD_QUEUE', 'default'),
     'upload_extraction_timeout' => (int) env('ACADEX_UPLOAD_EXTRACTION_TIMEOUT', 300),
     'upload_extraction_tries' => (int) env('ACADEX_UPLOAD_EXTRACTION_TRIES', 3),
-    // Bound the amount of cleaned source text sent to a local model.
-    'ai_source_chars' => (int) env('ACADEX_AI_SOURCE_CHARS', 12000),
-
-    // ── Optional local AI (Ollama) ─────────────────────────────────────
-    // Disabled unless OLLAMA_URL is explicitly configured. Every value the
-    // model suggests is checked against the document text before use.
-    'ollama_url' => env('OLLAMA_URL'),
-    'ollama_model' => env('OLLAMA_MODEL', 'llama3.1:8b'),
-    'ollama_timeout' => (int) env('OLLAMA_TIMEOUT', 45),
-
     // ── Registration hardening (R4) ────────────────────────────────────
     'registration_challenge' => (bool) env('ACADEX_REGISTRATION_CHALLENGE', true),
     'registration_min_seconds' => (int) env('ACADEX_REGISTRATION_MIN_SECONDS', 4),

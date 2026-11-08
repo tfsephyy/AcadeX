@@ -16,8 +16,8 @@ import axios from '../../api/axios';
 
 /* ─── Status options ─────────────────────────────────────────── */
 const STATUS_OPTIONS = [
-    { value: 'published',   label: 'Published',   desc: 'Visible to all in the library', icon: HiOutlineGlobeAlt,  accent: '#16a34a', bg: 'rgba(22,163,74,0.12)',  border: 'rgba(22,163,74,0.4)' },
-    { value: 'unpublished', label: 'Unpublished', desc: 'Saved but hidden from view',    icon: HiOutlineEyeSlash, accent: 'var(--color-text-muted)', bg: 'var(--color-bg-tertiary)', border: 'var(--color-border-strong)' },
+    { value: 'unpublished', label: 'Internal Only (Unpublished)', desc: 'Enters the student and Faculty library after approval. Visitors need copyright clearance or an IMRAD file.', icon: HiOutlineEyeSlash, accent: 'var(--color-text-muted)', bg: 'var(--color-bg-tertiary)', border: 'var(--color-border-strong)' },
+    { value: 'published', label: 'Visitor Access (Published)', desc: 'After approval, authenticated visitors can preview the full PDF and resources.', icon: HiOutlineGlobeAlt, accent: '#16a34a', bg: 'rgba(22,163,74,0.12)', border: 'rgba(22,163,74,0.4)' },
     { value: 'in_progress', label: 'In Progress', desc: 'Still being worked on',         icon: HiOutlineClock,    accent: '#d97706', bg: 'rgba(217,119,6,0.1)',  border: 'rgba(217,119,6,0.35)' },
 ];
 
@@ -80,7 +80,7 @@ export default function StudentCapstoneAdditionalInfoPage() {
         if (!initialForm || !pdfInfo) navigate('/student/capstone-library', { replace: true });
     }, []);
 
-    const [publicationStatus] = useState('unpublished');
+    const [publicationStatus, setPublicationStatus] = useState('unpublished');
     const [copyrightStatus, setCopyrightStatus] = useState('');
     const [saving, setSaving] = useState(false);
 
@@ -248,18 +248,22 @@ export default function StudentCapstoneAdditionalInfoPage() {
                     </div>
 
                     {/* ── Library Visibility & Publication Notice ── */}
-                    <SectionCard icon={HiOutlineGlobeAlt} title="Library Visibility & Publication" subtitle="Student submissions begin pending review and unpublished" accent="#16a34a">
-                        <div className="p-4 rounded-xl border flex items-start gap-3.5"
-                            style={{ background: 'var(--color-bg-secondary)', borderColor: 'var(--color-border)' }}>
-                            <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(22,163,74,0.1)' }}>
-                                <HiOutlineEyeSlash className="w-4 h-4 text-emerald-600" />
-                            </div>
-                            <div className="space-y-1">
-                                <p className="text-sm font-semibold" style={{ color: 'var(--color-text)' }}>Internal Archive (Pending Approval)</p>
-                                <p className="text-xs leading-relaxed" style={{ color: 'var(--color-text-muted)' }}>
-                                    Your capstone will be submitted as <strong>Pending</strong> review and <strong>Unpublished</strong>. Once reviewed and approved by your faculty adviser or an administrator, it will become accessible to students and faculty in the EduArchive internal library. After approval, &ldquo;published&rdquo; or &ldquo;copyrighted&rdquo; records qualify for full authenticated-visitor preview access, while a record with only an IMRAD file qualifies for restricted visitor metadata/IMRAD access. Visitor downloads remain disabled. Publication status is controlled separately from approval.
-                                </p>
-                            </div>
+                    <SectionCard icon={HiOutlineGlobeAlt} title="Library Visibility & Publication" subtitle="Your selection is saved with the submission. Library and visitor access still require adviser or administrator approval." accent="#16a34a">
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3" role="group" aria-label="Library visibility and publication">
+                            {STATUS_OPTIONS.map(opt => {
+                                const isSelected = publicationStatus === opt.value;
+                                const Icon = opt.icon;
+                                return (
+                                    <button type="button" key={opt.value} onClick={() => setPublicationStatus(opt.value)} aria-pressed={isSelected}
+                                        className="relative text-left p-4 rounded-xl border-2 transition-all"
+                                        style={{ background: isSelected ? opt.bg : 'var(--color-bg-secondary)', borderColor: isSelected ? opt.border : 'var(--color-border)' }}>
+                                        {isSelected && <HiOutlineCheck className="absolute top-3 right-3 w-4 h-4" style={{ color: opt.accent }} />}
+                                        <Icon className="w-5 h-5 mb-2" style={{ color: opt.accent }} />
+                                        <p className="text-sm font-semibold" style={{ color: 'var(--color-text)' }}>{opt.label}</p>
+                                        <p className="text-xs mt-0.5 leading-relaxed" style={{ color: 'var(--color-text-muted)' }}>{opt.desc}</p>
+                                    </button>
+                                );
+                            })}
                         </div>
                     </SectionCard>
 

@@ -6,6 +6,7 @@ import {
     HiOutlineRefresh, HiOutlineClock,
 } from 'react-icons/hi';
 import CategoryCombobox from './CategoryCombobox';
+import AdviserField from './AdviserField';
 import { useNotification } from './useNotification';
 import { getExtractionNotice } from './extractionNotice';
 import api from '../api/axios';
@@ -44,6 +45,8 @@ export default function ReviewExtractedDataPage({ nextPath, backPath }) {
         category: initialExtracted.category || '',
         abstract: initialExtracted.abstract || '',
         keywords: initialExtracted.keywords || [],
+        adviser_name: initialExtracted.adviser_name || '',
+        adviser_id: initialExtracted.adviser_id || null,
     });
     const [newKeyword, setNewKeyword] = useState('');
     const [processingStatus, setProcessingStatus] = useState(initialStatus);
@@ -55,6 +58,7 @@ export default function ReviewExtractedDataPage({ nextPath, backPath }) {
     const [pollExpired, setPollExpired] = useState(false);
     const [retryable, setRetryable] = useState(Boolean(state.retryable));
     const pollTimer = useRef(null);
+    const adviserEdited = useRef(false);
 
     const isStillProcessing = ['queued', 'processing'].includes(processingStatus);
     const processing = isStillProcessing && !pollExpired;
@@ -81,6 +85,7 @@ export default function ReviewExtractedDataPage({ nextPath, backPath }) {
             program: prev.program || data.program || '',
             abstract: prev.abstract.trim() ? prev.abstract : (data.abstract || ''),
             keywords: prev.keywords.length ? prev.keywords : (Array.isArray(data.keywords) ? data.keywords : []),
+            adviser_name: adviserEdited.current || prev.adviser_name.trim() ? prev.adviser_name : (data.adviser_name || ''),
         }));
         setAuthorDetails(prev => {
             if (prev.length > 0) return prev;
@@ -392,6 +397,9 @@ export default function ReviewExtractedDataPage({ nextPath, backPath }) {
                     </div>
 
                     {/* ── Row 2: Year + Program + Category ─── */}
+                    <AdviserField name={form.adviser_name} selectedId={form.adviser_id} disabled={processing} inputClassName={inputCls}
+                        onChange={(adviser_name, adviser_id) => { adviserEdited.current = true; setForm(prev => ({ ...prev, adviser_name, adviser_id })); }} />
+
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
                         <div className="rounded-2xl border p-5" style={{ background: 'var(--color-surface)', borderColor: 'var(--color-border)' }}>
                             <label htmlFor="metadata-year" className="block text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--color-text-muted)' }}>Year</label>

@@ -32,6 +32,7 @@ class FacultyRegistrationTest extends SecurityTestCase
     public function test_faculty_can_register_without_student_year_or_section_and_awaits_approval(): void
     {
         $payload = $this->payload();
+        $payload['id_number'] = 'FAC / '.bin2hex(random_bytes(5));
         $this->verifyEmail($payload['email']);
         $this->postJson('/api/v1/register', $payload)->assertCreated()
             ->assertJsonPath('data.user.role', 'faculty')->assertJsonPath('data.user.program', 'BSIT');
@@ -39,6 +40,7 @@ class FacultyRegistrationTest extends SecurityTestCase
         self::assertFalse($user->is_approved);
         self::assertNotNull($user->email_verified_at);
         self::assertSame('BSIT', $user->faculty_program);
+        self::assertSame($payload['id_number'], $user->id_number);
         self::assertNull($user->studentProfile);
         $this->postJson('/api/v1/login', ['email' => $payload['email'], 'password' => $this->password])->assertStatus(423);
     }
@@ -50,7 +52,7 @@ class FacultyRegistrationTest extends SecurityTestCase
         $this->postJson('/api/v1/register', $payload)->assertUnprocessable()->assertJsonValidationErrors('email');
         $this->postJson('/api/v1/register', array_replace($payload, ['program' => 'invalid']))
             ->assertUnprocessable()->assertJsonValidationErrors('program');
-        $this->postJson('/api/v1/register', array_replace($payload, ['id_number' => 'invalid']))
+        $this->postJson('/api/v1/register', array_replace($payload, ['id_number' => '   ']))
             ->assertUnprocessable()->assertJsonValidationErrors('id_number');
         self::assertSame($before, User::count());
         $this->verifyEmail($payload['email']);
@@ -62,6 +64,7 @@ class FacultyRegistrationTest extends SecurityTestCase
     public function test_google_faculty_registration_has_the_same_program_and_approval_rules(): void
     {
         $payload = $this->payload();
+        $payload['id_number'] = 'Employee '.bin2hex(random_bytes(5));
         $payload['credential'] = 'synthetic-verified-google-token';
         $identity = \Mockery::mock(GoogleIdentityService::class);
         $identity->shouldReceive('configured')->once()->andReturnTrue();
@@ -75,6 +78,22 @@ class FacultyRegistrationTest extends SecurityTestCase
         $user = User::where('email', $payload['email'])->firstOrFail();
         self::assertNotNull($user->email_verified_at);
         self::assertFalse($user->is_approved);
+        self::assertSame($payload['id_number'], $user->id_number);
         self::assertNull($user->studentProfile);
+    }
+
+    public function test_student_registration_accepts_a_different_id_format_and_keeps_required_unique_and_size_checks(): void
+    {
+        $payload = array_replace($this->payload(), ['role' => 'student', 'program' => 'BSIT', 'year' => '4', 'section' => 'A',
+            'id_number' => '2026/'.bin2hex(random_bytes(5))]);
+        Role::firstOrCreate(['name' => 'student']);
+        $this->postJson('/api/v1/register', array_replace($payload, ['id_number' => '']))
+            ->assertUnprocessable()->assertJsonValidationErrors('id_number');
+        $this->postJson('/api/v1/register', array_replace($payload, ['id_number' => str_repeat('a', 256)]))
+            ->assertUnprocessable()->assertJsonValidationErrors('id_number');
+        $this->verifyEmail($payload['email']);
+        $this->postJson('/api/v1/register', $payload)->assertCreated();
+        self::assertFalse(User::where('email', $payload['email'])->firstOrFail()->is_approved);
+        $this->postJson('/api/v1/register', $payload)->assertUnprocessable()->assertJsonValidationErrors('id_number');
     }
 }

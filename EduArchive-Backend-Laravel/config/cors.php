@@ -1,5 +1,15 @@
 <?php
 
+$origins = [env('FRONTEND_URL', 'http://localhost:5173')];
+// Vite uses 5174 when another local development server already owns 5173.
+// Never add development origins to a production/staging configuration.
+if (env('APP_ENV') === 'local') {
+    $origins = array_values(array_unique(array_merge($origins, [
+        'http://localhost:5173',
+        'http://localhost:5174',
+    ])));
+}
+
 return [
 
     /*
@@ -12,9 +22,7 @@ return [
 
     'allowed_methods' => ['*'],
 
-    'allowed_origins' => [
-        env('FRONTEND_URL', 'http://localhost:5173'),
-    ],
+    'allowed_origins' => $origins,
 
     'allowed_origins_patterns' => [],
 

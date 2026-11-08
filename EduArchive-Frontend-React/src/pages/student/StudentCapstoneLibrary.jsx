@@ -180,7 +180,7 @@ export default function StudentCapstoneLibrary() {
     // ── Card View ─────────────────────────────────────────────────────────────────
     const CardView = () => (
         <div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 p-4 lg:p-6">
+            <div className="my-uploads-grid grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 p-4 lg:p-6">
                 {capstones.map((cap) => (
                     <div key={cap.id}
                         onClick={() => navigate(`/student/capstones/${cap.slug || cap.id}`)}
