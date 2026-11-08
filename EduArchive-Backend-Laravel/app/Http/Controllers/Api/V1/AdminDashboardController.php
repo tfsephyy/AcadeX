@@ -34,7 +34,7 @@ class AdminDashboardController extends Controller
     }
 
     /**
-     * Calendar upload years, including empty years, for all repository records.
+     * Capstone counts grouped by recorded capstone year.
      */
     public function uploadedByYear(): JsonResponse
     {
@@ -55,19 +55,24 @@ class AdminDashboardController extends Controller
 
     private function uploadYearSeries(bool $approvedOnly = false): array
     {
-        $end = now()->startOfYear()->addYear();
-        $start = $end->copy()->subYears(6);
-        // `year` is academic metadata, not the date the record was uploaded.
-        // Include archived/pending records just like the Uploaded summary total.
-        $query = Capstone::where('created_at', '>=', $start)->where('created_at', '<', $end);
-        if ($approvedOnly) $query->where('approval_status', 'approved')->where('is_archived', false);
-        $counts = $query->selectRaw('YEAR(created_at) as upload_year, COUNT(*) as total')
-            ->groupByRaw('YEAR(created_at)')->pluck('total', 'upload_year');
+        // Group by the capstone's recorded year (metadata) matching the distinct years in the repository
+        $query = Capstone::query()->whereNotNull('year');
+        if ($approvedOnly) {
+            $query->where('approval_status', 'approved')->where('is_archived', false);
+        }
+        $counts = $query->selectRaw('year, COUNT(*) as total')
+            ->groupBy('year')
+            ->orderBy('year', 'asc')
+            ->pluck('total', 'year');
 
         $series = [];
-        for ($year = $start->year; $year < $end->year; $year++) {
-            $series[] = ['year' => $year, 'count' => (int) ($counts[$year] ?? 0)];
+        foreach ($counts as $year => $total) {
+            $series[] = [
+                'year' => (int) $year,
+                'count' => (int) $total,
+            ];
         }
+
         return $series;
     }
 

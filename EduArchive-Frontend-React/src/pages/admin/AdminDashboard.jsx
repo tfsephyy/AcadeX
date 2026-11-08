@@ -142,19 +142,19 @@ export default function AdminDashboard() {
 
                 {/* Bar Graph */}
                 <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
-                    <h3 className="text-sm font-semibold text-gray-700">Capstones by Upload Year</h3>
-                    <p className="text-xs text-gray-500 mt-1 mb-4">Last 6 calendar years · all records, including archived submissions</p>
+                    <h3 className="text-sm font-semibold text-gray-700">Capstones by Year</h3>
+                    <p className="text-xs text-gray-500 mt-1 mb-4">Recorded capstone years · all records, including archived submissions</p>
                     {uploadYearError ? <div role="alert" className="h-64 flex flex-col items-center justify-center gap-3 text-sm text-gray-500">
-                        <p>Upload counts could not be loaded.</p>
-                        <button type="button" onClick={fetchData} className="text-green-700 underline">Retry upload counts</button>
+                        <p>Capstone counts could not be loaded.</p>
+                        <button type="button" onClick={fetchData} className="text-green-700 underline">Retry capstone counts</button>
                     </div> : <div className="h-64">
                         <ResponsiveContainer width="100%" height="100%">
                             <BarChart data={uploadedByYear} margin={{ top: 20, right: 5, bottom: 5, left: 0 }}>
                                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
                                 <XAxis dataKey="year" tick={{ fontSize: 12 }} interval={0} />
                                 <YAxis tick={{ fontSize: 12 }} allowDecimals={false} />
-                                <Tooltip cursor={false} labelFormatter={year => `Uploaded in ${year}`} contentStyle={{ borderRadius: '8px', fontSize: '12px', border: '1px solid #e5e7eb' }} />
-                                <Bar dataKey="count" fill="#8BC34A" radius={[6, 6, 0, 0]} name="Uploaded capstones">
+                                <Tooltip cursor={false} labelFormatter={year => `Year ${year}`} contentStyle={{ borderRadius: '8px', fontSize: '12px', border: '1px solid #e5e7eb' }} />
+                                <Bar dataKey="count" fill="#8BC34A" radius={[6, 6, 0, 0]} name="Capstones">
                                     <LabelList dataKey="count" position="top" fill="var(--color-text-secondary)" fontSize={11} />
                                 </Bar>
                             </BarChart>
