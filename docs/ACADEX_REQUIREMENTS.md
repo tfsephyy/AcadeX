@@ -6,15 +6,7 @@ This file is the durable record of the 16 requested improvements. It must be rea
 [ACADEX_PROGRESS.md](ACADEX_PROGRESS.md) and [ACADEX_DECISIONS.md](ACADEX_DECISIONS.md).
 The client-facing deployment history remains in [../ACADEX_CLIENT_AI_HANDOFF.md](../ACADEX_CLIENT_AI_HANDOFF.md).
 
-**Current production state (2026-11-08):** staged upload quota fix commit
-`6fa3fac` is live in the versioned backend/frontend release. No migration was
-added; the 1 GiB pending quota is cached, queue and scheduler use the new backend,
-and one-time cleanup removed 20 expired staged uploads. Root returned 200,
-anonymous protected upload status returned 401, and Chrome rendered the live page.
-The November 7 production migrations and verified backup remain part of the
-underlying release. This does not claim that every feature flow was replayed
-against production accounts or documents. See the [staged upload release record](handoff/STAGED_UPLOAD_QUOTA_FIX_2026-11-07.md)
-and the [November 7 production release record](handoff/PRODUCTION_RELEASE_2026-11-07.md).
+**Current production state (2026-11-09):** Unified release cadex-20261109-e32fa20 is live in production with backend and frontend. Migration 2026_11_08_000001_add_capstone_adviser_name applied. UI responsiveness (3-card grid default, 4 on collapsed), removed rigid MBC ID requirement, fixed Admin Dashboard upload year series, Faculty Adviser Dashboard, and modular PDF extraction active and verified. See [the production release record](handoff/PRODUCTION_RELEASE_2026-11-09_UI_REFINEMENT_MODULAR_EXTRACTION.md).
 
 ## November 8, 2026 upload review layout and full-PDF keywords
 

@@ -1,5 +1,23 @@
 # AcadeX implementation progress
 
+## 2026-11-09 - Production Release: UI Refinements, ID Validation, and Modular PDF Extraction
+
+Merged `origin/release/ui-refinement` (commit `e32fa20`) into `main` and pushed to GitHub `origin/main`. Deployed both backend and frontend to AWS EC2 (`https://veload.site`).
+- Backend release: `/srv/acadex-staging/releases/acadex-20261109-e32fa20/EduArchive-Backend-Laravel`
+- Frontend release: `/srv/acadex-staging/frontend-releases/acadex-20261109-e32fa20/dist`
+- Applied migration: `2026_11_08_000001_add_capstone_adviser_name`
+- Verified:
+  - Uploads card grid: 3 cards per row default, 4 when collapsed (`library-grid`).
+  - Registration ID validation: removed rigid `MBC` regex format constraint.
+  - Admin Dashboard: fixed upload year series calculating calendar year of upload.
+  - Faculty Dashboard: updated Adviser Dashboard UI active.
+  - Modular PDF extraction active with OCR service health verified at port 8001.
+  - Frontend assets `index-Dqxqu3pJ.js` and `index-Bau6mt0A.css` serving HTTP 200.
+  - Database backup taken prior to migration and verified at `/var/backups/acadex/ui-refinement-20261109/database.sql.gz`.
+  - All 6 services active: `acadex-queue`, `acadex-scheduler`, `acadex-ocr`, `apache2`, `php8.3-fpm`, `mysql`.
+See [production release report](handoff/PRODUCTION_RELEASE_2026-11-09_UI_REFINEMENT_MODULAR_EXTRACTION.md).
+
+
 ## 2026-11-08 - Source published to the client's GitHub repository
 
 Committed the 61 reviewed staged source/test/documentation files as

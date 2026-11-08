@@ -506,3 +506,12 @@ Retain the existing tracking branch `release/ui-refinement`; publish the reviewe
 source/tests/handoff together without rewriting history or merging to main.
 Implementation commit `1402d74` was pushed and verified against GitHub. This
 publication does not change the serving production release.
+
+
+## D-028 — Production unification of UI refinements, ID format relaxation, and modular extraction (2026-11-09)
+
+**Context:** Client Mark Joseph tested the deployed site (`veload.site`) and noted that UI responsiveness fixes (3-card grid default), account registration without rigid `MBC` ID constraints, the corrected Admin Dashboard upload year series, and the Adviser Faculty Dashboard were absent because production was serving an older frontend (`86c2487`) and backend (`97d5955`).
+
+**Decision:** Fast-forward `main` to `origin/release/ui-refinement` (`e32fa20`), push `main` to GitHub, and deploy a unified release package (frontend dist + backend source) to AWS EC2. Run database migration `2026_11_08_000001_add_capstone_adviser_name`. Retain existing shared `.env`, document storage, and Apache virtualhost mappings.
+
+**Consequences:** Both frontend and backend are in lockstep. Registration no longer rejects non-MBC IDs; cards display 3 per row (4 when rail collapsed); upload year chart displays properly; and the full modular extraction pipeline with OCR service on port 8001 is active. Production verified healthy across all 6 system services.
