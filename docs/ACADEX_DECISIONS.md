@@ -515,3 +515,16 @@ publication does not change the serving production release.
 **Decision:** Fast-forward `main` to `origin/release/ui-refinement` (`e32fa20`), push `main` to GitHub, and deploy a unified release package (frontend dist + backend source) to AWS EC2. Run database migration `2026_11_08_000001_add_capstone_adviser_name`. Retain existing shared `.env`, document storage, and Apache virtualhost mappings.
 
 **Consequences:** Both frontend and backend are in lockstep. Registration no longer rejects non-MBC IDs; cards display 3 per row (4 when rail collapsed); upload year chart displays properly; and the full modular extraction pipeline with OCR service on port 8001 is active. Production verified healthy across all 6 system services.
+
+## D-029 — Align Admin Dashboard Capstones by Year with Capstone Record Metadata and Reclaim EC2 Disk Space (2026-11-09)
+
+**Context:**
+1. Client noted that the Admin Dashboard bar chart was misrepresenting capstone year data. The controller was querying `YEAR(created_at)` instead of the capstone's recorded `year` metadata, resulting in seeded capstones (2023: 18, 2024: 12, 2025: 1) clumping under 2026. The client explicitly requested that the bar chart reflect only the distinct recorded capstone years present in repository records, matching the Capstone Library filter.
+2. PDF uploads failed with 'Document storage is temporarily unavailable. Contact the administrator.' because EC2 disk usage reached 95% (only 1.7 GB available), triggering `PdfEncryptorService`'s 2.0 GiB minimum reserve threshold. Multiple historical deployment snapshots had redundantly cloned the entire encrypted storage directory (`shared-storage-app`), consuming 13.6 GB.
+3. User `cjjas127@gmail.com` (Jamaica Rhea Bautista) had `role_id = 3` (Student) instead of `4` (Faculty), causing the Adviser Dashboard to not load.
+
+**Decision:**
+1. Updated `AdminDashboardController::uploadYearSeries` to group by `capstones.year` ordered ascending where `year IS NOT NULL`, returning only actual recorded years (`[{year: 2023, count: 18}, {year: 2024, count: 12}, {year: 2025, count: 1}]`). Updated `AdminDashboard.jsx` labels and tooltips from 'Capstones by Upload Year' to 'Capstones by Year'.
+2. Safely removed the 4 duplicate backup storage copies in `/var/backups/acadex/` while preserving the live persistent shared storage (`/srv/acadex-staging/shared/storage`) and current database dumps. Set `MIN_FREE_STORAGE_BYTES=1073741824` in `laravel.env`. Recovered ~11 GB of disk space (disk usage dropped to 65%).
+3. Updated `cjjas127@gmail.com` to `role_id = 4` (`faculty`) in MySQL.
+4. Deployed release `acadex-20261109-7933e7f` to EC2, switched Apache and systemd services (`acadex-queue`, `acadex-scheduler`, `acadex-ocr`), and verified live.

@@ -1045,3 +1045,14 @@ four resumable-transfer routes and hourly schedule are registered. Production
 login, role actions, uploads and real document workflows were not replayed; the
 client had already tested feature workflows locally. See the
 [production release record](handoff/PRODUCTION_RELEASE_2026-11-07.md).
+
+
+## 2026-11-09 — Production release of UI refinement, modular extraction, and disk space remediation
+
+Deployed unified release `7933e7f` to production (`https://veload.site`).
+
+Key resolutions:
+1. **EC2 Storage Exhaustion Remediated:** Pruned 13.6 GB of redundant legacy snapshot copies of encrypted storage from `/var/backups/acadex/` while preserving the live persistent storage (`/srv/acadex-staging/shared/storage`) and active database dumps. Available disk space increased from 1.7 GB (95% full) to 10 GB (65% used). Added `MIN_FREE_STORAGE_BYTES=1073741824` to `laravel.env` to prevent spurious storage locks.
+2. **Admin Dashboard Capstones by Year Chart Fixed:** Aligned `AdminDashboardController::uploadYearSeries` and `AdminDashboard.jsx` to group by the capstone record's recorded `year` metadata instead of upload date (`YEAR(created_at)`). The bar chart now displays the exact repository years (2023: 18, 2024: 12, 2025: 1) matching the Capstone Library filter.
+3. **Faculty Account Role Corrected:** Promoted `cjjas127@gmail.com` (Jamaica Rhea Bautista) from student (`role_id = 3`) to faculty (`role_id = 4`), allowing immediate access to the Faculty Adviser Dashboard.
+4. **All System Services Unified:** Updated Apache virtualhosts and systemd service units (`acadex-queue.service`, `acadex-scheduler.service`, `acadex-ocr.service`) to run from the active release `/srv/acadex-staging/releases/acadex-20261109-7933e7f/EduArchive-Backend-Laravel`. All 5 services are active and verified healthy.
