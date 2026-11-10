@@ -58,18 +58,34 @@ class ChatbotController extends Controller
         $validated = $request->validate([
             'message'                        => 'required|string|max:2000',
             'capstone_id'                    => 'nullable|integer|exists:capstones,id',
+            'mode'                           => 'nullable|string|in:smart,pdf_only,general',
+            'action'                         => 'nullable|string|in:summary,gaps,suggested_questions,similar,compare',
+            'compare_capstone_id'            => 'nullable|integer|exists:capstones,id',
             'selected_adviser_id'            => 'nullable|integer|exists:users,id',
             'conversation_history'           => 'nullable|array|max:20',
             'conversation_history.*.role'    => 'required|string|in:user,assistant',
             'conversation_history.*.content' => 'required|string|max:4000',
         ]);
 
+        $mode   = $validated['mode'] ?? 'smart';
+        $action = $validated['action'] ?? null;
+
+        // If PDF Only mode requested without a capstone, return guidance and revert to smart mode
+        if ($mode === 'pdf_only' && empty($validated['capstone_id'])) {
+            return $this->buildResponse([
+                'reply'               => "No capstone PDF is currently open. PDF Only Mode requires an open document.\n\nI have switched back to **Smart Mode** to assist you with capstone research and topics.",
+                'suggested_capstones' => [],
+                'provider'            => 'local',
+                'mode'                => 'smart',
+            ], 'mode_guidance', 'smart');
+        }
+
         // ── 2. Role from authenticated server-side session (never from message) ──
         $user = $request->user();
         $role = $this->resolveRole($user);
         $msg  = trim($validated['message']);
         if ($role !== 'admin' && preg_match('/never\s+logged\s+in|most\s+active\s+users?/i', $msg)) {
-            return $this->buildResponse($this->responseSvc->accessDenied('Account activity is administrator-only.'), 'access_denied');
+            return $this->buildResponse($this->responseSvc->accessDenied('Account activity is administrator-only.'), 'access_denied', $mode);
         }
 
 
@@ -83,7 +99,8 @@ class ChatbotController extends Controller
                 $this->responseSvc->accessDenied(
                     $this->permSvc->getDeniedMessage($intent, $role)
                 ),
-                $intent
+                $intent,
+                $mode
             );
         }
 
@@ -93,9 +110,17 @@ class ChatbotController extends Controller
             $openCapstone = $this->querySvc->findById($role, (int) $validated['capstone_id']);
         }
 
+        $compareCapstone = null;
+        if (!empty($validated['compare_capstone_id'])) {
+            $compareCapstone = $this->querySvc->findById($role, (int) $validated['compare_capstone_id']);
+        }
+
         // ── 6. Handle intent → query DB → format deterministic baseline ─────────
         try {
-            $result = $this->handleIntent($intent, $msg, $role, $filters, $openCapstone, $user, $validated['selected_adviser_id'] ?? null);
+            $result = $this->handleIntent(
+                $intent, $msg, $role, $filters, $openCapstone, $user,
+                $validated['selected_adviser_id'] ?? null, $mode, $action, $compareCapstone
+            );
         } catch (\Throwable $e) {
             Log::error('Chatbot DB error', [
                 'role'   => $role,
@@ -103,13 +128,13 @@ class ChatbotController extends Controller
                 'error'  => $e->getMessage(),
                 'trace'  => $e->getTraceAsString(),
             ]);
-            return $this->buildResponse($this->responseSvc->dbError(), $intent);
+            return $this->buildResponse($this->responseSvc->dbError(), $intent, $mode);
         }
 
         // Preserve interactive adviser-selection button prompt without AI rewriting
         if (!empty($result['faculty_list'])) {
             $result['provider'] = 'local';
-            return $this->buildResponse($result, $intent);
+            return $this->buildResponse($result, $intent, $mode);
         }
 
         // ── 7. AI generation (Groq primary → Gemini fallback → Local fallback) ──
@@ -123,25 +148,31 @@ class ChatbotController extends Controller
             $searchResults = collect();
         }
 
+        // In General AI mode, we do not constrain the AI with the open capstone
+        $capstoneForAi = ($mode === 'general') ? null : $openCapstone;
+
         $aiResult = $this->aiSvc->generateResponse(
             $msg,
             $validated['conversation_history'] ?? [],
-            $openCapstone,
+            $capstoneForAi,
             $searchResults,
             $role,
             $user,
-            $result['reply'] ?? ''
+            $result['reply'] ?? '',
+            $mode,
+            $action,
+            $compareCapstone
         );
 
         if ($aiResult !== null) {
             if (empty($aiResult['suggested_capstones']) && !empty($result['suggested_capstones'])) {
                 $aiResult['suggested_capstones'] = $result['suggested_capstones'];
             }
-            return $this->buildResponse($aiResult, $intent);
+            return $this->buildResponse($aiResult, $intent, $mode);
         }
 
         $result['provider'] = 'local';
-        return $this->buildResponse($result, $intent);
+        return $this->buildResponse($result, $intent, $mode);
     }
 
     // ── Intent dispatcher ──────────────────────────────────────────────────────
@@ -153,10 +184,13 @@ class ChatbotController extends Controller
         array  $filters,
         ?Capstone $openCapstone,
         $user = null,
-        ?int $selectedAdviserId = null
+        ?int $selectedAdviserId = null,
+        string $mode = 'smart',
+        ?string $action = null,
+        ?Capstone $compareCapstone = null
     ): array {
-        // If a capstone is open and the user is asking about it specifically
-        if ($openCapstone && $this->isAskingAboutOpenCapstone($intent, $msg)) {
+        // In General AI mode, we do not divert to open capstone details unless explicitly asked
+        if ($mode !== 'general' && $openCapstone && $this->isAskingAboutOpenCapstone($intent, $msg)) {
             return $this->responseSvc->formatCapstoneDetails($openCapstone);
         }
 
@@ -499,18 +533,23 @@ class ChatbotController extends Controller
     /**
      * Build the final JSON response in the standard AcadeX API format.
      */
-    private function buildResponse(array $data, string $intent): JsonResponse
+    private function buildResponse(array $data, string $intent, string $mode = 'smart'): JsonResponse
     {
         $payload = [
             'reply'               => $data['reply']               ?? '',
             'suggested_capstones' => $data['suggested_capstones'] ?? [],
             'intent'              => $intent,
             'provider'            => $data['provider']            ?? 'local',
+            'mode'                => $data['mode']                ?? $mode,
         ];
 
         // Pass faculty_list through when present (adviser selection flow)
         if (!empty($data['faculty_list'])) {
             $payload['faculty_list'] = $data['faculty_list'];
+        }
+
+        if (!empty($data['references'])) {
+            $payload['references'] = $data['references'];
         }
 
         return $this->successResponse($payload, 'Chatbot response generated.');

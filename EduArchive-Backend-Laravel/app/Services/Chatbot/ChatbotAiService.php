@@ -36,7 +36,10 @@ class ChatbotAiService
         Collection $searchResults,
         string $role,
         ?User $user = null,
-        string $referenceContext = ''
+        string $referenceContext = '',
+        string $mode = 'smart',
+        ?string $action = null,
+        ?Capstone $compareCapstone = null
     ): ?array {
         $groqKey   = $this->cleanKey(config('services.groq.key'));
         $geminiKey = $this->cleanKey(config('services.gemini.key'));
