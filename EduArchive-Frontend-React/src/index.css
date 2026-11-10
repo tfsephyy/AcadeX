@@ -1403,6 +1403,80 @@ input[type="password"]::-ms-clear {
   background: rgba(46, 125, 50, 0.15);
 }
 
+/* ── Research Assistant Quick Tools ─────────────────────────── */
+.chatbot-quick-tools {
+  display: flex;
+  gap: 0.35rem;
+  padding: 0.4rem 0.6rem;
+  background: var(--chat-bot-bubble);
+  border-bottom: 1px solid var(--chat-border);
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+.chatbot-quick-tools::-webkit-scrollbar {
+  display: none;
+}
+
+.chatbot-quick-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.25rem 0.6rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--color-text);
+  background: var(--color-surface);
+  border: 1px solid var(--chat-border);
+  border-radius: 0.45rem;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+.chatbot-quick-btn:hover {
+  background: rgba(91, 190, 99, 0.12);
+  border-color: rgba(91, 190, 99, 0.4);
+  color: #2e7d32;
+  transform: translateY(-1px);
+}
+
+/* ── Dynamic Suggested Questions Chips ──────────────────────── */
+.chatbot-suggested-chips {
+  display: flex;
+  gap: 0.35rem;
+  padding: 0.4rem 0.6rem;
+  background: var(--color-surface);
+  border-top: 1px solid var(--chat-border);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.chatbot-suggested-chips::-webkit-scrollbar {
+  display: none;
+}
+
+.chatbot-suggested-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.25rem 0.6rem;
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: var(--color-text-muted);
+  background: var(--chat-bot-bubble);
+  border: 1px solid var(--chat-border);
+  border-radius: 9999px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+.chatbot-suggested-chip:hover {
+  color: var(--color-text);
+  background: rgba(91, 190, 99, 0.1);
+  border-color: rgba(91, 190, 99, 0.35);
+  transform: translateY(-1px);
+}
+
 /* ── Chat Messages Area ──────────────────────────────────────── */
 .chatbot-messages {
   flex: 1;

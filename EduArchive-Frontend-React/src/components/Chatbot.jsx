@@ -5,7 +5,7 @@ import { useAuth } from '../context/useAuth';
 import { useChatbotContext } from '../context/useChatbotContext';
 import api from '../api/axios';
 import { inlineMarkdown } from './inlineMarkdown';
-import { getAvailableModes } from './chatbotHelpers';
+import { getAvailableModes, generateSuggestedQuestions } from './chatbotHelpers';
 import { parseCitations } from './citationParser';
 
 // ─── Simple markdown renderer ─────────────────────────────────────────────────
@@ -273,6 +273,7 @@ export default function Chatbot() {
     const { activeCapstone, capstoneContext, mode, setMode, scrollToPdfPage } = useChatbotContext();
     const currentCapstone = activeCapstone || capstoneContext;
     const availableModes = getAvailableModes(currentCapstone);
+    const suggestedQuestions = generateSuggestedQuestions(currentCapstone);
     const navigate = useNavigate();
     const location = useLocation();
 
@@ -630,6 +631,44 @@ export default function Chatbot() {
                         </div>
                     )}
 
+                    {/* Research Assistant Quick Tools (when PDF context active) */}
+                    {currentCapstone?.id && (
+                        <div className="chatbot-quick-tools" role="toolbar" aria-label="Research Assistant Tools">
+                            <button
+                                type="button"
+                                className="chatbot-quick-btn"
+                                onClick={() => sendMessage('Summarize this capstone', { action: 'summary' })}
+                                title="Generate academic summary of this capstone"
+                            >
+                                📑 AI Summary
+                            </button>
+                            <button
+                                type="button"
+                                className="chatbot-quick-btn"
+                                onClick={() => sendMessage('What are the research gaps and documented limitations of this capstone?', { action: 'gaps' })}
+                                title="Identify research gaps and limitations"
+                            >
+                                🔍 Research Gaps
+                            </button>
+                            <button
+                                type="button"
+                                className="chatbot-quick-btn"
+                                onClick={() => sendMessage('Find similar capstones in the archive', { action: 'similar' })}
+                                title="Find related capstones in the repository"
+                            >
+                                🔗 Similar Research
+                            </button>
+                            <button
+                                type="button"
+                                className="chatbot-quick-btn"
+                                onClick={() => sendMessage('What methodology and technologies were used in this study?')}
+                                title="Ask about methodology and technologies"
+                            >
+                                🔬 Methodology
+                            </button>
+                        </div>
+                    )}
+
                     {/* Messages */}
                     <div className="chatbot-messages" id="chatbot-messages">
                         {messages.length === 0 ? (
@@ -764,6 +803,23 @@ export default function Chatbot() {
                                 onAsk={(q) => sendMessage(q)}
                                 filter={input}
                             />
+                        </div>
+                    )}
+
+                    {/* Suggested Question Chips (when not in FAQ drawer) */}
+                    {!showFaqDrawer && suggestedQuestions.length > 0 && (
+                        <div className="chatbot-suggested-chips" role="group" aria-label="Suggested Questions">
+                            {suggestedQuestions.slice(0, 4).map((q, idx) => (
+                                <button
+                                    key={idx}
+                                    type="button"
+                                    className="chatbot-suggested-chip"
+                                    onClick={() => sendMessage(q)}
+                                    title={q}
+                                >
+                                    💬 {q}
+                                </button>
+                            ))}
                         </div>
                     )}
 
