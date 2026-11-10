@@ -1233,6 +1233,128 @@ input[type="password"]::-ms-clear {
   background: var(--chat-bot-bubble);
 }
 
+/* ── Chatbot Mode Switcher ───────────────────────────────────── */
+.chatbot-mode-bar {
+  display: flex;
+  background: var(--chat-bot-bubble);
+  border-bottom: 1px solid var(--chat-border);
+  padding: 0.35rem 0.6rem;
+  gap: 0.35rem;
+  flex-shrink: 0;
+}
+
+.chatbot-mode-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  padding: 0.32rem 0.5rem;
+  border-radius: 0.45rem;
+  font-size: 0.73rem;
+  font-weight: 500;
+  color: var(--color-text-muted);
+  background: transparent;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.chatbot-mode-btn:hover:not(:disabled) {
+  color: var(--color-text);
+  background: rgba(91, 190, 99, 0.08);
+}
+
+.chatbot-mode-btn.active {
+  background: var(--color-surface);
+  color: #5BBE63;
+  font-weight: 600;
+  border-color: var(--chat-border);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+[data-theme="light"] .chatbot-mode-btn.active {
+  color: #2e7d32;
+  border-color: rgba(76, 175, 80, 0.3);
+}
+
+.chatbot-mode-btn.disabled,
+.chatbot-mode-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  pointer-events: auto;
+}
+
+.chatbot-mode-lock {
+  font-size: 0.65rem;
+  margin-left: 0.1rem;
+}
+
+/* ── Active Document Context Banner ─────────────────────────── */
+.chatbot-active-doc-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.45rem 0.85rem;
+  background: rgba(91, 190, 99, 0.08);
+  border-bottom: 1px solid var(--chat-border);
+  font-size: 0.75rem;
+  color: var(--color-text);
+  flex-shrink: 0;
+  animation: chatbot-slide-up 0.2s ease-out;
+}
+
+.chatbot-active-doc-icon {
+  width: 1.05rem;
+  height: 1.05rem;
+  color: #5BBE63;
+  flex-shrink: 0;
+}
+
+.chatbot-active-doc-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.chatbot-active-doc-prefix {
+  font-weight: 600;
+  color: var(--color-text-muted);
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  flex-shrink: 0;
+}
+
+.chatbot-active-doc-title {
+  font-weight: 600;
+  color: var(--color-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chatbot-active-doc-badge {
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 0.15rem 0.4rem;
+  border-radius: 9999px;
+  background: rgba(91, 190, 99, 0.18);
+  color: #5BBE63;
+  letter-spacing: 0.04em;
+  flex-shrink: 0;
+}
+
+[data-theme="light"] .chatbot-active-doc-badge {
+  color: #2e7d32;
+  background: rgba(46, 125, 50, 0.15);
+}
+
 /* ── Chat Messages Area ──────────────────────────────────────── */
 .chatbot-messages {
   flex: 1;

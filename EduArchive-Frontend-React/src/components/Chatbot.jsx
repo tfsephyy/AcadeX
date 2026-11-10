@@ -5,6 +5,7 @@ import { useAuth } from '../context/useAuth';
 import { useChatbotContext } from '../context/useChatbotContext';
 import api from '../api/axios';
 import { inlineMarkdown } from './inlineMarkdown';
+import { getAvailableModes } from './chatbotHelpers';
 
 // ─── Simple markdown renderer ─────────────────────────────────────────────────
 // Converts **bold**, *italic*, `code`, bullet lists, and numbered lists
@@ -265,7 +266,9 @@ function FaqPanel({ role, onAsk, filter }) {
 // ─── Chatbot Component ────────────────────────────────────────────────────────
 export default function Chatbot() {
     const { user } = useAuth();
-    const { capstoneContext } = useChatbotContext();
+    const { activeCapstone, capstoneContext, mode, setMode } = useChatbotContext();
+    const currentCapstone = activeCapstone || capstoneContext;
+    const availableModes = getAvailableModes(currentCapstone);
     const navigate = useNavigate();
     const location = useLocation();
 
@@ -444,11 +447,12 @@ export default function Chatbot() {
         try {
             const payload = {
                 message: text,
+                mode: mode || 'smart',
                 conversation_history: buildHistory([...messages, userMsg]),
                 ...extraPayload,
             };
-            if (capstoneContext?.id) {
-                payload.capstone_id = capstoneContext.id;
+            if (currentCapstone?.id) {
+                payload.capstone_id = currentCapstone.id;
             }
 
             const res = await api.post('/chatbot/message', payload);
@@ -587,7 +591,40 @@ export default function Chatbot() {
                         </button>
                     </div>
 
+                    {/* AI Mode Selector Segmented Bar */}
+                    <div className="chatbot-mode-bar" role="tablist" aria-label="AI Mode Selector">
+                        {availableModes.map((m) => (
+                            <button
+                                key={m.id}
+                                role="tab"
+                                aria-selected={mode === m.id}
+                                aria-disabled={m.disabled}
+                                className={`chatbot-mode-btn ${mode === m.id ? 'active' : ''} ${m.disabled ? 'disabled' : ''}`}
+                                onClick={() => {
+                                    if (!m.disabled) setMode(m.id, true);
+                                }}
+                                title={m.disabled ? m.disabledReason : m.description}
+                                disabled={m.disabled}
+                            >
+                                <span className="chatbot-mode-label">{m.label}</span>
+                                {m.disabled && <span className="chatbot-mode-lock" aria-hidden="true">🔒</span>}
+                            </button>
+                        ))}
+                    </div>
 
+                    {/* Active Document Context Banner */}
+                    {currentCapstone?.title && (
+                        <div className="chatbot-active-doc-banner">
+                            <HiOutlineBookOpen className="chatbot-active-doc-icon" aria-hidden="true" />
+                            <div className="chatbot-active-doc-text">
+                                <span className="chatbot-active-doc-prefix">Active PDF:</span>
+                                <span className="chatbot-active-doc-title" title={currentCapstone.title}>
+                                    {currentCapstone.title}
+                                </span>
+                            </div>
+                            <span className="chatbot-active-doc-badge">PDF Context</span>
+                        </div>
+                    )}
 
                     {/* Messages */}
                     <div className="chatbot-messages" id="chatbot-messages">
@@ -595,7 +632,7 @@ export default function Chatbot() {
                             /* ── FAQ Panel replaces old empty/chip state ── */
                             <FaqPanel
                                 role={currentRole}
-                                capstoneContext={capstoneContext}
+                                capstoneContext={currentCapstone}
                                 onAsk={(q) => sendMessage(q)}
                                 filter={input}
                             />
