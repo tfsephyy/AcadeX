@@ -189,9 +189,36 @@ class ChatbotController extends Controller
         ?string $action = null,
         ?Capstone $compareCapstone = null
     ): array {
-        // In General AI mode, we do not divert to open capstone details unless explicitly asked
-        if ($mode !== 'general' && $openCapstone && $this->isAskingAboutOpenCapstone($intent, $msg)) {
-            return $this->responseSvc->formatCapstoneDetails($openCapstone);
+        // 1. Explicit summary action
+        if ($action === 'summary' && $openCapstone) {
+            return $this->responseSvc->formatStructuredSummary($openCapstone);
+        }
+
+        // 2. PDF Only Mode: Grounded strictly in active document
+        if ($mode === 'pdf_only' && $openCapstone) {
+            if ($action === 'summary' || preg_match('/\bsummariz(e|y)\b/i', $msg)) {
+                return $this->responseSvc->formatStructuredSummary($openCapstone);
+            }
+            return $this->responseSvc->formatDocumentAnswer($openCapstone, $msg, 'pdf_only');
+        }
+
+        // 3. General AI Mode: Academic & technical knowledge without document restrictions
+        if ($mode === 'general') {
+            return $this->responseSvc->formatGeneralKnowledge($msg);
+        }
+
+        // 4. Smart Mode: Document-first when asking about open capstone or matching document text
+        if ($openCapstone) {
+            if ($this->isAskingAboutOpenCapstone($intent, $msg)) {
+                return $this->responseSvc->formatCapstoneDetails($openCapstone);
+            }
+            if (!empty($openCapstone->pdf_text)) {
+                $retriever = app(\App\Services\Chatbot\PdfPassageRetriever::class);
+                $ranked = $retriever->retrieveRankedPages($openCapstone->pdf_text, $msg, 1);
+                if (!empty($ranked) && $ranked[0]['score'] >= 1.5) {
+                    return $this->responseSvc->formatDocumentAnswer($openCapstone, $msg, 'smart');
+                }
+            }
         }
 
         // If adviser was selected via faculty button, always route to student research handler

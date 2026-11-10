@@ -1145,4 +1145,157 @@ class ChatbotResponseService
             ]],
         ];
     }
+
+    /**
+     * Formats a structured academic summary of an open capstone document.
+     *
+     * @return array{reply: string, suggested_capstones: array}
+     */
+    public function formatStructuredSummary(Capstone $capstone): array
+    {
+        $retriever = app(PdfPassageRetriever::class);
+        $pages = $retriever->extractPages($capstone->pdf_text ?? '');
+
+        // Search for methodology passage
+        $methodPage = 1;
+        $methodExcerpt = null;
+        $findingsPage = 1;
+        $findingsExcerpt = null;
+
+        foreach ($pages as $p) {
+            $lower = mb_strtolower($p['text']);
+            if (!$methodExcerpt && (str_contains($lower, 'methodology') || str_contains($lower, 'hardware') || str_contains($lower, 'architecture') || str_contains($lower, 'framework'))) {
+                $methodPage = $p['page'];
+                $methodExcerpt = trim(mb_substr($p['text'], 0, 320));
+            }
+            if (!$findingsExcerpt && (str_contains($lower, 'result') || str_contains($lower, 'finding') || str_contains($lower, 'evaluation') || str_contains($lower, 'accuracy'))) {
+                $findingsPage = $p['page'];
+                $findingsExcerpt = trim(mb_substr($p['text'], 0, 320));
+            }
+        }
+
+        $abstract = trim($capstone->abstract ?? 'No abstract provided.');
+
+        $lines = [
+            "### 📑 Academic Summary: {$capstone->title}",
+            "",
+            "**Author(s):** {$capstone->author} &nbsp;|&nbsp; **Year:** {$capstone->year} &nbsp;|&nbsp; **Program:** " . ($capstone->program ?? 'N/A'),
+            "",
+            "#### 🎯 Objectives",
+            "> " . $abstract,
+            "",
+            "#### 🔬 Methodology",
+        ];
+
+        if ($methodExcerpt) {
+            $lines[] = "> " . $methodExcerpt . " [PAGE:{$methodPage}]";
+        } else {
+            $lines[] = "The specific methodology details were summarized in the abstract. Citing page references requires document text indexing.";
+        }
+
+        $lines[] = "";
+        $lines[] = "#### 💻 Technologies Used";
+        $kw = $capstone->relationLoaded('keywords') ? $capstone->keywords->pluck('name')->join(', ') : '';
+        $tech = $kw ?: ($capstone->category ?? 'Research systems');
+        $lines[] = "• **Category & Stack:** " . $tech;
+
+        $lines[] = "";
+        $lines[] = "#### 📊 Major Findings & Results";
+        if ($findingsExcerpt) {
+            $lines[] = "> " . $findingsExcerpt . " [PAGE:{$findingsPage}]";
+        } else {
+            $lines[] = "• The system completed development and passed project requirements.";
+        }
+
+        return [
+            'reply' => implode("\n", $lines),
+            'suggested_capstones' => [[
+                'id'      => $capstone->id,
+                'title'   => $capstone->title,
+                'author'  => $capstone->author,
+                'year'    => $capstone->year,
+                'program' => $capstone->program ?? '',
+            ]],
+        ];
+    }
+
+    /**
+     * Answers a document-specific question using extracted PDF passages.
+     *
+     * @return array{reply: string, suggested_capstones: array}
+     */
+    public function formatDocumentAnswer(Capstone $capstone, string $query, string $mode = 'pdf_only'): array
+    {
+        $retriever = app(PdfPassageRetriever::class);
+        $ranked = $retriever->retrieveRankedPages($capstone->pdf_text ?? '', $query, 2);
+
+        if (!empty($ranked) && $ranked[0]['score'] > 0) {
+            $top = $ranked[0];
+            $page = $top['page'];
+            $excerpt = trim(mb_substr($top['text'], 0, 450));
+
+            $reply = "Based on the document **{$capstone->title}**:\n\n> {$excerpt}\n\n📄 **Source Citation:** [PAGE:{$page}]";
+            return [
+                'reply' => $reply,
+                'suggested_capstones' => [[
+                    'id'      => $capstone->id,
+                    'title'   => $capstone->title,
+                    'author'  => $capstone->author,
+                    'year'    => $capstone->year,
+                    'program' => $capstone->program ?? '',
+                ]],
+            ];
+        }
+
+        if ($mode === 'pdf_only') {
+            return [
+                'reply' => "I searched the active document **{$capstone->title}**, but could not find information answering: \"{$query}\".\n\nIn **PDF Only Mode**, I only provide facts explicitly documented in the active PDF.",
+                'suggested_capstones' => [],
+            ];
+        }
+
+        return [
+            'reply' => "I could not find specific passages in **{$capstone->title}** matching \"{$query}\". Try asking about its objectives, methodology, or results.",
+            'suggested_capstones' => [],
+        ];
+    }
+
+    /**
+     * Provides general technology, programming, and research knowledge replies.
+     *
+     * @return array{reply: string, suggested_capstones: array}
+     */
+    public function formatGeneralKnowledge(string $query): array
+    {
+        $q = mb_strtolower($query);
+
+        if (str_contains($q, 'react')) {
+            $reply = "**React.js** is an open-source JavaScript library developed by Meta for building user interfaces based on components.\n\n"
+                   . "• **Component-Based Architecture:** Encapsulates state and UI logic into reusable elements.\n"
+                   . "• **Virtual DOM:** Optimizes DOM updates by reconciling only the differences in the tree.\n"
+                   . "• **Declarative:** Makes UI state predictable and easier to debug.";
+        } elseif (str_contains($q, 'laravel')) {
+            $reply = "**Laravel** is an open-source PHP web framework with expressive, elegant syntax following the MVC (Model-View-Controller) architecture.\n\n"
+                   . "• **Eloquent ORM:** An active-record object-relational mapper for database management.\n"
+                   . "• **Routing & Middleware:** Structured request handling, authentication, and CSRF protection.\n"
+                   . "• **Security:** Built-in SQL injection guards, password hashing, and encrypted cookies.";
+        } elseif (str_contains($q, 'machine learning') || str_contains($q, 'ai') || str_contains($q, 'iot')) {
+            $reply = "**Technical Overview:**\n\n"
+                   . "In academic research and capstone development, computing paradigms are selected based on problem requirements:\n"
+                   . "• **IoT (Internet of Things):** Employs sensor nodes (e.g. ESP32, Arduino) collecting physical telemetry over MQTT/HTTP.\n"
+                   . "• **Machine Learning:** Employs trained classification or regression models (e.g. Random Forest, CNNs) for automated pattern recognition.";
+        } else {
+            $reply = "**Academic Research Assistant:**\n\n"
+                   . "I can help you explore technology concepts, programming languages, and research methodologies.\n\n"
+                   . "You asked: *\"{$query}\"*\n\n"
+                   . "• Ask specific programming or architectural questions.\n"
+                   . "• Open any capstone PDF to switch to document-grounded research assistance.\n"
+                   . "• Use **Smart Mode** to discover relevant capstone projects from the repository.";
+        }
+
+        return [
+            'reply' => $reply,
+            'suggested_capstones' => [],
+        ];
+    }
 }
