@@ -21,12 +21,19 @@ Resolved the Adviser filter limitation where the dropdown only showed faculty me
   - `VisitorCapstoneController`: `advisers()` and `index()`.
   - `PublishedCapstoneController`: `advisers()` and `index()`.
   - `CapstoneLibrary.jsx`: loads filter options via `getCapstoneFilterOptions()`.
-- **Comprehensive Verification:**
+- **Comprehensive Verification & Production Deployment (November 11, 2026):**
   - Added `tests/Feature/AdviserFilterTest.php` with 6 feature tests covering registered faculty, manual advisers, deduplication, combined filters (year, category, search), and visitor access scoping.
   - Full backend test suite: **197 guarded disposable-MySQL tests / 1,667 assertions passed** (0 failures, 0 errors, 4 skipped).
   - Full frontend test suite: **80 tests passed** (0 failures).
   - Frontend production build: **855 modules transformed, built cleanly in 12.21s**.
   - Frontend ESLint: **0 errors**.
+  - **Deployed to AWS Production (`https://veload.site`):**
+    - Created verified pre-deployment backup: `/var/backups/acadex/backup-20261111-pre-ai-adviser-deployment` (`database.sql.gz`, `laravel.env`, Apache configurations, systemd drop-ins).
+    - Extracted release to `/srv/acadex-staging/releases/acadex-20261111-7e53407/EduArchive-Backend-Laravel` and `/srv/acadex-staging/frontend-releases/acadex-20261111-7e53407/dist`.
+    - Preserved production `APP_KEY`, `.env` (`/srv/acadex-staging/shared/config/laravel.env`), and encrypted storage (`/srv/acadex-staging/shared/storage`).
+    - Applied atomic Apache and systemd service switch (`acadex-queue`, `acadex-scheduler`, `acadex-ocr`).
+    - Verified live HTTP 200 on `https://veload.site/`, 200 on entry assets `index-B6I22GkV.js` and `index-CSqW-C7A.css`, 401 unauthenticated response on `/api/v1/user`, and 200 on OCR `/health`.
+    - See full report: [`docs/handoff/PRODUCTION_RELEASE_2026-11-11_AI_CHATBOT_ADVISER_FIX.md`](handoff/PRODUCTION_RELEASE_2026-11-11_AI_CHATBOT_ADVISER_FIX.md).
 
 ## 2026-11-10 - Comprehensive AI Chatbot Audit, Problem Identification, and Quality Improvements
 
