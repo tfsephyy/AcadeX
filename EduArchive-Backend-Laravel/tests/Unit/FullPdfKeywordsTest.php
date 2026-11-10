@@ -34,6 +34,13 @@ class FullPdfKeywordsTest extends TestCase
 
     public function test_middle_image_page_uses_native_ocr_and_missing_coverage_is_disclosed(): void
     {
+        $finder = new \Symfony\Component\Process\ExecutableFinder();
+        $gs = $finder->find('gs') ?: $finder->find('gswin64c') ?: (glob('C:/Program Files/gs/gs*/bin/gswin64c.exe')[0] ?? null);
+        $tess = $finder->find('tesseract') ?: (is_file('C:/Program Files/Tesseract-OCR/tesseract.exe') ? 'C:/Program Files/Tesseract-OCR/tesseract.exe' : null);
+        if (!$gs || !$tess) {
+            self::markTestSkipped('Native OCR binaries (Ghostscript/Tesseract) are unavailable on this host.');
+        }
+
         $path = tempnam(sys_get_temp_dir(), 'acadex-middle-scan-');
         try {
             MetadataPdfFixture::write($path, 0, 40, null, [20 => []]);
@@ -66,6 +73,13 @@ class FullPdfKeywordsTest extends TestCase
 
     public function test_unreadable_middle_page_keeps_other_fields_and_warns_about_incomplete_keywords(): void
     {
+        $finder = new \Symfony\Component\Process\ExecutableFinder();
+        $gs = $finder->find('gs') ?: $finder->find('gswin64c') ?: (glob('C:/Program Files/gs/gs*/bin/gswin64c.exe')[0] ?? null);
+        $tess = $finder->find('tesseract') ?: (is_file('C:/Program Files/Tesseract-OCR/tesseract.exe') ? 'C:/Program Files/Tesseract-OCR/tesseract.exe' : null);
+        if (!$gs || !$tess) {
+            self::markTestSkipped('Native OCR binaries (Ghostscript/Tesseract) are unavailable on this host.');
+        }
+
         $path = tempnam(sys_get_temp_dir(), 'acadex-incomplete-keywords-');
         try {
             MetadataPdfFixture::write($path, 0, 40, 'Alex Example', [20 => []]);
