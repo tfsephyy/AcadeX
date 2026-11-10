@@ -316,6 +316,16 @@ Only include information supported by the document and cite pages [PAGE:n] where
 SUMMARY_RULES;
         }
 
+        if ($action === 'gaps') {
+            $modeRules .= "\n\n" . <<<GAPS_RULES
+ACTION INSTRUCTION: RESEARCH GAPS & IMPROVEMENTS.
+You must strictly separate:
+1. **Documented Limitations (from PDF [PAGE:n]):** Documented boundaries, constraints, or sample limits found in the text.
+2. **AI-Suggested Future Directions:** Potential research improvements or extensions suggested by the AI.
+NEVER present speculative improvements as confirmed weaknesses of the paper.
+GAPS_RULES;
+        }
+
         return <<<PROMPT
 You are AcaBot (EduBot), the intelligent academic research assistant for AcadeX (Mindanao State University's Capstone Research Archive).
 Current user role: {$role}.

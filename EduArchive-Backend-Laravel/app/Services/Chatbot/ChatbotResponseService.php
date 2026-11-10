@@ -1298,4 +1298,59 @@ class ChatbotResponseService
             'suggested_capstones' => [],
         ];
     }
+
+    /**
+     * Identifies documented research limitations and clearly delineates AI-suggested improvements.
+     *
+     * @return array{reply: string, suggested_capstones: array}
+     */
+    public function formatResearchGaps(Capstone $capstone): array
+    {
+        $retriever = app(PdfPassageRetriever::class);
+        $pages = $retriever->extractPages($capstone->pdf_text ?? '');
+
+        $limitationExcerpt = null;
+        $limitationPage = 1;
+
+        foreach ($pages as $p) {
+            $lower = mb_strtolower($p['text']);
+            if (str_contains($lower, 'limitation') || str_contains($lower, 'scope') || str_contains($lower, 'constraint') || str_contains($lower, 'future work') || str_contains($lower, 'delimitations')) {
+                $limitationPage = $p['page'];
+                $limitationExcerpt = trim(mb_substr($p['text'], 0, 400));
+                break;
+            }
+        }
+
+        $lines = [
+            "### 🔬 Research Gaps & Improvements Analysis",
+            "**Document:** {$capstone->title} [ID:{$capstone->id}]",
+            "",
+            "#### 📌 Documented Limitations (from PDF)",
+        ];
+
+        if ($limitationExcerpt) {
+            $lines[] = "> " . $limitationExcerpt . " [PAGE:{$limitationPage}]";
+        } else {
+            $lines[] = "The author did not explicitly state specific scope boundaries or limitations in the extracted document sections.";
+        }
+
+        $lines[] = "";
+        $lines[] = "#### 💡 Suggested Future Directions & Research Opportunities";
+        $lines[] = "*(AI-generated research recommendations — not confirmed weaknesses of the author's work)*:";
+        $lines[] = "• **Dataset Diversification:** Expand sample data beyond controlled test environments to real-world edge scenarios.";
+        $lines[] = "• **Cross-Platform Scalability:** Investigate deployment across heterogeneous operating systems or cloud container environments.";
+        $lines[] = "• **Real-Time Telemetry & Alerts:** Incorporate event-driven push notifications or automated anomaly response pipelines.";
+        $lines[] = "• **Longitudinal Evaluation:** Conduct multi-month field trials to measure drift, performance degradation, and operational costs over time.";
+
+        return [
+            'reply' => implode("\n", $lines),
+            'suggested_capstones' => [[
+                'id'      => $capstone->id,
+                'title'   => $capstone->title,
+                'author'  => $capstone->author,
+                'year'    => $capstone->year,
+                'program' => $capstone->program ?? '',
+            ]],
+        ];
+    }
 }

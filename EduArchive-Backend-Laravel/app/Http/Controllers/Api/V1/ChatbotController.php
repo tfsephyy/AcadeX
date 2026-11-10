@@ -194,6 +194,11 @@ class ChatbotController extends Controller
             return $this->responseSvc->formatStructuredSummary($openCapstone);
         }
 
+        // 2. Explicit gaps action or question
+        if ($openCapstone && ($action === 'gaps' || preg_match('/\b(research\s+gap[s]?|limitation[s]?|future\s+work)\b/i', $msg))) {
+            return $this->responseSvc->formatResearchGaps($openCapstone);
+        }
+
         // 2. PDF Only Mode: Grounded strictly in active document
         if ($mode === 'pdf_only' && $openCapstone) {
             if ($action === 'summary' || preg_match('/\bsummariz(e|y)\b/i', $msg)) {
