@@ -1,4 +1,4 @@
-import { HiOutlineBookOpen, HiOutlineSearch, HiOutlineAcademicCap, HiOutlineChartBar, HiOutlineShieldCheck, HiOutlineLink, HiOutlineUserGroup } from 'react-icons/hi';
+import { HiOutlineBookOpen, HiOutlineSearch, HiOutlineAcademicCap, HiOutlineChartBar, HiOutlineShieldCheck, HiOutlineLink, HiOutlineUserGroup, HiOutlineDocumentText } from 'react-icons/hi';
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/useAuth';
@@ -6,12 +6,14 @@ import { useChatbotContext } from '../context/useChatbotContext';
 import api from '../api/axios';
 import { inlineMarkdown } from './inlineMarkdown';
 import { getAvailableModes } from './chatbotHelpers';
+import { parseCitations } from './citationParser';
 
 // ─── Simple markdown renderer ─────────────────────────────────────────────────
 // Converts **bold**, *italic*, `code`, bullet lists, and numbered lists
 // to HTML elements — no external dependency needed.
 // linkRenderer(id) → called for [LINK:id] tags to produce a clickable element.
-function renderMarkdown(text, linkRenderer) {
+// pageRenderer(page) → called for [PAGE:n] tags to produce a clickable page jump button.
+function renderMarkdown(text, linkRenderer, pageRenderer) {
     const lines = text.split('\n');
     const elements = [];
     let listItems = [];   // each entry: string (plain) or React element
@@ -34,31 +36,33 @@ function renderMarkdown(text, linkRenderer) {
         listType = null;
     };
 
-    // Parse a text fragment that may contain [LINK:N] into React nodes
-    const parseWithLinks = (raw) => {
-        const linkRx = /\[LINK:([a-z0-9-]+)\]/g;
+    // Parse a text fragment that may contain [LINK:N] or [PAGE:N] into React nodes
+    const parseWithCitations = (raw) => {
+        const tokens = parseCitations(raw);
         const parts = [];
-        let last = 0;
-        let m;
-        while ((m = linkRx.exec(raw)) !== null) {
-            if (m.index > last) {
+        for (const token of tokens) {
+            if (token.type === 'text') {
                 parts.push(
-                    <span key={`t-${key++}`} dangerouslySetInnerHTML={{ __html: inlineMarkdown(raw.slice(last, m.index)) }} />
+                    <span key={`t-${key++}`} dangerouslySetInnerHTML={{ __html: inlineMarkdown(token.content) }} />
                 );
+            } else if (token.type === 'link') {
+                if (linkRenderer) {
+                    parts.push(linkRenderer(token.id, key++));
+                } else {
+                    parts.push(<span key={`link-${key++}`}>[ID:{token.id}]</span>);
+                }
+            } else if (token.type === 'page') {
+                if (pageRenderer) {
+                    parts.push(pageRenderer(token.page, key++));
+                } else {
+                    parts.push(<span key={`page-${key++}`} className="chatbot-page-ref-badge">Page {token.page}</span>);
+                }
             }
-            const capId = m[1];
-            if (linkRenderer) parts.push(linkRenderer(capId, key++));
-            last = m.index + m[0].length;
-        }
-        if (last < raw.length) {
-            parts.push(
-                <span key={`t-${key++}`} dangerouslySetInnerHTML={{ __html: inlineMarkdown(raw.slice(last)) }} />
-            );
         }
         return parts.length === 1 ? parts[0] : <>{parts}</>;
     };
 
-    const hasLink = (s) => /\[LINK:[a-z0-9-]+\]/.test(s);
+    const hasCitation = (s) => /\[(?:LINK:[a-zA-Z0-9_-]+|PAGE:\d+)\]/i.test(s);
 
     lines.forEach((line) => {
         const ulMatch = line.match(/^[*-]\s+(.*)/);
@@ -68,14 +72,14 @@ function renderMarkdown(text, linkRenderer) {
             if (listType === 'ol') flushList();
             listType = 'ul';
             const content = ulMatch[1];
-            listItems.push(hasLink(content) && linkRenderer ? parseWithLinks(content) : content);
+            listItems.push(hasCitation(content) ? parseWithCitations(content) : content);
             return;
         }
         if (olMatch) {
             if (listType === 'ul') flushList();
             listType = 'ol';
             const content = olMatch[1];
-            listItems.push(hasLink(content) && linkRenderer ? parseWithLinks(content) : content);
+            listItems.push(hasCitation(content) ? parseWithCitations(content) : content);
             return;
         }
 
@@ -86,9 +90,9 @@ function renderMarkdown(text, linkRenderer) {
             return;
         }
 
-        // Check for [LINK:id] tags — render title as a clickable link
-        if (hasLink(line) && linkRenderer) {
-            elements.push(<p key={`p-${key++}`}>{parseWithLinks(line)}</p>);
+        // Check for [LINK:id] or [PAGE:n] tags
+        if (hasCitation(line)) {
+            elements.push(<p key={`p-${key++}`}>{parseWithCitations(line)}</p>);
             return;
         }
 
@@ -266,7 +270,7 @@ function FaqPanel({ role, onAsk, filter }) {
 // ─── Chatbot Component ────────────────────────────────────────────────────────
 export default function Chatbot() {
     const { user } = useAuth();
-    const { activeCapstone, capstoneContext, mode, setMode } = useChatbotContext();
+    const { activeCapstone, capstoneContext, mode, setMode, scrollToPdfPage } = useChatbotContext();
     const currentCapstone = activeCapstone || capstoneContext;
     const availableModes = getAvailableModes(currentCapstone);
     const navigate = useNavigate();
@@ -651,19 +655,37 @@ export default function Chatbot() {
                                     <div className="chatbot-msg-body">
                                         <div className={`chatbot-bubble ${msg.role} ${msg.isError ? 'chatbot-error' : ''}`}>
                                             {msg.role === 'bot'
-                                                ? renderMarkdown(msg.text, (capId, keyProp) => (
-                                                    <button
-                                                        key={keyProp ?? capId}
-                                                        className="chatbot-inline-link"
-                                                        onClick={() => {
-                                                            setOpen(false);
-                                                            navigate(getCapstoneRoute(capId));
-                                                        }}
-                                                        title="View capstone"
-                                                    >
-                                                        <HiOutlineLink aria-hidden="true" /> View
-                                                    </button>
-                                                ))
+                                                ? renderMarkdown(
+                                                    msg.text,
+                                                    (capId, keyProp) => (
+                                                        <button
+                                                            key={keyProp ?? capId}
+                                                            className="chatbot-inline-link"
+                                                            onClick={() => {
+                                                                setOpen(false);
+                                                                navigate(getCapstoneRoute(capId));
+                                                            }}
+                                                            title="View capstone"
+                                                        >
+                                                            <HiOutlineLink aria-hidden="true" /> View
+                                                        </button>
+                                                    ),
+                                                    (pageNum, keyProp) => (
+                                                        <button
+                                                            key={keyProp ?? `p-${pageNum}`}
+                                                            type="button"
+                                                            className="chatbot-page-ref-btn"
+                                                            onClick={() => {
+                                                                if (typeof scrollToPdfPage === 'function') {
+                                                                    scrollToPdfPage(pageNum);
+                                                                }
+                                                            }}
+                                                            title={`Jump to PDF Page ${pageNum}`}
+                                                        >
+                                                            <HiOutlineDocumentText aria-hidden="true" /> Page {pageNum}
+                                                        </button>
+                                                    )
+                                                )
                                                 : msg.text
                                             }
                                         </div>
