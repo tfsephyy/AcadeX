@@ -53,8 +53,9 @@ class PublishedCapstoneController extends Controller
         }
 
         // Filter by adviser
-        if ($request->has('adviser_id') && $request->adviser_id) {
-            $query->where('adviser_id', $request->adviser_id);
+        $adviserParam = $request->input('adviser_id') ?? $request->input('adviser_name') ?? $request->input('adviser');
+        if ($adviserParam !== null && $adviserParam !== '') {
+            app(\App\Services\AdviserMatching::class)->applyFilter($query, $adviserParam);
         }
 
         // Sort
@@ -115,14 +116,7 @@ class PublishedCapstoneController extends Controller
      */
     public function advisers(): JsonResponse
     {
-        $adviserIds = Capstone::published()
-            ->whereNotNull('adviser_id')
-            ->distinct()
-            ->pluck('adviser_id');
-
-        $advisers = User::whereIn('id', $adviserIds)
-            ->orderBy('name')
-            ->get(['id', 'name']);
+        $advisers = app(\App\Services\AdviserMatching::class)->extractOptions(Capstone::published());
 
         return $this->successResponse($advisers, 'Advisers retrieved.');
     }

@@ -39,7 +39,6 @@ class ChatbotResponseService
                 ? mb_substr($abstract, 0, 350) . '…'
                 : $abstract;
 
-            $lines[] = "---";
             $lines[] = "**{$num}. {$c->title}** [ID:{$c->id}]";
             $lines[] = "📂 **Category:** {$c->category} &nbsp;|&nbsp; 📅 **Year:** {$c->year}";
             $lines[] = "👤 **Author(s):** {$c->author}";
@@ -230,7 +229,7 @@ class ChatbotResponseService
         $lines = ["\ud83d\udcca **AcadeX Repository Statistics**\n*All values are live from the database.*\n"];
 
         // Capstone overview
-        $lines[] = "---\n**\ud83d\udcda Capstones**";
+        $lines[] = "\n**\ud83d\udcda Capstones**";
         $lines[] = "\u2022 Published: **{$stats['total_published']}**";
         $lines[] = "\u2022 Total (all statuses): **{$stats['total_all']}**";
         $lines[] = "\u2022 Pending Approval: **{$stats['pending_approval']}**";
@@ -1177,14 +1176,14 @@ class ChatbotResponseService
         $abstract = trim($capstone->abstract ?? 'No abstract provided.');
 
         $lines = [
-            "### 📑 Academic Summary: {$capstone->title}",
+            "**📑 Academic Summary: {$capstone->title}**",
             "",
             "**Author(s):** {$capstone->author} &nbsp;|&nbsp; **Year:** {$capstone->year} &nbsp;|&nbsp; **Program:** " . ($capstone->program ?? 'N/A'),
             "",
-            "#### 🎯 Objectives",
+            "**🎯 Objectives:**",
             "> " . $abstract,
             "",
-            "#### 🔬 Methodology",
+            "**🔬 Methodology:**",
         ];
 
         if ($methodExcerpt) {
@@ -1194,13 +1193,13 @@ class ChatbotResponseService
         }
 
         $lines[] = "";
-        $lines[] = "#### 💻 Technologies Used";
+        $lines[] = "**💻 Technologies Used:**";
         $kw = $capstone->relationLoaded('keywords') ? $capstone->keywords->pluck('name')->join(', ') : '';
         $tech = $kw ?: ($capstone->category ?? 'Research systems');
         $lines[] = "• **Category & Stack:** " . $tech;
 
         $lines[] = "";
-        $lines[] = "#### 📊 Major Findings & Results";
+        $lines[] = "**📊 Major Findings & Results:**";
         if ($findingsExcerpt) {
             $lines[] = "> " . $findingsExcerpt . " [PAGE:{$findingsPage}]";
         } else {
@@ -1226,13 +1225,24 @@ class ChatbotResponseService
      */
     public function formatDocumentAnswer(Capstone $capstone, string $query, string $mode = 'pdf_only'): array
     {
+        $rawText = trim($capstone->pdf_text ?? '');
+        if ($rawText === '') {
+            $msg = $mode === 'pdf_only'
+                ? "The active document **{$capstone->title}** does not have extracted text available for in-document searching yet."
+                : "The active document **{$capstone->title}** does not have indexed document text yet. Try asking about its abstract or repository metadata.";
+            return [
+                'reply' => $msg,
+                'suggested_capstones' => [],
+            ];
+        }
+
         $retriever = app(PdfPassageRetriever::class);
-        $ranked = $retriever->retrieveRankedPages($capstone->pdf_text ?? '', $query, 2);
+        $ranked = $retriever->retrieveRankedPages($rawText, $query, 2);
 
         if (!empty($ranked) && $ranked[0]['score'] > 0) {
             $top = $ranked[0];
             $page = $top['page'];
-            $excerpt = trim(mb_substr($top['text'], 0, 450));
+            $excerpt = $this->extractFocusedExcerpt($top['text'], $query, 420);
 
             $reply = "Based on the document **{$capstone->title}**:\n\n> {$excerpt}\n\n📄 **Source Citation:** [PAGE:{$page}]";
             return [
@@ -1261,6 +1271,61 @@ class ChatbotResponseService
     }
 
     /**
+     * Extracts a focused excerpt from page text centered on query terms.
+     */
+    public function extractFocusedExcerpt(string $pageText, string $query, int $maxLen = 420): string
+    {
+        $text = trim($pageText);
+        if (mb_strlen($text) <= $maxLen) {
+            return $text;
+        }
+
+        $terms = app(PdfPassageRetriever::class)->extractQueryTerms($query);
+        $bestPos = -1;
+
+        if (!empty($terms)) {
+            $lower = mb_strtolower($text);
+            foreach ($terms as $term) {
+                $pos = mb_strpos($lower, mb_strtolower($term));
+                if ($pos !== false) {
+                    $bestPos = $pos;
+                    break;
+                }
+            }
+        }
+
+        if ($bestPos === -1) {
+            return mb_substr($text, 0, $maxLen) . '…';
+        }
+
+        $half = (int) ($maxLen / 2);
+        $start = max(0, $bestPos - $half);
+
+        if ($start > 0) {
+            $spacePos = mb_strpos($text, ' ', $start);
+            if ($spacePos !== false && $spacePos < $bestPos) {
+                $start = $spacePos + 1;
+            }
+        }
+
+        $excerpt = mb_substr($text, $start, $maxLen);
+
+        if ($start + $maxLen < mb_strlen($text)) {
+            $lastSpace = mb_strrpos($excerpt, ' ');
+            if ($lastSpace !== false && $lastSpace > $maxLen * 0.7) {
+                $excerpt = mb_substr($excerpt, 0, $lastSpace);
+            }
+            $excerpt .= '…';
+        }
+
+        if ($start > 0) {
+            $excerpt = '… ' . $excerpt;
+        }
+
+        return trim($excerpt);
+    }
+
+    /**
      * Provides general technology, programming, and research knowledge replies.
      *
      * @return array{reply: string, suggested_capstones: array}
@@ -1270,25 +1335,79 @@ class ChatbotResponseService
         $q = mb_strtolower($query);
 
         if (str_contains($q, 'react')) {
-            $reply = "**React.js** is an open-source JavaScript library developed by Meta for building user interfaces based on components.\n\n"
-                   . "• **Component-Based Architecture:** Encapsulates state and UI logic into reusable elements.\n"
-                   . "• **Virtual DOM:** Optimizes DOM updates by reconciling only the differences in the tree.\n"
-                   . "• **Declarative:** Makes UI state predictable and easier to debug.";
+            $reply = "**React.js** is an open-source JavaScript library developed by Meta for building component-based user interfaces.\n\n"
+                   . "• **Component-Based Architecture:** Encapsulates state and UI logic into modular, reusable elements.\n"
+                   . "• **Virtual DOM:** Reconciles differences in memory to minimize expensive browser DOM manipulations.\n"
+                   . "• **Unidirectional Data Flow:** State flows downward through props, keeping application state predictable.";
+        } elseif (str_contains($q, 'vue')) {
+            $reply = "**Vue.js** is a progressive JavaScript framework for building user interfaces and single-page applications.\n\n"
+                   . "• **Reactivity System:** Uses JavaScript Proxies to track dependencies and automatically update the view.\n"
+                   . "• **Single-File Components (.vue):** Unifies template, script, and scoped styles in one file.\n"
+                   . "• **Flexible Adoption:** Can be embedded incrementally or scaled into a full enterprise SPA with Pinia and Vue Router.";
         } elseif (str_contains($q, 'laravel')) {
-            $reply = "**Laravel** is an open-source PHP web framework with expressive, elegant syntax following the MVC (Model-View-Controller) architecture.\n\n"
-                   . "• **Eloquent ORM:** An active-record object-relational mapper for database management.\n"
-                   . "• **Routing & Middleware:** Structured request handling, authentication, and CSRF protection.\n"
-                   . "• **Security:** Built-in SQL injection guards, password hashing, and encrypted cookies.";
-        } elseif (str_contains($q, 'machine learning') || str_contains($q, 'ai') || str_contains($q, 'iot')) {
-            $reply = "**Technical Overview:**\n\n"
-                   . "In academic research and capstone development, computing paradigms are selected based on problem requirements:\n"
-                   . "• **IoT (Internet of Things):** Employs sensor nodes (e.g. ESP32, Arduino) collecting physical telemetry over MQTT/HTTP.\n"
-                   . "• **Machine Learning:** Employs trained classification or regression models (e.g. Random Forest, CNNs) for automated pattern recognition.";
+            $reply = "**Laravel** is an open-source PHP web framework following the Model-View-Controller (MVC) architectural pattern.\n\n"
+                   . "• **Eloquent ORM:** Active-record object-relational mapping for type-safe database interactions.\n"
+                   . "• **Routing & Middleware:** Centralized HTTP request handling, authorization policies, and security headers.\n"
+                   . "• **Built-In Security:** Automated protection against SQL injection (PDO binding), Cross-Site Scripting (Blade escaping), and CSRF token verification.";
+        } elseif (str_contains($q, 'node') || str_contains($q, 'express')) {
+            $reply = "**Node.js & Express.js:**\n\n"
+                   . "• **Node.js:** A V8-powered JavaScript runtime using an asynchronous, event-driven, single-threaded event loop for high-concurrency I/O operations.\n"
+                   . "• **Express.js:** A minimalist web framework providing middleware routing, request handling, and RESTful API endpoints.\n"
+                   . "• **Common Use Cases:** Microservices, real-time WebSockets, and backend API gateways.";
+        } elseif (str_contains($q, 'python')) {
+            $reply = "**Python:**\n\n"
+                   . "A high-level, interpreted programming language emphasizing readability, dynamic typing, and comprehensive standard libraries.\n\n"
+                   . "• **Academic & Research Dominance:** Standard language for data analysis (Pandas, NumPy), machine learning (PyTorch, TensorFlow, Scikit-learn), and scientific computing.\n"
+                   . "• **Web Development:** Robust backend frameworks including Django (batteries-included) and FastAPI (high-performance asynchronous APIs).";
+        } elseif (str_contains($q, 'flutter') || str_contains($q, 'mobile')) {
+            $reply = "**Mobile Application Development:**\n\n"
+                   . "• **Cross-Platform (Flutter / React Native):** Compiles a single codebase to both iOS and Android, accelerating development cycles.\n"
+                   . "• **Flutter:** Uses Google's Dart language and Skia/Impeller rendering engine to paint native widgets directly onto the screen.\n"
+                   . "• **Native (Swift/Kotlin):** Directly leverages platform APIs, best for hardware-intensive features like Bluetooth Low Energy or complex background tasks.";
+        } elseif (str_contains($q, 'sql') || str_contains($q, 'mysql') || str_contains($q, 'database') || str_contains($q, 'normalization')) {
+            $reply = "**Database Systems & Design:**\n\n"
+                   . "• **Relational Databases (MySQL, PostgreSQL):** Organizes data into structured tables with foreign key constraints, guaranteeing ACID properties (Atomicity, Consistency, Isolation, Durability).\n"
+                   . "• **Database Normalization:** Eliminates redundancy and prevents insertion/update anomalies (1NF: atomic values; 2NF: full dependency on primary key; 3NF: transitive dependencies removed).\n"
+                   . "• **Indexing (B-Tree):** Dramatically accelerates lookup and join query execution at the cost of slight write overhead.";
+        } elseif (str_contains($q, 'mvc') || str_contains($q, 'architecture') || str_contains($q, 'microservice')) {
+            $reply = "**Software Architecture Patterns:**\n\n"
+                   . "• **MVC (Model-View-Controller):** Separates data logic (Model), UI presentation (View), and user input processing (Controller).\n"
+                   . "• **Monolith vs Microservices:** Monolithic systems bundle all modules into a unified codebase for simpler deployment, while microservices decompose systems into independent, network-communicating services for modular scaling.\n"
+                   . "• **Clean Architecture / Layered:** Separates domain entities, use cases, and external infrastructure (databases, UI) using dependency inversion.";
+        } elseif (str_contains($q, 'machine learning') || str_contains($q, 'supervised') || str_contains($q, 'accuracy') || str_contains($q, 'classification')) {
+            $reply = "**Machine Learning & Evaluation:**\n\n"
+                   . "• **Paradigms:** Supervised learning learns mappings from labeled data (classification, regression); Unsupervised learning discovers latent structures (clustering, PCA).\n"
+                   . "• **Core Evaluation Metrics:**\n"
+                   . "  - **Accuracy:** Total correct predictions over total samples.\n"
+                   . "  - **Precision:** True Positives / (True Positives + False Positives) — minimizes false alarms.\n"
+                   . "  - **Recall (Sensitivity):** True Positives / (True Positives + False Negatives) — critical when missing a positive is costly.\n"
+                   . "  - **F1-Score:** Harmonic mean of precision and recall for imbalanced datasets.";
+        } elseif (str_contains($q, 'iot') || str_contains($q, 'arduino') || str_contains($q, 'esp32') || str_contains($q, 'mqtt')) {
+            $reply = "**Internet of Things (IoT) & Embedded Systems:**\n\n"
+                   . "• **Microcontrollers:** ESP32 (dual-core with built-in Wi-Fi and Bluetooth) and Arduino (prototyping, analog sensor interfacing).\n"
+                   . "• **Communication Protocols:** MQTT (lightweight publish-subscribe protocol ideal for low-bandwidth, unreliable telemetry networks), HTTP/REST, and WebSockets.\n"
+                   . "• **Sensor Integration:** Digital and analog transducers (temperature, DHT22, soil moisture, ultrasonic) providing real-time telemetry to centralized gateways.";
+        } elseif (str_contains($q, 'imrad') || str_contains($q, 'methodology') || str_contains($q, 'research methodology')) {
+            $reply = "**Research Methodology & Structure:**\n\n"
+                   . "• **IMRAD Structure:** Standard scientific format comprising Introduction (problem context & objectives), Methodology (system architecture & procedure), Results (empirical data), and Discussion (interpretation & limitations).\n"
+                   . "• **Research Design:** Quantitative (numerical metrics, response latency, accuracy) vs Qualitative (usability surveys, thematic analysis).\n"
+                   . "• **Literature Gap:** Demonstrating that existing solutions leave an unresolved challenge, establishing the academic novelty of the proposed capstone.";
+        } elseif (str_contains($q, 'security') || str_contains($q, 'injection') || str_contains($q, 'csrf') || str_contains($q, 'xss') || str_contains($q, 'rbac')) {
+            $reply = "**Application Security & Web Defense:**\n\n"
+                   . "• **SQL Injection Defense:** Prepared statements and parameterized queries (preventing attacker input from altering query structure).\n"
+                   . "• **Cross-Site Scripting (XSS):** Context-aware HTML escaping and Content Security Policy (CSP) headers.\n"
+                   . "• **Cross-Site Request Forgery (CSRF):** Synchronizer token pattern validating state-changing requests.\n"
+                   . "• **Access Control (RBAC):** Role-Based Access Control enforcing least-privilege permissions at both route middleware and database query boundaries.";
+        } elseif (str_contains($q, 'agile') || str_contains($q, 'scrum') || str_contains($q, 'sdlc') || str_contains($q, 'waterfall')) {
+            $reply = "**Software Development Life Cycle (SDLC):**\n\n"
+                   . "• **Agile / Scrum:** Iterative development organized into 2–4 week sprints, enabling rapid adaptation to user feedback and changing requirements.\n"
+                   . "• **Waterfall:** Sequential phases (Requirements → Design → Implementation → Verification → Maintenance), best for projects with immutable hardware or safety regulations.\n"
+                   . "• **CI/CD Pipelines:** Automated linting, unit testing, and deployment to maintain codebase integrity across collaborative developer teams.";
         } else {
             $reply = "**Academic Research Assistant:**\n\n"
                    . "I can help you explore technology concepts, programming languages, and research methodologies.\n\n"
                    . "You asked: *\"{$query}\"*\n\n"
-                   . "• Ask specific programming or architectural questions.\n"
+                   . "• Ask specific programming, architectural, or methodology questions.\n"
                    . "• Open any capstone PDF to switch to document-grounded research assistance.\n"
                    . "• Use **Smart Mode** to discover relevant capstone projects from the repository.";
         }
@@ -1322,10 +1441,10 @@ class ChatbotResponseService
         }
 
         $lines = [
-            "### 🔬 Research Gaps & Improvements Analysis",
+            "**🔬 Research Gaps & Improvements Analysis**",
             "**Document:** {$capstone->title} [ID:{$capstone->id}]",
             "",
-            "#### 📌 Documented Limitations (from PDF)",
+            "**📌 Documented Limitations (from PDF):**",
         ];
 
         if ($limitationExcerpt) {
@@ -1335,7 +1454,7 @@ class ChatbotResponseService
         }
 
         $lines[] = "";
-        $lines[] = "#### 💡 Suggested Future Directions & Research Opportunities";
+        $lines[] = "**💡 Suggested Future Directions & Research Opportunities:**";
         $lines[] = "*(AI-generated research recommendations — not confirmed weaknesses of the author's work)*:";
         $lines[] = "• **Dataset Diversification:** Expand sample data beyond controlled test environments to real-world edge scenarios.";
         $lines[] = "• **Cross-Platform Scalability:** Investigate deployment across heterogeneous operating systems or cloud container environments.";
@@ -1370,13 +1489,12 @@ class ChatbotResponseService
 
         $count = $similar->count();
         $lines = [
-            "### 🔗 Similar Research to {$target->title}",
+            "**🔗 Similar Research to {$target->title}**",
             "I found **{$count}** related capstone project(s) in the AcadeX repository:\n",
         ];
 
         foreach ($similar->values() as $i => $c) {
             $num = $i + 1;
-            $lines[] = "---";
             $lines[] = "**{$num}. {$c->title}** [LINK:{$c->id}]";
             $lines[] = "📂 **Category:** {$c->category} &nbsp;|&nbsp; 📅 **Year:** {$c->year} &nbsp;|&nbsp; 🎓 **Program:** " . ($c->program ?? 'N/A');
             $lines[] = "👤 **Author(s):** {$c->author}";
@@ -1416,10 +1534,10 @@ class ChatbotResponseService
     public function formatCapstoneComparison(Capstone $c1, Capstone $c2): array
     {
         $lines = [
-            "### ⚖️ Capstone Research Comparison",
+            "**⚖️ Capstone Research Comparison**",
             "Comparing **{$c1->title}** [LINK:{$c1->id}] and **{$c2->title}** [LINK:{$c2->id}]:",
             "",
-            "#### 📋 Metadata & Scope",
+            "**📋 Metadata & Scope:**",
             "| Feature | **{$c1->title}** | **{$c2->title}** |",
             "|---|---|---|",
             "| **Year** | {$c1->year} | {$c2->year} |",
@@ -1427,15 +1545,15 @@ class ChatbotResponseService
             "| **Program** | " . ($c1->program ?? 'N/A') . " | " . ($c2->program ?? 'N/A') . " |",
             "| **Category** | " . ($c1->category ?? 'N/A') . " | " . ($c2->category ?? 'N/A') . " |",
             "",
-            "#### 🎯 Objectives",
+            "**🎯 Objectives:**",
             "• **{$c1->title} [LINK:{$c1->id}]:** " . trim($c1->abstract ?? 'No abstract documented.'),
             "• **{$c2->title} [LINK:{$c2->id}]:** " . trim($c2->abstract ?? 'No abstract documented.'),
             "",
-            "#### 💻 Technologies & Stack",
+            "**💻 Technologies & Stack:**",
             "• **{$c1->title}:** " . ($c1->category ?? 'N/A'),
             "• **{$c2->title}:** " . ($c2->category ?? 'N/A'),
             "",
-            "#### 🔍 Key Distinctions & Similarities",
+            "**🔍 Key Distinctions & Similarities:**",
         ];
 
         if ($c1->category === $c2->category) {

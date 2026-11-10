@@ -4,108 +4,10 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/useAuth';
 import { useChatbotContext } from '../context/useChatbotContext';
 import api from '../api/axios';
-import { inlineMarkdown } from './inlineMarkdown';
 import { getAvailableModes, generateSuggestedQuestions } from './chatbotHelpers';
-import { parseCitations } from './citationParser';
+import { renderMarkdown } from './chatMarkdownRenderer';
 
-// ─── Simple markdown renderer ─────────────────────────────────────────────────
-// Converts **bold**, *italic*, `code`, bullet lists, and numbered lists
-// to HTML elements — no external dependency needed.
-// linkRenderer(id) → called for [LINK:id] tags to produce a clickable element.
-// pageRenderer(page) → called for [PAGE:n] tags to produce a clickable page jump button.
-function renderMarkdown(text, linkRenderer, pageRenderer) {
-    const lines = text.split('\n');
-    const elements = [];
-    let listItems = [];   // each entry: string (plain) or React element
-    let listType = null;  // 'ul' | 'ol'
-    let key = 0;
 
-    const flushList = () => {
-        if (listItems.length === 0) return;
-        const Tag = listType === 'ul' ? 'ul' : 'ol';
-        elements.push(
-            <Tag key={`list-${key++}`}>
-                {listItems.map((li, i) =>
-                    typeof li === 'string'
-                        ? <li key={i} dangerouslySetInnerHTML={{ __html: inlineMarkdown(li) }} />
-                        : <li key={i}>{li}</li>
-                )}
-            </Tag>
-        );
-        listItems = [];
-        listType = null;
-    };
-
-    // Parse a text fragment that may contain [LINK:N] or [PAGE:N] into React nodes
-    const parseWithCitations = (raw) => {
-        const tokens = parseCitations(raw);
-        const parts = [];
-        for (const token of tokens) {
-            if (token.type === 'text') {
-                parts.push(
-                    <span key={`t-${key++}`} dangerouslySetInnerHTML={{ __html: inlineMarkdown(token.content) }} />
-                );
-            } else if (token.type === 'link') {
-                if (linkRenderer) {
-                    parts.push(linkRenderer(token.id, key++));
-                } else {
-                    parts.push(<span key={`link-${key++}`}>[ID:{token.id}]</span>);
-                }
-            } else if (token.type === 'page') {
-                if (pageRenderer) {
-                    parts.push(pageRenderer(token.page, key++));
-                } else {
-                    parts.push(<span key={`page-${key++}`} className="chatbot-page-ref-badge">Page {token.page}</span>);
-                }
-            }
-        }
-        return parts.length === 1 ? parts[0] : <>{parts}</>;
-    };
-
-    const hasCitation = (s) => /\[(?:LINK:[a-zA-Z0-9_-]+|PAGE:\d+)\]/i.test(s);
-
-    lines.forEach((line) => {
-        const ulMatch = line.match(/^[*-]\s+(.*)/);
-        const olMatch = line.match(/^\d+\.\s+(.*)/);
-
-        if (ulMatch) {
-            if (listType === 'ol') flushList();
-            listType = 'ul';
-            const content = ulMatch[1];
-            listItems.push(hasCitation(content) ? parseWithCitations(content) : content);
-            return;
-        }
-        if (olMatch) {
-            if (listType === 'ul') flushList();
-            listType = 'ol';
-            const content = olMatch[1];
-            listItems.push(hasCitation(content) ? parseWithCitations(content) : content);
-            return;
-        }
-
-        flushList();
-
-        if (line.trim() === '') {
-            elements.push(<br key={`br-${key++}`} />);
-            return;
-        }
-
-        // Check for [LINK:id] or [PAGE:n] tags
-        if (hasCitation(line)) {
-            elements.push(<p key={`p-${key++}`}>{parseWithCitations(line)}</p>);
-            return;
-        }
-
-        // Strip [ID:N] tags from visible text (legacy — kept for safety)
-        const cleanLine = line.replace(/\[ID:\d+\]/g, '');
-        elements.push(
-            <p key={`p-${key++}`} dangerouslySetInnerHTML={{ __html: inlineMarkdown(cleanLine) }} />
-        );
-    });
-
-    flushList();
-    return elements;
-}
 
 // ─── Helper: format timestamp ─────────────────────────────────────────────────
 function formatTime(date) {
@@ -491,7 +393,7 @@ export default function Chatbot() {
         } finally {
             setLoading(false);
         }
-    }, [input, loading, messages, capstoneContext, open]);
+    }, [input, loading, messages, currentCapstone, mode, open]);
 
     const handleKeyDown = (e) => {
         if (e.key === 'Enter' && !e.shiftKey) {

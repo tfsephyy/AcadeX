@@ -11,7 +11,7 @@ import {
     HiOutlineArchiveBoxArrowDown, HiOutlineArchiveBoxXMark,
 } from 'react-icons/hi2';
 import {
-    getCapstones, getCapstone, deleteCapstone, archiveCapstone, unarchiveCapstone, getArchivedCapstones, publishCapstone, unpublishCapstone,
+    getCapstones, getCapstone, deleteCapstone, archiveCapstone, unarchiveCapstone, getArchivedCapstones, publishCapstone, unpublishCapstone, getCapstoneFilterOptions,
 } from '../../api/admin';
 import { useNotification } from '../../components/useNotification';
 import Loading from '../../components/Loading';
@@ -98,24 +98,13 @@ export default function CapstoneLibrary() {
      */
     const loadFilters = async () => {
         try {
-            const res = await getCapstones({ per_page: 1000 });
-            const all = res.data.data?.data || res.data.data || [];
+            const res = await getCapstoneFilterOptions();
+            const opts = res.data?.data || {};
 
-            setYears([...new Set(all.map(c => c.year).filter(Boolean))].sort((a, b) => b - a));
-            setPrograms([...new Set(all.map(c => c.program).filter(Boolean))].sort());
-            setCategories([...new Set(all.map(c => c.category).filter(Boolean))].sort());
-
-            // Advisers = uploaders who actually have at least one capstone
-            const adviserMap = new Map();
-            all.forEach(c => {
-                if (c.uploader?.id && c.uploader?.name)
-                    adviserMap.set(c.uploader.id, c.uploader.name);
-            });
-            setAdviserOptions(
-                [...adviserMap.entries()]
-                    .map(([id, name]) => ({ id, name }))
-                    .sort((a, b) => a.name.localeCompare(b.name))
-            );
+            setYears(opts.years || []);
+            setPrograms(opts.programs || []);
+            setCategories((opts.categories || []).map(c => typeof c === 'string' ? c : c.name));
+            setAdviserOptions(opts.advisers || []);
         } catch (err) {
             console.error('Failed to load filters:', err);
         }

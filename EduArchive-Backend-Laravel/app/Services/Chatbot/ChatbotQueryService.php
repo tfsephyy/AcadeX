@@ -27,15 +27,42 @@ class ChatbotQueryService
     /**
      * Build a base Capstone query filtered to what the role is allowed to see.
      *
-     * - Admin / Faculty / Student → all published, non-archived capstones.
-     * - Visitor → only capstones that are published OR copyrighted OR have IMRAD,
-     *   matching the existing VisitorCapstoneController visibility rules.
+     * - Admin → all capstones.
+     * - Faculty / Student → approved non-archived library capstones (plus own uploads/reviews).
+     * - Visitor → non-archived approved capstones that meet a visitor tier (published, copyrighted, or IMRAD).
      *
      * @return \Illuminate\Database\Eloquent\Builder
      */
-    public function baseQuery(string $role)
+    public function baseQuery(string $role, ?\App\Models\User $user = null)
     {
         $query = Capstone::with('keywords');
+
+        if ($role === 'admin' || ($user && $user->hasRole('admin'))) {
+            return $query;
+        }
+
+        $query->where('is_archived', false);
+
+        if ($role === 'visitor') {
+            $query->where('approval_status', 'approved')
+                  ->where(function ($tier) {
+                      $tier->where('publication_status', 'published')
+                           ->orWhere('copyright_status', 'copyrighted')
+                           ->orWhereNotNull('imrad_path');
+                  });
+            return $query;
+        }
+
+        // Student and Faculty: approved library capstones, plus own uploads/reviews if user provided
+        $query->where(function ($allowed) use ($user) {
+            $allowed->where('approval_status', 'approved');
+            if ($user) {
+                $allowed->orWhere('uploaded_by', $user->id);
+                if ($user->hasRole('faculty')) {
+                    $allowed->orWhere('adviser_id', $user->id);
+                }
+            }
+        });
 
         return $query;
     }
@@ -46,10 +73,10 @@ class ChatbotQueryService
      * Full-text keyword search with NLP expansion, year, and author filters.
      * Returns up to 10 results, ordered newest-first.
      */
-    public function search(string $role, string $message, array $filters = []): Collection
+    public function search(string $role, string $message, array $filters = [], ?\App\Models\User $user = null): Collection
     {
         $terms = $this->nlp->expandTerms($message);
-        $query = $this->baseQuery($role);
+        $query = $this->baseQuery($role, $user);
 
         // Year filters
         if (!empty($filters['year']))      $query->where('year', $filters['year']);
@@ -98,14 +125,12 @@ class ChatbotQueryService
      *       is_archived — so the results match the live counts shown on each capstone's
      *       analytics panel (which also reads directly from the capstones table).
      */
-    public function popular(string $role, string $metric = 'view_count', int $limit = 10, bool $thisYear = false): Collection
+    public function popular(string $role, string $metric = 'view_count', int $limit = 10, bool $thisYear = false, ?\App\Models\User $user = null): Collection
     {
         $allowed = ['view_count', 'download_count', 'bookmark_count'];
         if (!in_array($metric, $allowed)) $metric = 'view_count';
 
-        // Query ALL capstones — no publication/copyright filter — so the counts
-        // are the same numbers the analytics panel shows on the capstone main page.
-        $query = Capstone::query();
+        $query = $this->baseQuery($role, $user);
 
         if ($thisYear) {
             // For bookmarks "this year": join the bookmarks table and restrict by year
@@ -129,9 +154,9 @@ class ChatbotQueryService
     /**
      * Return the most recently uploaded accessible capstones.
      */
-    public function recent(string $role, int $limit = 5): Collection
+    public function recent(string $role, int $limit = 5, ?\App\Models\User $user = null): Collection
     {
-        return $this->baseQuery($role)
+        return $this->baseQuery($role, $user)
                     ->orderByDesc('created_at')
                     ->limit($limit)
                     ->get(['id', 'title', 'author', 'year', 'program', 'category']);
@@ -140,9 +165,9 @@ class ChatbotQueryService
     /**
      * Get category list with counts for the role's accessible capstones.
      */
-    public function categories(string $role): \Illuminate\Support\Collection
+    public function categories(string $role, ?\App\Models\User $user = null): \Illuminate\Support\Collection
     {
-        return $this->baseQuery($role)
+        return $this->baseQuery($role, $user)
                     ->whereNotNull('category')
                     ->selectRaw('category, COUNT(*) as count')
                     ->groupBy('category')
@@ -154,9 +179,9 @@ class ChatbotQueryService
      * Fetch a single capstone by ID, respecting role access rules.
      * Returns null if not found or not accessible to the role.
      */
-    public function findById(string $role, int $id): ?Capstone
+    public function findById(string $role, int $id, ?\App\Models\User $user = null): ?Capstone
     {
-        return $this->baseQuery($role)
+        return $this->baseQuery($role, $user)
                     ->with(['keywords'])
                     ->where('id', $id)
                     ->first();
@@ -165,9 +190,9 @@ class ChatbotQueryService
     /**
      * Finds related capstones based on shared category, program, or keywords.
      */
-    public function findSimilar(string $role, Capstone $capstone, int $limit = 4): Collection
+    public function findSimilar(string $role, Capstone $capstone, int $limit = 4, ?\App\Models\User $user = null): Collection
     {
-        $query = $this->baseQuery($role)
+        $query = $this->baseQuery($role, $user)
             ->where('id', '!=', $capstone->id);
 
         $query->where(function ($q) use ($capstone) {

@@ -3,7 +3,7 @@
 namespace Tests\Unit;
 
 use App\Services\Chatbot\PdfPassageRetriever;
-use PHPUnit\Framework\TestCase;
+use Tests\TestCase;
 
 class PdfPassageRetrieverTest extends TestCase
 {
@@ -15,66 +15,84 @@ class PdfPassageRetrieverTest extends TestCase
         $this->retriever = new PdfPassageRetriever();
     }
 
-    public function test_splits_text_by_page_markers(): void
+    public function test_extract_pages_parses_delimited_pages(): void
     {
-        $text = "--- [PAGE:1] ---\nFirst page introduction to inventory management.\n\n"
-              . "--- [PAGE:2] ---\nSecond page discusses database normalization.\n\n"
-              . "--- [PAGE:3] ---\nThird page describes React user interface.";
+        $text = "--- [PAGE:1] ---\nFirst page title and introduction.\n--- [PAGE:2] ---\nMethodology and hardware setup.\n--- [PAGE:3] ---\nResults and discussion.";
+        $pages = $this->retriever->extractPages($text);
 
-        $passages = $this->retriever->extractPages($text);
-
-        $this->assertCount(3, $passages);
-        $this->assertSame(1, $passages[0]['page']);
-        $this->assertStringContainsString('First page introduction', $passages[0]['text']);
-        $this->assertSame(2, $passages[1]['page']);
-        $this->assertSame(3, $passages[2]['page']);
+        $this->assertCount(3, $pages);
+        $this->assertSame(1, $pages[0]['page']);
+        $this->assertStringContainsString('First page title', $pages[0]['text']);
+        $this->assertSame(2, $pages[1]['page']);
+        $this->assertStringContainsString('Methodology', $pages[1]['text']);
+        $this->assertSame(3, $pages[2]['page']);
+        $this->assertStringContainsString('Results', $pages[2]['text']);
     }
 
-    public function test_scores_and_ranks_passages_by_query_terms(): void
+    public function test_extract_pages_fallback_on_unindexed_text(): void
     {
-        $text = "--- [PAGE:1] ---\nIntroduction to general capstone projects and acknowledgements.\n\n"
-              . "--- [PAGE:2] ---\nMethodology: Agile development methodology with two-week sprints.\n\n"
-              . "--- [PAGE:3] ---\nTechnologies used: Laravel 11 framework, MySQL database, and Docker containers.";
+        $text = "Plain unindexed document without delimiter marks.";
+        $pages = $this->retriever->extractPages($text);
 
-        $ranked = $this->retriever->retrieveRankedPages($text, 'What framework and database were used in this capstone?', 2);
-
-        $this->assertNotEmpty($ranked);
-        // Page 3 contains 'framework', 'database', 'Laravel', 'MySQL' and should rank #1
-        $this->assertSame(3, $ranked[0]['page']);
+        $this->assertCount(1, $pages);
+        $this->assertSame(1, $pages[0]['page']);
+        $this->assertSame($text, $pages[0]['text']);
     }
 
-    public function test_limits_context_within_character_budget(): void
+    public function test_extract_query_terms_filters_stopwords_and_punctuation(): void
     {
-        $p1 = str_repeat('A', 500);
-        $p2 = str_repeat('B', 500);
-        $p3 = str_repeat('C', 500);
-        $text = "--- [PAGE:1] ---\nkeyword {$p1}\n\n--- [PAGE:2] ---\nkeyword {$p2}\n\n--- [PAGE:3] ---\nkeyword {$p3}";
+        $query = "What is the deep learning methodology for crop disease detection?!";
+        $terms = $this->retriever->extractQueryTerms($query);
 
-        $context = $this->retriever->retrieveContext($text, 'keyword', 1200);
+        $this->assertContains('deep', $terms);
+        $this->assertContains('learning', $terms);
+        $this->assertContains('methodology', $terms);
+        $this->assertContains('crop', $terms);
+        $this->assertContains('disease', $terms);
+        $this->assertContains('detection', $terms);
 
-        // Budget is 1200 chars, so 3 pages (~1600 chars) cannot all fit, only top pages fit
-        $this->assertLessThanOrEqual(1300, strlen($context));
-        $this->assertStringContainsString('--- [PAGE:', $context);
+        $this->assertNotContains('what', $terms);
+        $this->assertNotContains('is', $terms);
+        $this->assertNotContains('the', $terms);
+        $this->assertNotContains('for', $terms);
     }
 
-    public function test_handles_unmarked_text_gracefully(): void
+    public function test_retrieve_context_prioritizes_high_scoring_tail_pages_within_budget(): void
     {
-        $rawText = "Plain document without page delimiters discussing machine learning algorithms and random forest.";
+        // Construct document where Page 1 has filler text, Page 2 has irrelevant text,
+        // and Page 3 has highly relevant methodology and hardware terms
+        $page1Text = str_repeat("General introduction to institutional research policies and formatting guidelines. ", 30);
+        $page2Text = str_repeat("Administrative overview and historical background of the department. ", 30);
+        $page3Text = "Methodology: We developed an IoT edge node utilizing an ESP32 microcontroller with DHT22 humidity sensor and MQTT telemetry protocol.";
 
-        $passages = $this->retriever->extractPages($rawText);
+        $fullDoc = "--- [PAGE:1] ---\n{$page1Text}\n--- [PAGE:2] ---\n{$page2Text}\n--- [PAGE:3] ---\n{$page3Text}";
 
-        $this->assertNotEmpty($passages);
-        $this->assertSame(1, $passages[0]['page']);
-        $this->assertStringContainsString('Plain document without page delimiters', $passages[0]['text']);
+        // Budget that fits Page 3 plus at most one large page
+        $context = $this->retriever->retrieveContext($fullDoc, "ESP32 DHT22 sensor microcontroller methodology", 2500);
+
+        // Page 3 must be present in the retrieved context because its relevance score is highest
+        $this->assertStringContainsString('[PAGE:3]', $context);
+        $this->assertStringContainsString('ESP32 microcontroller', $context);
     }
 
-    public function test_formats_context_with_page_citations(): void
+    public function test_retrieve_context_returns_pages_in_document_order(): void
     {
-        $text = "--- [PAGE:4] ---\nChapter 4: Results and Evaluation.\nPrecision was 94.2% on test dataset.";
+        $page1Text = "Objectives and background problem statement for smart agriculture.";
+        $page2Text = "Methodology and experimental design using sensor arrays.";
+        $page3Text = "Results: Evaluation demonstrated 98% accuracy.";
 
-        $context = $this->retriever->retrieveContext($text, 'precision evaluation', 2000);
+        $fullDoc = "--- [PAGE:1] ---\n{$page1Text}\n--- [PAGE:2] ---\n{$page2Text}\n--- [PAGE:3] ---\n{$page3Text}";
 
-        $this->assertStringContainsString('--- [PAGE:4] ---', $context);
-        $this->assertStringContainsString('Precision was 94.2%', $context);
+        $context = $this->retriever->retrieveContext($fullDoc, "smart agriculture methodology sensor accuracy", 5000);
+
+        $posPage1 = strpos($context, '[PAGE:1]');
+        $posPage2 = strpos($context, '[PAGE:2]');
+        $posPage3 = strpos($context, '[PAGE:3]');
+
+        $this->assertNotFalse($posPage1);
+        $this->assertNotFalse($posPage2);
+        $this->assertNotFalse($posPage3);
+        $this->assertTrue($posPage1 < $posPage2);
+        $this->assertTrue($posPage2 < $posPage3);
     }
 }

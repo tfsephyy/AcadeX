@@ -1,5 +1,66 @@
 # AcadeX implementation progress
 
+## 2026-11-11 - Capstone Repository Adviser Filter Fix
+
+Resolved the Adviser filter limitation where the dropdown only showed faculty members with registered accounts, and manually entered advisers on saved capstone records were omitted:
+- **Root Cause Resolution:**
+  - Backend dropdown endpoints (`browseFilterOptions`, `filterOptions`, `VisitorCapstoneController::advisers`, `PublishedCapstoneController::advisers`) previously plucked `adviser_id` and queried `User::whereIn('id', ...)`, omitting projects whose advisers were saved as `adviser_name` with null `adviser_id`.
+  - Filtering previously queried strictly `where('adviser_id', $request->adviser_id)`, failing when string names were passed or when an adviser had projects stored under text names.
+  - Frontend `CapstoneLibrary.jsx` previously fetched 1,000 capstones over the network and mapped `c.uploader` instead of filter options / advisers.
+- **Unified Adviser Extraction (`AdviserMatching::extractOptions`):**
+  - Directly extracts unique `(capstones.adviser_id, capstones.adviser_name)` pairs from the scoped capstone query without table joins, clearing base query `orders` to prevent MySQL `DISTINCT` clause collisions.
+  - Resolves faculty names for records with `adviser_id` in a single batch query.
+  - Groups and deduplicates names via `NameNormalizer::key()`, stripping academic credentials ("Dr.", "Prof.", "Engr.", "Ph.D.", "MIT") and normalizing whitespace/casing.
+  - Returns a sorted list of `['id' => $facultyId ?? $displayName, 'name' => $displayName]`, naturally sorted case-insensitively.
+- **Two-Phase Symmetric Filtering (`AdviserMatching::applyFilter`):**
+  - When filtering by numeric ID: retrieves the faculty account, finds matching `adviser_name` records via normalized key, and queries `WHERE (capstones.adviser_id IN (...) OR capstones.adviser_name IN (...))`.
+  - When filtering by name string: finds matching faculty accounts and matching `adviser_name` records, querying both FK and text columns.
+  - Accepts filter input from `adviser_id`, `adviser_name`, or `adviser`.
+- **Integrated Across All Repository Endpoints:**
+  - `CapstoneController`: `browseFilterOptions()`, `filterOptions()`, `index()`, `browse()`, and `getPendingCapstones()`.
+  - `VisitorCapstoneController`: `advisers()` and `index()`.
+  - `PublishedCapstoneController`: `advisers()` and `index()`.
+  - `CapstoneLibrary.jsx`: loads filter options via `getCapstoneFilterOptions()`.
+- **Comprehensive Verification:**
+  - Added `tests/Feature/AdviserFilterTest.php` with 6 feature tests covering registered faculty, manual advisers, deduplication, combined filters (year, category, search), and visitor access scoping.
+  - Full backend test suite: **197 guarded disposable-MySQL tests / 1,667 assertions passed** (0 failures, 0 errors, 4 skipped).
+  - Full frontend test suite: **80 tests passed** (0 failures).
+  - Frontend production build: **855 modules transformed, built cleanly in 12.21s**.
+  - Frontend ESLint: **0 errors**.
+
+## 2026-11-10 - Comprehensive AI Chatbot Audit, Problem Identification, and Quality Improvements
+
+Completed full architectural investigation, problem identification, algorithmic remediation, and production-grade verification for the AcadeX AI Chatbot:
+- **Root Cause Resolution for Markdown Artifacts & Formatting Noise:**
+  - Resolved frontend rendering bug where headings (`###`), horizontal dividers (`---`, `----`), blockquotes (`>`), markdown tables (`| Col |`), and fenced code blocks were dumped into raw HTML paragraphs.
+  - Implemented `chatMarkdownRenderer.js` with pure `React.createElement` parsing, rendering clean accessible headers, responsive markdown tables, styled horizontal rules, code blocks, blockquotes, and interactive clickable citations.
+  - Added theme-aware styles in `index.css` for `.chatbot-heading`, `.chatbot-divider`, `.chatbot-quote`, `.chatbot-table`, and `.chatbot-code-block`.
+- **Passage Retrieval Truncation Bug Fix (`PdfPassageRetriever.php`):**
+  - Fixed algorithmic truncation flaw in `retrieveContext()` where candidate pages were sorted by page ascending *before* character budget enforcement, causing high-scoring tail pages to be dropped whenever low-scoring early pages filled the budget.
+  - Updated selection: scores and ranks all pages first, selects highest-scoring candidate pages into the character budget, and *then* sorts chosen pages into document order for logical reading flow.
+  - Made `extractQueryTerms()` public and enhanced relevance scoring with phrase bigrams and section-intent boosts.
+- **Repository Security & Access Isolation (`ChatbotQueryService.php`):**
+  - Eliminated unauthenticated/unprivileged record leakage by strictly enforcing role-based filters in `baseQuery()`:
+    - `visitor`: restricted to approved, non-archived capstones meeting public tiers (published, copyrighted, or with IMRAD).
+    - `faculty` / `student`: restricted to approved, non-archived capstones, plus own uploads/reviews.
+    - `admin`: full system visibility.
+  - Threaded `$user` into all query methods (`search`, `findById`, `popular`, `recent`, `categories`, `findSimilar`).
+- **Conversational Context & Multi-Turn Anaphora Resolution (`ChatbotController.php`):**
+  - Added `resolveReferencedCapstone()` to resolve conversational references ("the first one", "it", "#1", "that capstone") from preceding assistant turns when no explicit `capstone_id` is passed.
+  - Added `handleTargetedCapstoneField()` to provide direct, concise answers for specific field queries (author, year, program, category, keywords, abstract) without dumping massive metadata tables.
+- **AI Citation Sanitization & Prompt Injection Hardening (`ChatbotAiService.php`):**
+  - Implemented `sanitizePageCitations()` validating generated `[PAGE:n]` citations against extracted document pages and stripping hallucinated page references.
+  - Hardened system prompt with strict formatting rules (no divider noise, no raw hashes) and prompt injection defenses making system rules, database context, and role boundaries immutable.
+- **Deterministic Knowledge Engine Expansion (`ChatbotResponseService.php`):**
+  - Expanded `formatGeneralKnowledge()` with comprehensive academic definitions for Frontend (React, Vue), Backend (Laravel, Node/Express, Python), Databases (SQL, Normalization, ACID), Architecture (MVC, Microservices), Machine Learning (Supervised/Unsupervised, Metrics: Precision/Recall/F1), IoT (ESP32, MQTT), Security (RBAC, SQLi, XSS, CSRF), and Research Methodology (IMRAD, Qualitative vs Quantitative).
+  - Implemented `extractFocusedExcerpt()` centering passage excerpts around keyword matches with sentence-boundary awareness.
+  - Cleaned up formatting separators across capstone lists, admin analytics, and comparisons.
+- **Verification & Test Outcomes:**
+  - Full backend test suite: **191 guarded disposable-MySQL tests / 1,635 assertions passed** (0 failures, 0 errors, 4 skipped).
+  - Full frontend test suite: **80 tests passed** (0 failures, 7 new markdown parser tests).
+  - Frontend production build: **855 modules transformed, built in 10.97s**.
+  - Frontend ESLint: **0 errors** (33 existing unrelated warnings).
+
 ## 2026-11-10 - Unified AI Capstone Research Assistant
 
 Implemented and verified the unified AI Capstone Research Assistant across frontend and backend:

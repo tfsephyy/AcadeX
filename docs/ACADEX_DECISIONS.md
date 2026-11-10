@@ -552,3 +552,63 @@ The previous implementation had fragmented chatbots for general questions, capst
 
 **Consequences:**
 Single persistent assistant across all pages, zero context leaks between documents, verifiable citations pointing directly to PDF pages, and strict grounding preventing hallucination. Tested across 187 backend tests and 73 frontend tests with 100% pass rate.
+
+## D-031 — Comprehensive AI Chatbot Quality, Retrieval Optimization, Security Scoping, and Zero-Dependency Markdown Rendering (2026-11-10)
+
+**Context:**
+The audit of the AI Chatbot revealed five distinct technical deficiencies:
+1. Formatting noise: Headings (`###`), horizontal rules (`---`, `----`), blockquotes (`>`), markdown tables (`| Col |`), and fenced code blocks were dumped into raw HTML paragraphs because the renderer only handled paragraphs and simple list items.
+2. Passage retrieval truncation bug: `PdfPassageRetriever::retrieveContext()` sorted top candidates by page ascending *before* checking the character budget, resulting in relevant tail pages (e.g. Page 45 with relevance score 25) being dropped whenever early introductory pages filled the budget.
+3. Security boundary leak: `ChatbotQueryService::baseQuery()` returned unconstrained records without role filtering, allowing visitors to access unpublished, non-copyrighted, or unapproved records via chatbot search.
+4. Multi-turn anaphora amnesia: Chatbot ignored conversation history for document references, failing to resolve follow-ups like "tell me more about the first one", "its methodology", or "#1".
+5. Shallow deterministic fallback: Technical and research queries fell back to a 3-keyword canned response when AI keys were absent or rate-limited.
+
+**Decision:**
+1. Zero-Dependency Markdown Parser (`chatMarkdownRenderer.js`):
+   - Implemented pure `React.createElement` parser supporting headers (`#`–`######`), horizontal rules (`---`), blockquotes (`>`), structured HTML tables (`|---|`), code blocks (```` ``` ````), bullet/ordered lists, and interactive `[PAGE:n]` and `[LINK:id]` buttons.
+   - Designed for compatibility with both Vite production bundler and Node `--test` test runner without external parser dependencies.
+2. Score-Prioritized Passage Selection:
+   - Modified `PdfPassageRetriever::retrieveContext()` to sort candidates by relevance score descending into the character budget, and *then* sort the selected pages into ascending document order for coherent reading flow.
+   - Enhanced relevance scoring with phrase bigrams and section-intent boosts (methodology, results, limitations).
+3. Strict Database-Layer Role Scoping:
+   - Updated `ChatbotQueryService::baseQuery()` to enforce role filters via `CapstoneAccess`: visitors see only approved, non-archived capstones meeting publication, copyright, or IMRAD availability. Threaded `$user` to all query methods.
+4. Multi-Turn Conversational Resolution:
+   - Added `resolveReferencedCapstone()` to inspect conversation history for ordinal and anaphoric references, resolving referenced capstone IDs and setting the active document context.
+   - Added `handleTargetedCapstoneField()` to answer direct inquiries (author, year, program, category, keywords, abstract) concisely without dumping full tables.
+5. AI Post-Generation Citation Sanitization & Injection Defense:
+   - Added `ChatbotAiService::sanitizePageCitations()` to clamp or strip non-existent `[PAGE:n]` citations pointing outside actual extracted document page numbers.
+   - Hardened system prompt with strict markdown formatting standards and prompt injection defenses.
+6. Expanded Academic & Technical Knowledge Base:
+   - Expanded `ChatbotResponseService::formatGeneralKnowledge()` with comprehensive definitions across frontend, backend, databases, architecture, machine learning, IoT, security, and research methodology.
+   - Implemented `extractFocusedExcerpt()` centering passage excerpts around keyword matches with sentence-boundary awareness.
+
+**Consequences:**
+Eliminated all raw markdown characters (`###`, `---`, tables) from chatbot bubbles, guaranteed verified document page citations, secured visitor repository boundaries, restored conversational context for multi-turn inquiries, and raised test coverage to 191 backend tests (1,635 assertions) and 80 frontend unit tests with 100% pass rate.
+
+## D-032 — Unified Adviser Extraction, Two-Phase Matching, and Repository Dropdown Deduplication (2026-11-11)
+
+**Context:**
+The Capstone Repository Adviser filter previously suffered from three core issues:
+1. Faculty account limitation: Dropdown endpoints (`browseFilterOptions`, `filterOptions`, `VisitorCapstoneController::advisers`, `PublishedCapstoneController::advisers`) only retrieved faculty users by plucking `adviser_id` and querying `User::whereIn('id', ...)`. Projects with manually entered advisers (`adviser_name` populated, `adviser_id` null) never appeared in the dropdown.
+2. Filtering mismatch: Query filtering strictly ran `$query->where('adviser_id', $request->adviser_id)`. If a student or visitor selected a manual adviser by name, or if a capstone had `adviser_name` matching a faculty member but null `adviser_id`, the filter failed to return those projects.
+3. Frontend mapping bug: `CapstoneLibrary.jsx` fetched 1,000 capstones over the network and mapped `c.uploader` instead of filter options and advisers.
+
+**Decision:**
+1. Unified Adviser Extraction (`AdviserMatching::extractOptions`):
+   - Directly queries distinct `(capstones.adviser_id, capstones.adviser_name)` from the scoped capstone query without table joins, clearing any base query `orders` to prevent MySQL `DISTINCT` clause errors.
+   - Batch-resolves registered faculty names for records with `adviser_id`.
+   - Normalizes and deduplicates names via `NameNormalizer::key()`, stripping academic titles ("Dr.", "Prof.", "Engr.") and suffixes ("Ph.D.", "M.S.", "MIT") and case-folding whitespace.
+   - Returns a sorted collection of `['id' => $facultyId ?? $displayName, 'name' => $displayName]`, sorted using natural case-insensitive comparison (`strnatcasecmp`).
+2. Two-Phase Symmetric Filtering (`AdviserMatching::applyFilter`):
+   - When numeric ID is passed: resolves the faculty user, extracts their normalized name key, finds all matching `adviser_name` strings in the capstone repository, and constructs `WHERE (capstones.adviser_id IN (...) OR capstones.adviser_name IN (...))`.
+   - When string name is passed: normalizes the string, discovers matching faculty user accounts, finds all matching `adviser_name` strings, and constructs `WHERE (capstones.adviser_id IN (...) OR capstones.adviser_name IN (...))`.
+   - Seamlessly handles parameters supplied via `adviser_id`, `adviser_name`, or `adviser`.
+3. Controller & Frontend Integration:
+   - Updated `CapstoneController` (`index`, `browse`, `filterOptions`, `browseFilterOptions`, `getPendingCapstones`).
+   - Updated `VisitorCapstoneController` (`index`, `advisers`) and `PublishedCapstoneController` (`index`, `advisers`).
+   - Fixed `CapstoneLibrary.jsx` to load filter options via `getCapstoneFilterOptions()` instead of downloading 1,000 records and mapping uploaders.
+4. Comprehensive Feature Testing:
+   - Added `tests/Feature/AdviserFilterTest.php` verifying registered advisers, manual non-account advisers, deduplication, combined filtering (year, category, search), and visitor visibility restrictions.
+
+**Consequences:**
+All unique advisers across capstone records appear in the dropdown with zero duplicates. Selecting an adviser displays all assigned capstone projects regardless of whether assigned by account FK or text string. Backward compatibility is preserved for existing callers and automated tests. All 197 backend tests (1,667 assertions) and 80 frontend unit tests pass.

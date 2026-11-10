@@ -84,8 +84,9 @@ class CapstoneController extends Controller
         }
 
         // Filter by adviser
-        if ($request->has('adviser_id') && $request->adviser_id) {
-            $query->where('adviser_id', $request->adviser_id);
+        $adviserParam = $request->input('adviser_id') ?? $request->input('adviser_name') ?? $request->input('adviser');
+        if ($adviserParam !== null && $adviserParam !== '') {
+            app(\App\Services\AdviserMatching::class)->applyFilter($query, $adviserParam);
         }
 
         $query->orderByDesc('created_at');
@@ -138,8 +139,9 @@ class CapstoneController extends Controller
         }
 
         // Filter by adviser
-        if ($request->has('adviser_id') && $request->adviser_id) {
-            $query->where('adviser_id', $request->adviser_id);
+        $adviserParam = $request->input('adviser_id') ?? $request->input('adviser_name') ?? $request->input('adviser');
+        if ($adviserParam !== null && $adviserParam !== '') {
+            app(\App\Services\AdviserMatching::class)->applyFilter($query, $adviserParam);
         }
 
         $query->orderByDesc('created_at');
@@ -161,8 +163,7 @@ class CapstoneController extends Controller
         $programs = (clone $base)->whereNotNull('program')->where('program', '!=', '')->distinct()->orderBy('program')->pluck('program');
         $categories = (clone $base)->whereNotNull('category')->where('category', '!=', '')->selectRaw('category as name, COUNT(*) as count')->groupBy('category')->orderBy('category')->get();
 
-        $adviserIds = (clone $base)->whereNotNull('adviser_id')->distinct()->pluck('adviser_id');
-        $advisers = User::whereIn('id', $adviserIds)->orderBy('name')->get(['id', 'name']);
+        $advisers = app(\App\Services\AdviserMatching::class)->extractOptions($base);
 
         return $this->successResponse([
             'years'      => $years,
@@ -206,14 +207,7 @@ class CapstoneController extends Controller
             ->orderBy('category')
             ->get();
 
-        $adviserIds = (clone $baseQuery)
-            ->whereNotNull('adviser_id')
-            ->distinct()
-            ->pluck('adviser_id');
-
-        $advisers = User::whereIn('id', $adviserIds)
-            ->orderBy('name')
-            ->get(['id', 'name']);
+        $advisers = app(\App\Services\AdviserMatching::class)->extractOptions($baseQuery);
 
         return $this->successResponse([
             'years'      => $years,
@@ -862,8 +856,11 @@ class CapstoneController extends Controller
         }
 
         // Filter by adviser (admin only)
-        if ($request->user()->hasRole('admin') && $request->has('adviser_id') && $request->adviser_id) {
-            $query->where('adviser_id', $request->adviser_id);
+        if ($request->user()->hasRole('admin')) {
+            $adviserParam = $request->input('adviser_id') ?? $request->input('adviser_name') ?? $request->input('adviser');
+            if ($adviserParam !== null && $adviserParam !== '') {
+                app(\App\Services\AdviserMatching::class)->applyFilter($query, $adviserParam);
+            }
         }
 
         $query->orderByDesc('created_at');

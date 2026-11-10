@@ -104,15 +104,20 @@ class ChatbotController extends Controller
             );
         }
 
-        // ── 5. Currently open capstone context (if user has one open) ────────────
+        // ── 5. Currently open capstone context (if user has one open or referenced from conversation) ──
         $openCapstone = null;
         if (!empty($validated['capstone_id'])) {
-            $openCapstone = $this->querySvc->findById($role, (int) $validated['capstone_id']);
+            $openCapstone = $this->querySvc->findById($role, (int) $validated['capstone_id'], $user);
+        }
+
+        // If no active capstone was explicitly provided, resolve conversational references ("the first one", "it", "#1")
+        if ($openCapstone === null && !empty($validated['conversation_history'])) {
+            $openCapstone = $this->resolveReferencedCapstone($validated['conversation_history'], $msg, $role, $user);
         }
 
         $compareCapstone = null;
         if (!empty($validated['compare_capstone_id'])) {
-            $compareCapstone = $this->querySvc->findById($role, (int) $validated['compare_capstone_id']);
+            $compareCapstone = $this->querySvc->findById($role, (int) $validated['compare_capstone_id'], $user);
         }
 
         // ── 6. Handle intent → query DB → format deterministic baseline ─────────
@@ -140,9 +145,9 @@ class ChatbotController extends Controller
         // ── 7. AI generation (Groq primary → Gemini fallback → Local fallback) ──
         $searchResults = collect();
         try {
-            $searchResults = $this->querySvc->search($role, $msg, $filters);
+            $searchResults = $this->querySvc->search($role, $msg, $filters, $user);
             if ($searchResults->isEmpty()) {
-                $searchResults = $this->querySvc->recent($role, 5);
+                $searchResults = $this->querySvc->recent($role, 5, $user);
             }
         } catch (\Throwable $e) {
             $searchResults = collect();
@@ -201,7 +206,7 @@ class ChatbotController extends Controller
 
         // 3. Similar capstones action or question
         if ($openCapstone && ($action === 'similar' || preg_match('/\b(similar|related)\s+capstone[s]?\b/i', $msg))) {
-            $similar = $this->querySvc->findSimilar($role, $openCapstone, 4);
+            $similar = $this->querySvc->findSimilar($role, $openCapstone, 4, $user);
             return $this->responseSvc->formatSimilarCapstones($openCapstone, $similar);
         }
 
@@ -210,7 +215,15 @@ class ChatbotController extends Controller
             return $this->responseSvc->formatCapstoneComparison($openCapstone, $compareCapstone);
         }
 
-        // 2. PDF Only Mode: Grounded strictly in active document
+        // 5. Targeted field question about open capstone
+        if ($openCapstone) {
+            $targetedField = $this->handleTargetedCapstoneField($openCapstone, $msg);
+            if ($targetedField !== null) {
+                return $targetedField;
+            }
+        }
+
+        // 6. PDF Only Mode: Grounded strictly in active document
         if ($mode === 'pdf_only' && $openCapstone) {
             if ($action === 'summary' || preg_match('/\bsummariz(e|y)\b/i', $msg)) {
                 return $this->responseSvc->formatStructuredSummary($openCapstone);
@@ -218,12 +231,12 @@ class ChatbotController extends Controller
             return $this->responseSvc->formatDocumentAnswer($openCapstone, $msg, 'pdf_only');
         }
 
-        // 3. General AI Mode: Academic & technical knowledge without document restrictions
+        // 7. General AI Mode: Academic & technical knowledge without document restrictions
         if ($mode === 'general') {
             return $this->responseSvc->formatGeneralKnowledge($msg);
         }
 
-        // 4. Smart Mode: Document-first when asking about open capstone or matching document text
+        // 8. Smart Mode: Document-first when asking about open capstone or matching document text
         if ($openCapstone) {
             if ($this->isAskingAboutOpenCapstone($intent, $msg)) {
                 return $this->responseSvc->formatCapstoneDetails($openCapstone);
@@ -246,25 +259,25 @@ class ChatbotController extends Controller
             ChatbotIntentService::INTENT_ADMIN_STATS    => $this->handleAdminStats($msg),
             ChatbotIntentService::INTENT_ADMIN_TRENDS   => $this->handleAdminTrends(),
             ChatbotIntentService::INTENT_ADMIN_LOGS     => $this->handleAdminLogs($msg),
-            ChatbotIntentService::INTENT_POPULAR        => $this->handlePopular($role, $filters),
-            ChatbotIntentService::INTENT_CATEGORY_INFO  => $this->handleCategories($role),
+            ChatbotIntentService::INTENT_POPULAR        => $this->handlePopular($role, $filters, $user),
+            ChatbotIntentService::INTENT_CATEGORY_INFO  => $this->handleCategories($role, $user),
             ChatbotIntentService::INTENT_DEFINITION     => $this->handleDefinition($msg, $role),
             ChatbotIntentService::INTENT_PROGRAM_STATS  => $this->handleProgramStats($msg, $role, $user),
             ChatbotIntentService::INTENT_STUDENT_RESEARCH => $this->handleStudentResearch($msg, $selectedAdviserId),
             ChatbotIntentService::INTENT_CAPSTONE_DETAILS => $openCapstone
                 ? $this->responseSvc->formatCapstoneDetails($openCapstone)
-                : $this->handleSearch($role, $msg, $filters),
-            ChatbotIntentService::INTENT_UNKNOWN        => $this->handleUnknown($role),
-            default => $this->handleSearch($role, $msg, $filters),
+                : $this->handleSearch($role, $msg, $filters, $user),
+            ChatbotIntentService::INTENT_UNKNOWN        => $this->handleUnknown($role, $user),
+            default => $this->handleSearch($role, $msg, $filters, $user),
         };
     }
 
     // ── Intent handlers ────────────────────────────────────────────────────────
 
     /** General search / recommendation — used for SEARCH, RECOMMEND, UNKNOWN */
-    private function handleSearch(string $role, string $msg, array $filters): array
+    private function handleSearch(string $role, string $msg, array $filters, $user = null): array
     {
-        $results = $this->querySvc->search($role, $msg, $filters);
+        $results = $this->querySvc->search($role, $msg, $filters, $user);
 
         if ($results->isNotEmpty()) {
             // Extract a clean search query for the header (strip stop words for readability)
@@ -273,7 +286,7 @@ class ChatbotController extends Controller
         }
 
         // No exact match — show recent capstones as a suggestion
-        $recent = $this->querySvc->recent($role, 5);
+        $recent = $this->querySvc->recent($role, 5, $user);
         if ($recent->isNotEmpty()) {
             $reply  = "I couldn't find an exact match for your request, but here are some recent capstones:\n\n";
             $result = $this->responseSvc->formatCapstoneResults($recent);
@@ -298,7 +311,7 @@ class ChatbotController extends Controller
     }
 
     /** Popular capstones by view/download/bookmark count */
-    private function handlePopular(string $role, array $filters): array
+    private function handlePopular(string $role, array $filters, $user = null): array
     {
         $metric   = $filters['metric'] ?? 'view_count';
         $thisYear = $filters['this_year'] ?? false;
@@ -315,24 +328,24 @@ class ChatbotController extends Controller
             };
         }
 
-        $results = $this->querySvc->popular($role, $metric, $limit, $thisYear);
+        $results = $this->querySvc->popular($role, $metric, $limit, $thisYear, $user);
         return $this->responseSvc->formatPopular($results, $metric);
     }
 
     /** Category list with counts */
-    private function handleCategories(string $role): array
+    private function handleCategories(string $role, $user = null): array
     {
-        $cats = $this->querySvc->categories($role);
+        $cats = $this->querySvc->categories($role, $user);
         return $this->responseSvc->formatCategories($cats);
     }
 
     /** Unknown/general question — build hints from real DB data so examples always work */
-    private function handleUnknown(string $role): array
+    private function handleUnknown(string $role, $user = null): array
     {
         // Pull a few real categories and keywords from the DB so examples are always valid
         $hints = [];
         try {
-            $hints['categories'] = $this->querySvc->categories($role)->keys()->take(3)->values()->toArray();
+            $hints['categories'] = $this->querySvc->categories($role, $user)->keys()->take(3)->values()->toArray();
         } catch (\Throwable $e) { $hints['categories'] = []; }
         try {
             $hints['keywords'] = \Illuminate\Support\Facades\DB::table('keywords')
@@ -547,6 +560,8 @@ class ChatbotController extends Controller
             '/\bwhat\s+is\s+(it|this)\b/i',
             '/\bwho\s+(are|wrote|made|authored)\s+(it|this)\b/i',
             '/\b(about|more\s+about|regarding)\s+(it|this)\b/i',
+            '/\b(tell\s+me\s+more|more\s+about|details?\s+(about|on)|expand\s+on)\b/i',
+            '/\b(the\s+first\s+one|the\s+second\s+one|the\s+third\s+one|first\s+project|second\s+project)\b/i',
             '/\bsummariz(e|ing)\s+(it|this)\b/i',
         ];
         foreach ($patterns as $p) {
@@ -554,6 +569,138 @@ class ChatbotController extends Controller
         }
 
         return false;
+    }
+
+    /**
+     * Resolves a referenced capstone from previous assistant turns ("the first one", "it", "#1").
+     */
+    private function resolveReferencedCapstone(array $history, string $msg, string $role, ?\App\Models\User $user): ?Capstone
+    {
+        if (empty($history)) {
+            return null;
+        }
+
+        $lower = mb_strtolower($msg);
+
+        $wantsFirst  = (bool) preg_match('/\b(first|1st|#1|number\s+1|project\s+1)\b/i', $lower);
+        $wantsSecond = (bool) preg_match('/\b(second|2nd|#2|number\s+2|project\s+2)\b/i', $lower);
+        $wantsThird  = (bool) preg_match('/\b(third|3rd|#3|number\s+3|project\s+3)\b/i', $lower);
+        $wantsIt     = (bool) preg_match('/\b(the\s+(project|capstone|paper)|it|that\s+(one|project|capstone|paper)|tell\s+me\s+more)\b/i', $lower);
+
+        if (!$wantsFirst && !$wantsSecond && !$wantsThird && !$wantsIt) {
+            return null;
+        }
+
+        $lastAssistantContent = null;
+        for ($i = count($history) - 1; $i >= 0; $i--) {
+            if (($history[$i]['role'] ?? '') === 'assistant') {
+                $lastAssistantContent = (string) ($history[$i]['content'] ?? '');
+                break;
+            }
+        }
+
+        if (!$lastAssistantContent) {
+            return null;
+        }
+
+        preg_match_all('/\[(?:ID|LINK):(\d+)\]/', $lastAssistantContent, $matches);
+        $ids = array_values(array_unique(array_map('intval', $matches[1] ?? [])));
+        if (empty($ids)) {
+            return null;
+        }
+
+        $targetId = null;
+        if ($wantsFirst && isset($ids[0])) {
+            $targetId = $ids[0];
+        } elseif ($wantsSecond && isset($ids[1])) {
+            $targetId = $ids[1];
+        } elseif ($wantsThird && isset($ids[2])) {
+            $targetId = $ids[2];
+        } elseif ($wantsIt) {
+            $targetId = $ids[0];
+        }
+
+        if ($targetId) {
+            return $this->querySvc->findById($role, $targetId, $user);
+        }
+
+        return null;
+    }
+
+    /**
+     * Provides concise, direct answers when asking about specific metadata of the open capstone.
+     */
+    private function handleTargetedCapstoneField(Capstone $capstone, string $msg): ?array
+    {
+        $lower = mb_strtolower($msg);
+
+        // Author query
+        if (preg_match('/\b(author[s]?|who\s+wrote|who\s+authored|who\s+made|who\s+is\s+the\s+author|researcher[s]?)\b/i', $lower)) {
+            return [
+                'reply' => "👤 The author(s) of **{$capstone->title}** [ID:{$capstone->id}] is/are **{$capstone->author}**.",
+                'suggested_capstones' => [$this->suggestionCard($capstone)],
+            ];
+        }
+
+        // Year query
+        if (preg_match('/\b(year|when\s+was\s+(it|this)\s+(published|submitted|written|done))\b/i', $lower)) {
+            return [
+                'reply' => "📅 **{$capstone->title}** [ID:{$capstone->id}] was submitted in **{$capstone->year}**.",
+                'suggested_capstones' => [$this->suggestionCard($capstone)],
+            ];
+        }
+
+        // Program query
+        if (preg_match('/\b(program|degree|course|department)\b/i', $lower)) {
+            $prog = $capstone->program ?? 'N/A';
+            return [
+                'reply' => "🎓 **{$capstone->title}** [ID:{$capstone->id}] was developed under the **{$prog}** program.",
+                'suggested_capstones' => [$this->suggestionCard($capstone)],
+            ];
+        }
+
+        // Category query
+        if (preg_match('/\b(category|domain|field\s+of\s+study)\b/i', $lower) && !str_contains($lower, 'popular')) {
+            $cat = $capstone->category ?? 'N/A';
+            return [
+                'reply' => "📂 **{$capstone->title}** [ID:{$capstone->id}] is categorized under **{$cat}**.",
+                'suggested_capstones' => [$this->suggestionCard($capstone)],
+            ];
+        }
+
+        // Keywords query
+        if (preg_match('/\b(keywords?|tags?)\b/i', $lower)) {
+            $kw = $capstone->relationLoaded('keywords') ? $capstone->keywords->pluck('name')->join(', ') : '';
+            return [
+                'reply' => "🏷️ The keywords for **{$capstone->title}** [ID:{$capstone->id}] are: **" . ($kw ?: 'None recorded') . "**.",
+                'suggested_capstones' => [$this->suggestionCard($capstone)],
+            ];
+        }
+
+        // Abstract query
+        if (preg_match('/\b(abstract|overview)\b/i', $lower)) {
+            $abstract = trim($capstone->abstract ?? 'No abstract recorded.');
+            return [
+                'reply' => "📝 **Abstract for {$capstone->title}** [ID:{$capstone->id}]:\n\n> {$abstract}",
+                'suggested_capstones' => [$this->suggestionCard($capstone)],
+            ];
+        }
+
+        return null;
+    }
+
+    /**
+     * Formats a single suggestion card payload.
+     */
+    private function suggestionCard(Capstone $c): array
+    {
+        return [
+            'id'      => (int) $c->id,
+            'title'   => (string) $c->title,
+            'author'  => (string) $c->author,
+            'year'    => $c->year,
+            'program' => (string) ($c->program ?? ''),
+        ];
     }
 
     /**

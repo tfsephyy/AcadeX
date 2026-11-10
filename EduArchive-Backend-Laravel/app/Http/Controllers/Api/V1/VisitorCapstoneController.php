@@ -88,7 +88,11 @@ class VisitorCapstoneController extends Controller
         if ($request->filled('year'))       $query->where('year', $request->year);
         if ($request->filled('program'))    $query->where('program', $request->program);
         if ($request->filled('category'))   $query->where('category', $request->category);
-        if ($request->filled('adviser_id')) $query->where('adviser_id', $request->adviser_id);
+        
+        $adviserParam = $request->input('adviser_id') ?? $request->input('adviser_name') ?? $request->input('adviser');
+        if ($adviserParam !== null && $adviserParam !== '') {
+            app(\App\Services\AdviserMatching::class)->applyFilter($query, $adviserParam);
+        }
 
         if ($request->filled('keyword')) {
             $query->whereHas('keywords', fn($q) =>
@@ -137,15 +141,7 @@ class VisitorCapstoneController extends Controller
 
     public function advisers(): JsonResponse
     {
-        $advisers = \App\Models\User::whereHas('advisedCapstones', function ($q) {
-            $q->where('is_archived', false)
-              ->where('approval_status', 'approved')
-              ->where(function ($inner) {
-                  $inner->where('publication_status', 'published')
-                        ->orWhere('copyright_status', 'copyrighted')
-                        ->orWhereNotNull('imrad_path');
-              });
-        })->select('id', 'name')->orderBy('name')->get();
+        $advisers = app(\App\Services\AdviserMatching::class)->extractOptions($this->visibleQuery());
         return $this->successResponse($advisers, 'Advisers retrieved.');
     }
 

@@ -99,23 +99,34 @@ class PdfPassageRetriever
             return mb_substr($text, 0, $maxChars);
         }
 
-        // Sort the chosen top pages back into document order
-        usort($ranked, fn($a, $b) => $a['page'] <=> $b['page']);
+        // Budget selection: prioritize highest-scoring pages up to maxChars
+        $selected = [];
+        $currentChars = 0;
 
-        $context = '';
         foreach ($ranked as $item) {
             $pageHeader = "--- [PAGE:{$item['page']}] ---\n";
             $entry = $pageHeader . $item['text'] . "\n\n";
+            $entryLen = strlen($entry);
 
-            if (strlen($context) + strlen($entry) > $maxChars && strlen($context) > 0) {
-                // If the single first page exceeds budget, truncate it gracefully
-                if ($context === '') {
-                    $context = substr($entry, 0, $maxChars);
-                }
+            if ($currentChars + $entryLen <= $maxChars) {
+                $selected[] = $item;
+                $currentChars += $entryLen;
+            } elseif (empty($selected)) {
+                // If even the single highest-scoring page exceeds budget, truncate it gracefully
+                $headLen = strlen($pageHeader);
+                $available = max(100, $maxChars - $headLen - 4);
+                $item['text'] = mb_substr($item['text'], 0, $available) . '...';
+                $selected[] = $item;
                 break;
             }
+        }
 
-            $context .= $entry;
+        // Sort the chosen pages back into document order for logical reading flow
+        usort($selected, fn($a, $b) => $a['page'] <=> $b['page']);
+
+        $context = '';
+        foreach ($selected as $item) {
+            $context .= "--- [PAGE:{$item['page']}] ---\n" . $item['text'] . "\n\n";
         }
 
         return trim($context);
@@ -126,7 +137,7 @@ class PdfPassageRetriever
      *
      * @return array<int, string>
      */
-    private function extractQueryTerms(string $query): array
+    public function extractQueryTerms(string $query): array
     {
         $cleaned = preg_replace('/[^\p{L}\p{N}\s]/u', ' ', mb_strtolower($query));
         $tokens = preg_split('/\s+/', (string) $cleaned, -1, PREG_SPLIT_NO_EMPTY);
@@ -162,11 +173,42 @@ class PdfPassageRetriever
             $score += 15.0;
         }
 
+        // Bigram combination bonus for technical/compound terms
+        $termCount = count($terms);
+        if ($termCount >= 2) {
+            for ($k = 0; $k < $termCount - 1; $k++) {
+                $bigram = $terms[$k] . ' ' . $terms[$k + 1];
+                if (str_contains($lowerPage, $bigram)) {
+                    $score += 5.0;
+                }
+            }
+        }
+
         foreach ($terms as $term) {
             $matches = substr_count($lowerPage, $term);
             if ($matches > 0) {
                 // Diminishing returns for repeated terms
                 $score += 1.0 + log(1 + $matches);
+            }
+        }
+
+        // Section intent boost
+        $sectionKeywords = [
+            'methodology' => ['methodology', 'research design', 'implementation', 'system architecture', 'procedure', 'framework'],
+            'objective'   => ['objective', 'problem statement', 'purpose', 'aim of the study', 'scope'],
+            'result'      => ['results', 'findings', 'evaluation', 'discussion', 'performance', 'accuracy', 'outcome'],
+            'limitation'  => ['limitation', 'scope and limitation', 'future work', 'constraints', 'delimitations'],
+            'tech'        => ['technologies', 'tools', 'hardware', 'software stack', 'framework', 'microcontroller', 'sensors'],
+        ];
+
+        foreach ($sectionKeywords as $key => $indicators) {
+            if (str_contains($cleanRaw, $key)) {
+                foreach ($indicators as $ind) {
+                    if (str_contains($lowerPage, $ind)) {
+                        $score += 3.0;
+                        break;
+                    }
+                }
             }
         }
 
