@@ -1353,4 +1353,121 @@ class ChatbotResponseService
             ]],
         ];
     }
+
+    /**
+     * Formats similar capstone recommendations.
+     *
+     * @return array{reply: string, suggested_capstones: array}
+     */
+    public function formatSimilarCapstones(Capstone $target, Collection $similar): array
+    {
+        if ($similar->isEmpty()) {
+            return [
+                'reply' => "I searched the archive for capstones related to **{$target->title}**, but found no additional matches with similar category or program.",
+                'suggested_capstones' => [],
+            ];
+        }
+
+        $count = $similar->count();
+        $lines = [
+            "### 🔗 Similar Research to {$target->title}",
+            "I found **{$count}** related capstone project(s) in the AcadeX repository:\n",
+        ];
+
+        foreach ($similar->values() as $i => $c) {
+            $num = $i + 1;
+            $lines[] = "---";
+            $lines[] = "**{$num}. {$c->title}** [LINK:{$c->id}]";
+            $lines[] = "📂 **Category:** {$c->category} &nbsp;|&nbsp; 📅 **Year:** {$c->year} &nbsp;|&nbsp; 🎓 **Program:** " . ($c->program ?? 'N/A');
+            $lines[] = "👤 **Author(s):** {$c->author}";
+
+            $reasons = [];
+            if ($c->category === $target->category) $reasons[] = "Category ({$c->category})";
+            if ($c->program === $target->program) $reasons[] = "Program ({$c->program})";
+            if (!empty($reasons)) {
+                $lines[] = "💡 **Similarity:** Shared " . implode(' & ', $reasons);
+            }
+
+            $abstract = trim((string) ($c->abstract ?? ''));
+            if ($abstract !== '') {
+                $excerpt = mb_strlen($abstract) > 280 ? mb_substr($abstract, 0, 280) . '…' : $abstract;
+                $lines[] = "\n> {$excerpt}";
+            }
+            $lines[] = '';
+        }
+
+        return [
+            'reply' => implode("\n", $lines),
+            'suggested_capstones' => $similar->map(fn($c) => [
+                'id'      => $c->id,
+                'title'   => $c->title,
+                'author'  => $c->author,
+                'year'    => $c->year,
+                'program' => $c->program ?? '',
+            ])->values()->toArray(),
+        ];
+    }
+
+    /**
+     * Formats structured side-by-side comparison between two capstones.
+     *
+     * @return array{reply: string, suggested_capstones: array}
+     */
+    public function formatCapstoneComparison(Capstone $c1, Capstone $c2): array
+    {
+        $lines = [
+            "### ⚖️ Capstone Research Comparison",
+            "Comparing **{$c1->title}** [LINK:{$c1->id}] and **{$c2->title}** [LINK:{$c2->id}]:",
+            "",
+            "#### 📋 Metadata & Scope",
+            "| Feature | **{$c1->title}** | **{$c2->title}** |",
+            "|---|---|---|",
+            "| **Year** | {$c1->year} | {$c2->year} |",
+            "| **Author(s)** | {$c1->author} | {$c2->author} |",
+            "| **Program** | " . ($c1->program ?? 'N/A') . " | " . ($c2->program ?? 'N/A') . " |",
+            "| **Category** | " . ($c1->category ?? 'N/A') . " | " . ($c2->category ?? 'N/A') . " |",
+            "",
+            "#### 🎯 Objectives",
+            "• **{$c1->title} [LINK:{$c1->id}]:** " . trim($c1->abstract ?? 'No abstract documented.'),
+            "• **{$c2->title} [LINK:{$c2->id}]:** " . trim($c2->abstract ?? 'No abstract documented.'),
+            "",
+            "#### 💻 Technologies & Stack",
+            "• **{$c1->title}:** " . ($c1->category ?? 'N/A'),
+            "• **{$c2->title}:** " . ($c2->category ?? 'N/A'),
+            "",
+            "#### 🔍 Key Distinctions & Similarities",
+        ];
+
+        if ($c1->category === $c2->category) {
+            $lines[] = "• **Domain Alignment:** Both research projects investigate solutions within the **{$c1->category}** domain.";
+        } else {
+            $lines[] = "• **Domain Distinction:** {$c1->title} targets **{$c1->category}**, whereas {$c2->title} explores **{$c2->category}**.";
+        }
+
+        if ($c1->program === $c2->program) {
+            $lines[] = "• **Academic Department:** Both were developed under the **{$c1->program}** curriculum.";
+        } else {
+            $lines[] = "• **Curricular Scope:** Developed under differing academic tracks ({$c1->program} vs {$c2->program}).";
+        }
+
+        return [
+            'reply' => implode("\n", $lines),
+            'suggested_capstones' => [
+                [
+                    'id'      => $c1->id,
+                    'title'   => $c1->title,
+                    'author'  => $c1->author,
+                    'year'    => $c1->year,
+                    'program' => $c1->program ?? '',
+                ],
+                [
+                    'id'      => $c2->id,
+                    'title'   => $c2->title,
+                    'author'  => $c2->author,
+                    'year'    => $c2->year,
+                    'program' => $c2->program ?? '',
+                ],
+            ],
+        ];
+    }
 }

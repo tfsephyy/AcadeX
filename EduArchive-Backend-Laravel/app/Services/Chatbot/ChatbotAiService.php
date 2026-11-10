@@ -254,6 +254,20 @@ class ChatbotAiService
             $blocks[] = implode("\n", $openBlock);
         }
 
+        if ($compareCapstone) {
+            $compareBlock = [
+                "COMPARISON TARGET CAPSTONE:",
+                "ID: {$compareCapstone->id}",
+                "Title: {$compareCapstone->title} [ID:{$compareCapstone->id}]",
+                "Author(s): {$compareCapstone->author}",
+                "Year: {$compareCapstone->year}",
+                "Program: " . ($compareCapstone->program ?? 'N/A'),
+                "Category: " . ($compareCapstone->category ?? 'N/A'),
+                "Abstract:\n" . ($compareCapstone->abstract ?? 'No abstract available.'),
+            ];
+            $blocks[] = implode("\n", $compareBlock);
+        }
+
         if ($searchResults->isNotEmpty()) {
             $rows = [];
             foreach ($searchResults as $c) {
@@ -324,6 +338,18 @@ You must strictly separate:
 2. **AI-Suggested Future Directions:** Potential research improvements or extensions suggested by the AI.
 NEVER present speculative improvements as confirmed weaknesses of the paper.
 GAPS_RULES;
+        }
+
+        if ($action === 'compare') {
+            $modeRules .= "\n\n" . <<<COMPARE_RULES
+ACTION INSTRUCTION: CAPSTONE RESEARCH COMPARISON.
+Compare the two provided capstones side-by-side:
+- **Objectives:** Compare research goals and problems addressed.
+- **Technologies & Stack:** Compare programming frameworks, hardware, and libraries.
+- **Methodology:** Compare architectures and procedures.
+- **Key Distinctions:** Highlight clear differences and shared areas.
+Reference both documents explicitly using [LINK:id] and [PAGE:n] where supported.
+COMPARE_RULES;
         }
 
         return <<<PROMPT

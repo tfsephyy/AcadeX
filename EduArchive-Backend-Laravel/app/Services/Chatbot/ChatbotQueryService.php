@@ -161,4 +161,33 @@ class ChatbotQueryService
                     ->where('id', $id)
                     ->first();
     }
+
+    /**
+     * Finds related capstones based on shared category, program, or keywords.
+     */
+    public function findSimilar(string $role, Capstone $capstone, int $limit = 4): Collection
+    {
+        $query = $this->baseQuery($role)
+            ->where('id', '!=', $capstone->id);
+
+        $query->where(function ($q) use ($capstone) {
+            $hasCondition = false;
+            if (!empty($capstone->category)) {
+                $q->orWhere('category', $capstone->category);
+                $hasCondition = true;
+            }
+            if (!empty($capstone->program)) {
+                $q->orWhere('program', $capstone->program);
+                $hasCondition = true;
+            }
+            if (!$hasCondition) {
+                $q->whereNotNull('id');
+            }
+        });
+
+        return $query->orderByDesc('year')
+                     ->orderByDesc('created_at')
+                     ->limit($limit)
+                     ->get(['id', 'title', 'author', 'year', 'program', 'category', 'abstract']);
+    }
 }

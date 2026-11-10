@@ -199,6 +199,17 @@ class ChatbotController extends Controller
             return $this->responseSvc->formatResearchGaps($openCapstone);
         }
 
+        // 3. Similar capstones action or question
+        if ($openCapstone && ($action === 'similar' || preg_match('/\b(similar|related)\s+capstone[s]?\b/i', $msg))) {
+            $similar = $this->querySvc->findSimilar($role, $openCapstone, 4);
+            return $this->responseSvc->formatSimilarCapstones($openCapstone, $similar);
+        }
+
+        // 4. Compare capstones action or question
+        if ($openCapstone && $compareCapstone && ($action === 'compare' || preg_match('/\bcompar(e|ison)\b/i', $msg))) {
+            return $this->responseSvc->formatCapstoneComparison($openCapstone, $compareCapstone);
+        }
+
         // 2. PDF Only Mode: Grounded strictly in active document
         if ($mode === 'pdf_only' && $openCapstone) {
             if ($action === 'summary' || preg_match('/\bsummariz(e|y)\b/i', $msg)) {
