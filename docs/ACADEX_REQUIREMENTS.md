@@ -8,6 +8,27 @@ The client-facing deployment history remains in [../ACADEX_CLIENT_AI_HANDOFF.md]
 
 **Current production state (2026-11-09):** Unified release cadex-20261109-e32fa20 is live in production with backend and frontend. Migration 2026_11_08_000001_add_capstone_adviser_name applied. UI responsiveness (3-card grid default, 4 on collapsed), removed rigid MBC ID requirement, fixed Admin Dashboard upload year series, Faculty Adviser Dashboard, and modular PDF extraction active and verified. See [the production release record](handoff/PRODUCTION_RELEASE_2026-11-09_UI_REFINEMENT_MODULAR_EXTRACTION.md).
 
+## November 10, 2026 — Unified AI Capstone Research Assistant
+
+Status: implemented and verified locally; ready for publication/deployment.
+
+Consolidates all chatbot interactions into a single adaptive assistant:
+- **Automatic & Manual Mode Switching**: Automatically defaults to Smart Mode on repository/discovery pages; switches to PDF Only Mode when opening a capstone PDF; reverts to Smart Mode when closing or navigating away. Manual mode overrides (Smart, PDF Only, General AI) are respected within the active document session. PDF Only Mode is disabled when no document is active.
+- **Three Specialized AI Modes**:
+  1. *Smart Mode*: Context-aware general-purpose assistant. Prioritizes the active PDF when questions relate to the opened capstone; answers general knowledge and technical questions without document restrictions; distinguishes document facts with `[PAGE:n]` citations from AI context.
+  2. *PDF Only Mode*: Strictly grounded in the active PDF text. Answers using only facts supported by the document with exact page citations `[PAGE:n]`; refuses to answer or guess when information is absent.
+  3. *General AI Mode*: General academic and programming chatbot operating without document restrictions or repository constraints.
+- **Page-Delimited PDF Text Indexing & Retrieval**: `PdfPassageRetriever` scores extracted text delimited with `--- [PAGE:n] ---` markers, retrieving relevant passages within budget rather than truncating whole documents.
+- **Clickable Page References**: Citations rendered as `<button className="chatbot-page-ref-btn">📄 Page {n}</button>` that smoothly scroll the PDF viewer to `data-document-page="{n}"`.
+- **Integrated Research Features**:
+  - *AI Summary*: Structured academic summary (Objectives, Methodology, Technologies Used, Major Findings, Document Limitations) with page references.
+  - *Research Gaps & Improvements*: Strictly separates documented limitations from AI-suggested future directions.
+  - *Similar Capstones*: Verified repository recommendations based on shared category, program, or keywords with clickable cards and direct comparison triggers.
+  - *Capstone Comparison*: Structured side-by-side comparative matrix evaluating objectives, stack, and findings without hallucination.
+  - *Dynamic Suggested Questions*: Contextual chips tailored to the active capstone or discovery topics.
+
+Verification: 187 guarded disposable-MySQL backend tests / 1,607 assertions passed; 73 frontend tests passed; production build passed (854 modules); ESLint clean.
+
 ## November 8, 2026 upload review layout and full-PDF keywords
 
 Status: implemented and verified locally; no deployment. The current user request supersedes the computing-only

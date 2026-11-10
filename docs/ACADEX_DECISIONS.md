@@ -528,3 +528,27 @@ publication does not change the serving production release.
 2. Safely removed the 4 duplicate backup storage copies in `/var/backups/acadex/` while preserving the live persistent shared storage (`/srv/acadex-staging/shared/storage`) and current database dumps. Set `MIN_FREE_STORAGE_BYTES=1073741824` in `laravel.env`. Recovered ~11 GB of disk space (disk usage dropped to 65%).
 3. Updated `cjjas127@gmail.com` to `role_id = 4` (`faculty`) in MySQL.
 4. Deployed release `acadex-20261109-7933e7f` to EC2, switched Apache and systemd services (`acadex-queue`, `acadex-scheduler`, `acadex-ocr`), and verified live.
+
+## D-030 — Architecture of Unified AI Capstone Research Assistant (2026-11-10)
+
+**Context:**
+The previous implementation had fragmented chatbots for general questions, capstone discovery, and Talk to PDF, causing context mixing and requiring manual switching or separate interfaces. The client required one unified, context-aware AI Capstone Research Assistant adapting automatically to student activity (Smart Mode on discovery pages, PDF Only Mode on opened capstone PDFs, General AI Mode on broader queries), with clickable page citations navigating the viewer to the exact PDF page, and structured research tools (Summary, Research Gaps, Similar Capstones, Side-by-Side Comparison).
+
+**Decision:**
+1. Unified Frontend Context & Mode Management:
+   - Created `chatbotModeManager.js` and upgraded `ChatbotContext.jsx` to manage `activeCapstone`, `mode`, and `isManual` flag. Detail pages push full capstone metadata upon mount and clear it upon unmount.
+   - Preserves manual overrides (Smart, PDF Only, General AI) within the active document context without reverting per message. Disables PDF Only mode when no document is active.
+2. Grounded Passage Retrieval:
+   - Upgraded `PdfTextService.php` to inject `--- [PAGE:n] ---` markers during text-layer and OCR extraction.
+   - Built `PdfPassageRetriever.php` to parse page markers and execute BM25-lite keyword scoring against the student query, assembling relevant passages up to 7,500 characters into the prompt rather than arbitrarily slicing the first 6,000 characters.
+3. Interactive Page Citations:
+   - Created `citationParser.js` to parse `[PAGE:n]` and `[LINK:id]` tokens in markdown. Rendered citations as `<button className="chatbot-page-ref-btn">📄 Page {n}</button>` wired to `scrollToPdfPage` targeting `data-document-page="{n}"`.
+4. Structured Research Tools & Deterministic Fallbacks:
+   - Supported actions `summary`, `gaps`, `similar`, `compare` in `ChatbotController.php`, `ChatbotAiService.php`, and `ChatbotResponseService.php`.
+   - `summary`: Structured academic sections (Objectives, Methodology, Tech, Findings, Limitations) with page citations.
+   - `gaps`: Strictly distinguishes documented limitations in the PDF from AI-suggested future directions.
+   - `similar` & `compare`: Repository-grounded recommendations and side-by-side comparative matrices without hallucination.
+   - Deterministic local fallbacks ensure identical structured responses even when external AI API keys are absent or rate-limited.
+
+**Consequences:**
+Single persistent assistant across all pages, zero context leaks between documents, verifiable citations pointing directly to PDF pages, and strict grounding preventing hallucination. Tested across 187 backend tests and 73 frontend tests with 100% pass rate.

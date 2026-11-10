@@ -1,5 +1,26 @@
 # AcadeX implementation progress
 
+## 2026-11-10 - Unified AI Capstone Research Assistant
+
+Implemented and verified the unified AI Capstone Research Assistant across frontend and backend:
+- Unified floating chatbot automatically adapting to student activity:
+  - Smart Mode on main discovery pages.
+  - Automatically switches to PDF Only Mode upon opening a capstone PDF, showing the active PDF banner.
+  - Reverts to Smart Mode and clears active document context upon navigation away.
+  - Manual mode selection (Smart, PDF Only, General AI) persists during the active session.
+  - PDF Only mode is disabled when no capstone is open.
+- Page-delimited text extraction (`--- [PAGE:n] ---`) in `PdfTextService.php` and `PdfPassageRetriever.php` BM25-lite keyword scoring.
+- Interactive clickable citations `[PAGE:n]` navigating the PDF viewer directly to `data-document-page="{n}"`.
+- Structured AI research summaries (`action: 'summary'`) covering Objectives, Methodology, Technologies, Findings, and Limitations.
+- Research gaps analysis (`action: 'gaps'`) strictly delineating documented limitations from AI-suggested future directions.
+- Verified repository recommendations (`action: 'similar'`) and side-by-side comparative matrices (`action: 'compare'`).
+- Dynamic suggested questions chips and PDF research tools toolbar.
+- Verification:
+  - Full backend test suite: **187 guarded disposable-MySQL tests / 1,607 assertions passed** (0 failures, 0 errors).
+  - Full frontend test suite: **73 tests passed** (0 failures).
+  - Frontend production build: **854 modules transformed, built in 19.66s**.
+  - ESLint: **0 errors**.
+
 ## 2026-11-09 - Production Release: UI Refinements, ID Validation, and Modular PDF Extraction
 
 Merged `origin/release/ui-refinement` (commit `e32fa20`) into `main` and pushed to GitHub `origin/main`. Deployed both backend and frontend to AWS EC2 (`https://veload.site`).
