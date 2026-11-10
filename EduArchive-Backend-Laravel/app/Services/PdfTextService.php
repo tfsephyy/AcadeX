@@ -131,12 +131,14 @@ class PdfTextService
             $parser = new \Smalot\PdfParser\Parser();
             $pdf    = $parser->parseFile($pdfPath);
             $pages  = [];
+            $pageNum = 1;
 
             foreach ($pdf->getPages() as $page) {
                 $t = trim($page->getText());
                 if (!empty($t)) {
-                    $pages[] = $t;
+                    $pages[] = "--- [PAGE:{$pageNum}] ---\n" . $t;
                 }
+                $pageNum++;
             }
 
             return implode("\n\n", $pages) ?: null;
@@ -156,7 +158,15 @@ class PdfTextService
         $tess = $this->findTesseract();
         if (!$gs || !$tess) return null;
         $pages = app(BoundedPdfOcr::class)->extract($gs, $tess, $pdfPath, 1);
-        $text = trim(implode("\n\n", $pages));
+        $formattedPages = [];
+        foreach ($pages as $i => $pageText) {
+            $pageNum = $i + 1;
+            $trimmed = trim($pageText);
+            if ($trimmed !== '') {
+                $formattedPages[] = "--- [PAGE:{$pageNum}] ---\n" . $trimmed;
+            }
+        }
+        $text = trim(implode("\n\n", $formattedPages));
         return $text !== '' ? $text : null;
     }
 

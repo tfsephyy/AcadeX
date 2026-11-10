@@ -53,7 +53,8 @@ class ChatbotAiService
             $searchResults,
             $role,
             $user,
-            $referenceContext
+            $referenceContext,
+            $userMessage
         );
 
         $reply    = null;
@@ -211,7 +212,8 @@ class ChatbotAiService
         Collection $searchResults,
         string $role,
         ?User $user,
-        string $referenceContext
+        string $referenceContext,
+        string $userMessage = ''
     ): string {
         $blocks = [];
 
@@ -223,10 +225,8 @@ class ChatbotAiService
             $canReadFullText = $this->canIncludeDocumentText($role, $user, $openCapstone);
             $docText = '';
             if ($canReadFullText && !empty(trim($openCapstone->pdf_text ?? ''))) {
-                $rawText = trim($openCapstone->pdf_text);
-                $docText = mb_strlen($rawText) > 6000
-                    ? mb_substr($rawText, 0, 6000) . "\n...[truncated]"
-                    : $rawText;
+                $retriever = app(PdfPassageRetriever::class);
+                $docText = $retriever->retrieveContext($openCapstone->pdf_text, $userMessage, 7500);
             }
 
             $openBlock = [
