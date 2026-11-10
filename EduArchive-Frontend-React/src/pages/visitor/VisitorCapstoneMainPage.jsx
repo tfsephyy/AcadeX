@@ -19,6 +19,7 @@ import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
 import api from '../../api/axios';
 import { usePdfBlob } from '../../components/usePdfBlob';
+import { useChatbotContext } from '../../context/useChatbotContext';
 
 pdfjs.GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/build/pdf.worker.min.mjs', import.meta.url).toString();
 
@@ -26,6 +27,7 @@ export default function VisitorCapstoneMainPage() {
     const { id } = useParams();
     const navigate = useNavigate();
     const notify = useNotification();
+    const { setCapstoneContext } = useChatbotContext();
 
     const [capstone, setCapstone]       = useState(null);
     const [loading, setLoading]         = useState(true);
@@ -105,6 +107,22 @@ export default function VisitorCapstoneMainPage() {
 
     // ── Fetch capstone ─────────────────────────────────────
     useEffect(() => { fetchCapstone(); }, [id]);
+
+    useEffect(() => {
+        if (capstone) {
+            setCapstoneContext({
+                id: capstone.id,
+                title: capstone.title,
+                author: capstone.author,
+                year: capstone.year,
+                program: capstone.program,
+                category: capstone.category,
+                abstract: capstone.abstract,
+                keywords: capstone.keywords,
+            });
+        }
+        return () => setCapstoneContext(null);
+    }, [capstone?.id, setCapstoneContext]);
 
     const fetchCapstone = async () => {
         try {

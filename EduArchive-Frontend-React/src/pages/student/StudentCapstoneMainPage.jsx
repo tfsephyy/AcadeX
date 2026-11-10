@@ -68,10 +68,19 @@ export default function StudentCapstoneMainPage() {
     // Push capstone context into chatbot when capstone loads, clear on unmount
     useEffect(() => {
         if (capstone) {
-            setCapstoneContext({ id: capstone.id, title: capstone.title });
+            setCapstoneContext({
+                id: capstone.id,
+                title: capstone.title,
+                author: capstone.author,
+                year: capstone.year,
+                program: capstone.program,
+                category: capstone.category,
+                abstract: capstone.abstract,
+                keywords: capstone.keywords,
+            });
         }
         return () => setCapstoneContext(null);
-    }, [capstone?.id]);
+    }, [capstone?.id, setCapstoneContext]);
 
     useEffect(() => {
         viewRecorded.current = false;
